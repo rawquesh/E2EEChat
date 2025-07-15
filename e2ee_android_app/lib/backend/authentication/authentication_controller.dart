@@ -89,8 +89,6 @@ class AuthenticationController {
 
         MyPrint.printOnConsole("Registration successful");
         MyToast.showSuccess(context: context, msg: "Registration successful!");
-
-        // Navigate to PIN Entry Screen, not Main Screen
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(
             context: context,

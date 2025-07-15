@@ -133,8 +133,14 @@ class NavigationController {
   }
 
   static Widget? parsePinEntryScreen({required RouteSettings settings}) {
-    return const PinEntryScreen();
+    dynamic argument = settings.arguments;
+    if (argument is PinEntryScreenNavigationArguments) {
+      return PinEntryScreen(arguments: argument);
+    } else {
+      return null;
+    }
   }
+
 
   //endregion
 

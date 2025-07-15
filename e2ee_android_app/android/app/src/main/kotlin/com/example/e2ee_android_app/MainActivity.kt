@@ -1,5 +1,7 @@
 package io.darkcrypt.e2e
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+    // leave empty unless you override methods
+}

@@ -1,9 +1,11 @@
 import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
+import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
 import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:flutter/material.dart';
@@ -15,10 +17,9 @@ enum PinScreenMode { set, confirm, verify }
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
 
-  final PinScreenMode mode;
-  final String? initialPin; // Used for confirm step
+  final PinEntryScreenNavigationArguments arguments;
 
-  const PinEntryScreen({Key? key, this.mode = PinScreenMode.verify, this.initialPin}) : super(key: key);
+  const PinEntryScreen({Key? key, required this.arguments}) : super(key: key);
 
   @override
   _PinEntryScreenState createState() => _PinEntryScreenState();
@@ -40,9 +41,14 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   void initState() {
     super.initState();
     authenticationProvider = context.read<AuthenticationProvider>();
-    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
+    authenticationController = AuthenticationController(
+      authenticationProvider: authenticationProvider,
+    );
 
-    currentMode = widget.mode;
+    currentMode = widget.arguments.mode;
+    MyPrint.printOnConsole(
+      "PinEntryScreen initialized with mode: $currentMode",
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -143,7 +149,8 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
             errorMessage = "Too many failed attempts. All data will be wiped.";
             _wipeAppData();
           } else {
-            errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+            errorMessage =
+                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
           }
           _pinController.clear();
         });
@@ -164,37 +171,50 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Enable Biometric Unlock?'),
-        content: const Text('Would you like to use fingerprint or Face ID to unlock the app faster?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _goToHome();
-            },
-            child: const Text('Not Now'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Enable Biometric Unlock?'),
+            content: const Text(
+              'Would you like to use fingerprint or Face ID to unlock the app faster?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _goToHome();
+                },
+                child: const Text('Not Now'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final enabled = await authenticationController
+                      .enableBiometric(true);
+                  if (enabled) {
+                    final success =
+                        await authenticationController
+                            .authenticateWithBiometric();
+                    if (success) {
+                      // Optionally show a success toast/dialog
+                      MyToast.showSuccess(
+                        context: context,
+                        msg: "Biometric unlock enabled!",
+                      );
+                    } else {
+                      // Optionally show fail toast/dialog
+                      MyToast.showSuccess(
+                        context: context,
+                        msg:
+                            "Biometric setup can be enabled later in settings.",
+                      );
+                    }
+                  }
+                  _goToHome();
+                },
+                child: const Text('Enable'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final enabled = await authenticationController.enableBiometric(true);
-              if (enabled) {
-                final success = await authenticationController.authenticateWithBiometric();
-                if (success) {
-                  // Optionally show a success toast/dialog
-                  MyToast.showSuccess(context: context, msg: "Biometric unlock enabled!");
-                } else {
-                  // Optionally show fail toast/dialog
-                  MyToast.showSuccess(context: context, msg: "Biometric setup can be enabled later in settings.");
-                }
-              }
-              _goToHome();
-            },
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -218,27 +238,30 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Security Alert'),
-        content: const Text(
-          'All app data has been wiped for security purposes. You will need to register again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Navigate back to login/registration
-              NavigationController.navigateToLoginScreen(
-                navigationOperationParameters: NavigationOperationParameters(
-                  context: context,
-                  navigationType: NavigationType.pushNamedAndRemoveUntil,
-                ),
-              );
-            },
-            child: const Text('OK'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Security Alert'),
+            content: const Text(
+              'All app data has been wiped for security purposes. You will need to register again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Navigate back to login/registration
+                  NavigationController.navigateToLoginScreen(
+                    navigationOperationParameters:
+                        NavigationOperationParameters(
+                          context: context,
+                          navigationType:
+                              NavigationType.pushNamedAndRemoveUntil,
+                        ),
+                  );
+                },
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -267,6 +290,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
+    MyPrint.printOnConsole("Building PinEntryScreen with mode: $currentMode");
 
     final defaultPinTheme = PinTheme(
       width: 45,
@@ -306,17 +330,21 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: widget.mode == PinScreenMode.verify ? IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black54),
-          onPressed: () => Navigator.of(context).pop(),
-        ) : null, // Don't show back button during PIN setup
+        leading:
+            widget.arguments.mode == PinScreenMode.verify
+                ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black54),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+                : null, // Don't show back button during PIN setup
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height -
+              minHeight:
+                  MediaQuery.of(context).size.height -
                   MediaQuery.of(context).viewInsets.bottom -
                   MediaQuery.of(context).padding.top -
                   kToolbarHeight,
@@ -335,7 +363,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
-                      currentMode == PinScreenMode.verify ? Icons.lock : Icons.security,
+                      currentMode == PinScreenMode.verify
+                          ? Icons.lock
+                          : Icons.security,
                       size: 40,
                       color: themeData.primaryColor,
                     ),
@@ -385,7 +415,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: themeData.colorScheme.error.withValues(alpha: 0.1),
+                        color: themeData.colorScheme.error.withValues(
+                          alpha: 0.1,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.red.shade700),
                       ),
@@ -463,25 +495,27 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Forgot PIN?'),
-                            content: const Text(
-                              'Please contact support or reset your account to recover access.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Cancel'),
+                          builder:
+                              (context) => AlertDialog(
+                                title: const Text('Forgot PIN?'),
+                                content: const Text(
+                                  'Please contact support or reset your account to recover access.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.of(context).pop(),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      // Navigate to account recovery
+                                    },
+                                    child: const Text('Reset Account'),
+                                  ),
+                                ],
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  // Navigate to account recovery
-                                },
-                                child: const Text('Reset Account'),
-                              ),
-                            ],
-                          ),
                         );
                       },
                       child: Text(

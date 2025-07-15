@@ -1,3 +1,4 @@
+import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/views/authentication/screens/pin_entry_screen.dart';
 import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
 import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
@@ -167,7 +168,12 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => PinEntryScreen(mode: PinScreenMode.set),
+            builder:
+                (context) => PinEntryScreen(
+                  arguments: PinEntryScreenNavigationArguments(
+                    mode: PinScreenMode.set,
+                  ),
+                ),
           ),
         );
       } else {
@@ -205,10 +211,10 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
           context: context,
           msg: "Biometric authentication successful!",
         );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => PinEntryScreen()),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => PinEntryScreen()),
+        // );
       }
     } catch (e) {
       MyToast.showError(
