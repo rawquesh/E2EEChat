@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../views/authentication/screens/login_screen.dart';
+import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../../views/authentication/screens/sign_up_screen.dart';
 import '../../views/common/screens/splashscreen.dart';
 import '../../views/homecreen/main_screen.dart';
@@ -26,18 +27,26 @@ class NavigationController {
 
   NavigationController._();
 
-  static final GlobalKey<NavigatorState> mainScreenNavigator = GlobalKey<NavigatorState>();
-  static final GlobalKey<NavigatorState> doctorScreenNavigator = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> mainScreenNavigator =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> doctorScreenNavigator =
+      GlobalKey<NavigatorState>();
 
   static bool isUserProfileTabInitialized = false;
 
   static bool checkDataAndNavigateToSplashScreen() {
-    MyPrint.printOnConsole("checkDataAndNavigateToSplashScreen called, isFirst:$isFirst");
+    MyPrint.printOnConsole(
+      "checkDataAndNavigateToSplashScreen called, isFirst:$isFirst",
+    );
 
     if (isFirst) {
       WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
         isFirst = false;
-        Navigator.pushNamedAndRemoveUntil(mainScreenNavigator.currentContext!, SplashScreen.routeName, (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          mainScreenNavigator.currentContext!,
+          SplashScreen.routeName,
+          (route) => false,
+        );
       });
     }
 
@@ -45,10 +54,13 @@ class NavigationController {
   }
 
   static Route? onMainAppGeneratedRoutes(RouteSettings settings) {
-    MyPrint.printOnConsole("onAdminMainGeneratedRoutes called for ${settings.name} with arguments:${settings.arguments}");
+    MyPrint.printOnConsole(
+      "onAdminMainGeneratedRoutes called for ${settings.name} with arguments:${settings.arguments}",
+    );
 
     if (kIsWeb) {
-      if (!["/", SplashScreen.routeName].contains(settings.name) && NavigationController.checkDataAndNavigateToSplashScreen()) {
+      if (!["/", SplashScreen.routeName].contains(settings.name) &&
+          NavigationController.checkDataAndNavigateToSplashScreen()) {
         return null;
       }
     }
@@ -77,6 +89,11 @@ class NavigationController {
           page = parseMainScreen(settings: settings);
           break;
         }
+      case PinEntryScreen.routeName:
+        {
+          page = parsePinEntryScreen(settings: settings);
+          break;
+        }
       // case MainScreen.routeName:
       //   {
       //     page = parseMainScreen(settings: settings);
@@ -88,7 +105,9 @@ class NavigationController {
       return PageRouteBuilder(
         pageBuilder: (c, a1, a2) => page!,
         //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
-        transitionsBuilder: (c, anim, a2, child) => SizeTransition(sizeFactor: anim, child: child),
+        transitionsBuilder:
+            (c, anim, a2, child) =>
+                SizeTransition(sizeFactor: anim, child: child),
         transitionDuration: const Duration(milliseconds: 0),
         settings: settings,
       );
@@ -113,22 +132,58 @@ class NavigationController {
     return const MainScreen();
   }
 
+  static Widget? parsePinEntryScreen({required RouteSettings settings}) {
+    return const PinEntryScreen();
+  }
 
   //endregion
 
   //------------------------------------------------------------------------------------------------------------------------------------------------------------
-  static Future<dynamic> navigateToSignUpScreen({required NavigationOperationParameters navigationOperationParameters, required SignUpScreenNavigationArguments arguments}) {
+  static Future<dynamic> navigateToSignUpScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+    required SignUpScreenNavigationArguments arguments,
+  }) {
     return NavigationOperation.navigate(
-      navigationOperationParameters: navigationOperationParameters.copyWith(routeName: SignUpScreen.routeName, arguments: arguments),
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: SignUpScreen.routeName,
+        arguments: arguments,
+      ),
     );
   }
 
-  static Future<dynamic> navigateToLoginScreen({required NavigationOperationParameters navigationOperationParameters}) {
-    return NavigationOperation.navigate(navigationOperationParameters: navigationOperationParameters.copyWith(routeName: LoginScreen.routeName));
+  static Future<dynamic> navigateToLoginScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+  }) {
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: LoginScreen.routeName,
+      ),
+    );
   }
 
-  static Future<dynamic> navigateToMainScreen({required NavigationOperationParameters navigationOperationParameters}) async {
-    await SharedPrefManager().setBool(MySharedPreferenceVariables.isCreatorMode, false);
-    return NavigationOperation.navigate(navigationOperationParameters: navigationOperationParameters.copyWith(routeName: MainScreen.routeName));
+  static Future<dynamic> navigateToMainScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+  }) async {
+    await SharedPrefManager().setBool(
+      MySharedPreferenceVariables.isCreatorMode,
+      false,
+    );
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: MainScreen.routeName,
+      ),
+    );
+  }
+
+  static Future<dynamic> navigateToPinEntryScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+    required PinEntryScreenNavigationArguments arguments,
+  }) {
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: PinEntryScreen.routeName,
+        arguments: arguments,
+      ),
+    );
   }
 }

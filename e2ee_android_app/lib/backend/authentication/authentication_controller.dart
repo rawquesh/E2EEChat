@@ -1,13 +1,18 @@
+import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 
+import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../navigation/navigation_arguments.dart';
 import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
@@ -32,108 +37,115 @@ class AuthenticationController {
   AuthenticationRepository get authenticationRepository =>
       _authenticationRepository;
 
-  Future<bool> signInWithGoogle({required BuildContext context}) async {
+  static final _storage = FlutterSecureStorage();
+  static const _pinKey = "user_app_pin";
+  static const _biometricKey = "biometric_enabled";
+
+  final LocalAuthentication _auth = LocalAuthentication();
+
+  Future<bool> canCheckBiometrics() async => await _auth.canCheckBiometrics;
+
+  Future<bool> enableBiometric(bool enable) async {
+    await _storage.write(key: _biometricKey, value: enable ? "true" : "false");
+    return enable;
+  }
+
+  Future<bool> isBiometricEnabled() async {
+    final val = await _storage.read(key: _biometricKey);
+    return val == "true";
+  }
+
+  Future<bool> authenticateWithBiometric() async {
+    if (!await isBiometricEnabled()) return false;
+    return await _auth.authenticate(
+      localizedReason: "Unlock with fingerprint or Face ID",
+      options: const AuthenticationOptions(biometricOnly: true),
+    );
+  }
+
+  Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
-      final result = await _authenticationRepository.signInWithGoogle(context: context);
+      MyPrint.printOnConsole("Generating keys...");
+      Map<String, dynamic> keyBundle = await KeyManager.generateAndStoreKeys();
 
-      // Validate result and userData structure
-      if (result is! Map<String, dynamic> || result['userData'] is! Map<String, dynamic>) {
-        MyPrint.printOnConsole('Sign in failed: Invalid or missing user data');
+      MyPrint.printOnConsole("Building registration payload...");
+      Map<String, dynamic> payload = {
+        "username": username,
+        "password": password,
+        "identity_public_key": keyBundle["identity_public_key"],
+        "onetime_prekeys": keyBundle["onetime_prekeys"],
+        "signed_prekey": keyBundle["signed_prekey"],
+        "prekey_signature": keyBundle["prekey_signature"],
+      };
+
+      MyPrint.printOnConsole("Sending registration request...");
+      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+
+      final accessToken = result?['data']?['access_token'];
+
+      if (result != null && accessToken != null && accessToken.isNotEmpty) {
+        MyPrint.printOnConsole("Saving auth token: $accessToken");
+        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+
+        MyPrint.printOnConsole("Registration successful");
+        MyToast.showSuccess(context: context, msg: "Registration successful!");
+
+        // Navigate to PIN Entry Screen, not Main Screen
+        NavigationController.navigateToPinEntryScreen(
+          navigationOperationParameters: NavigationOperationParameters(
+            context: context,
+            navigationType: NavigationType.pushNamedAndRemoveUntil,
+          ),
+          arguments: PinEntryScreenNavigationArguments(
+            mode: PinScreenMode.set,
+          ),
+        );
+        return true;
+      } else {
+        MyPrint.printOnConsole("Registration failed");
+        String errorMsg = result?['message'] ?? "Registration failed. Please try again.";
+        MyToast.showError(context: context, msg: errorMsg);
         return false;
       }
-
-      _authToken = result['token'];
-
-      final UserModel? userModel = await _authenticationRepository.getUserFromToken(_authToken!);
-      if (userModel == null) {
-        MyPrint.printOnConsole('Sign in failed: Could not fetch user model from token');
-        return false;
-      }
-
-
-      MyPrint.printOnConsole('User Data from google sign in: ${userModel.toMap()}');
-
-      _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
-      _authenticationProvider.email.set(value: userModel.email, isNotify: false);
-      _authenticationProvider.userModel.set(value: userModel, isNotify: true);
-
-      await SharedPrefManager().setString(MySharedPreferenceVariables.userId, userModel.userId);
-      await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
-
-      await onLoginSuccess(
-        context: context,
-        userModel: userModel,
-        authenticationMode: AuthenticationModes.google,
-      );
-
-      return true;
     } catch (e) {
-      MyPrint.printOnConsole('Sign in error: $e');
+      MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
+      MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
       return false;
     }
   }
 
-  Future<Map<String, dynamic>?> signInWithEmail({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> setNewPin(String pin, String confirmPin) async {
     try {
-      final result = await _authenticationRepository.signInWithEmail(
-        email: email,
-        password: password,
-      );
-
-      if (result == null) return null;
-
-      _authToken = result['token'];
-      UserModel? userModel;
-
-      if (_authToken != null && _authToken!.isNotEmpty) {
-        userModel = await _authenticationRepository.getUserFromToken(_authToken!);
-        MyPrint.printOnConsole(
-            "Fetched user model using token: ${userModel?.toMap()}");
+      // Validate PIN length
+      if (pin.length < 6 || pin.length > 8) {
+        return false;
       }
 
-      if (userModel == null) {
-        final userData = result['userData'];
-        if (userData == null) return null;
-
-        userModel = UserModel(
-          userId: userData['id'] ?? "",
-          firstName: userData['firstName'] ?? "",
-          lastName: userData['lastName'] ?? "",
-          email: userData['email'] ?? "",
-          displayName:
-          "${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}"
-              .trim(),
-          profilePicture: userData["profilePicture"] ?? "",
-          authenticationMode: AuthenticationModes.email,
-        );
+      // Check if PINs match
+      if (pin != confirmPin) {
+        return false;
       }
 
-      _authenticationProvider.userId
-          .set(value: userModel.userId, isNotify: false);
-      _authenticationProvider.email
-          .set(value: userModel.email, isNotify: false);
-      _authenticationProvider.userModel.set(value: userModel, isNotify: true);
+      // Save the PIN securely
+      await _storage.write(key: _pinKey, value: pin);
 
-      // 🔍 Print the stored userModel
-      MyPrint.printOnConsole(
-          "UserModel set in provider: ${userModel.toString()}");
-
-      await SharedPrefManager()
-          .setString(MySharedPreferenceVariables.userId, userModel.userId);
-      await SharedPrefManager()
-          .setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
-
-      return {
-        'token': _authToken,
-        'userModel': userModel,
-      };
+      MyPrint.printOnConsole("PIN saved successfully");
+      return true;
     } catch (e) {
-      MyPrint.printOnConsole('Email sign in error: $e');
-      return null;
+      MyPrint.printOnConsole("Error saving PIN: $e");
+      return false;
     }
+  }
+
+  Future<bool> verifyPin(String pin) async {
+    final storedPin = await _storage.read(key: _pinKey);
+    return pin == storedPin;
+  }
+
+  Future<void> wipeAllAuthData() async {
+    await _storage.delete(key: _pinKey);
+    await _storage.delete(key: _biometricKey);
+    // TODO: Clear chats, user data, tokens, etc.
   }
 
   Future<bool> isUserLoggedIn() async {

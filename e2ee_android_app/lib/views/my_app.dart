@@ -1,3 +1,5 @@
+import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
+import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +24,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AppThemeProvider>.value(value: DependencyInjection.appThemeProvider),
+        ChangeNotifierProvider<AuthenticationProvider>.value(value: DependencyInjection.authenticationProvider),
       ],
       child: const MainApp(),
     );

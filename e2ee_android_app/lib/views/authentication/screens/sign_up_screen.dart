@@ -1,10 +1,12 @@
+import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
+import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/views/authentication/screens/pin_entry_screen.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../../backend/navigation/navigation_arguments.dart';
 import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -17,6 +19,9 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> with MySafeState {
+  late AuthenticationController authenticationController;
+  late AuthenticationProvider authenticationProvider;
+
   static const double radius = 12;
 
   bool isLoading = false;
@@ -34,9 +39,49 @@ class _SignUpScreenState extends State<SignUpScreen> with MySafeState {
   bool passwordVisible = false;
   bool confirmPasswordVisible = false;
 
+  Future<void> _signUp() async {
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (!_isUsernameValid()) {
+      MyToast.showError(
+        context: context,
+        msg: "Username must be lowercase and alphanumeric only.",
+      );
+      return;
+    }
+
+    if (!_isPasswordValid()) {
+      MyToast.showError(
+        context: context,
+        msg: "Password must be at least 8 characters.",
+      );
+      return;
+    }
+
+    if (!_doPasswordsMatch()) {
+      MyToast.showError(
+        context: context,
+        msg: "Passwords do not match.",
+      );
+      return;
+    }
+
+    isLoading = true;
+    mySetState();
+
+    await authenticationController.signUpWithUsernamePassword(context, username, password);
+
+    isLoading = false;
+    mySetState();
+  }
+
   @override
   void initState() {
     super.initState();
+    authenticationProvider = context.read<AuthenticationProvider>();
+    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
+
     usernameController.addListener(_onUsernameChanged);
     passwordController.addListener(_onPasswordChanged);
     confirmPasswordController.addListener(_onConfirmPasswordChanged);
@@ -147,69 +192,6 @@ class _SignUpScreenState extends State<SignUpScreen> with MySafeState {
     if (password.length < 8) return "Weak - too short";
     if (_isPasswordStrong()) return "Strong";
     return "Medium - add uppercase, numbers, symbols";
-  }
-
-  Future<void> _signUp() async {
-    final username = usernameController.text.trim();
-    final password = passwordController.text.trim();
-
-    // Final validation
-    if (!_isUsernameValid()) {
-      MyToast.showError(
-        context: context,
-        msg: "Username must be lowercase and alphanumeric only.",
-      );
-      return;
-    }
-
-    if (!_isPasswordValid()) {
-      MyToast.showError(
-        context: context,
-        msg: "Password must be at least 8 characters.",
-      );
-      return;
-    }
-
-    if (!_doPasswordsMatch()) {
-      MyToast.showError(context: context, msg: "Passwords do not match.");
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // For demo - simulate successful registration
-      bool registrationSuccess = true; // Replace with actual registration logic
-
-      if (registrationSuccess) {
-        MyToast.showSuccess(
-          context: context,
-          msg: "Account created successfully!",
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PinEntryScreen(mode: PinScreenMode.set),
-          ),
-        );
-      } else {
-        MyToast.showError(
-          context: context,
-          msg: "Registration failed. Please try again.",
-        );
-      }
-    } catch (e) {
-      MyToast.showError(
-        context: context,
-        msg: "An error occurred. Please try again.",
-      );
-    } finally {
-      setState(() => isLoading = false);
-    }
   }
 
   void _navigateToLogin() {

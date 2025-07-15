@@ -1,11 +1,20 @@
+import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
+import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
+import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
 import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
+import 'package:provider/provider.dart';
 
 enum PinScreenMode { set, confirm, verify }
 
 class PinEntryScreen extends StatefulWidget {
+  static const String routeName = "/PinEntryScreen";
+
   final PinScreenMode mode;
   final String? initialPin; // Used for confirm step
 
@@ -16,17 +25,25 @@ class PinEntryScreen extends StatefulWidget {
 }
 
 class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
+  late AuthenticationController authenticationController;
+  late AuthenticationProvider authenticationProvider;
+
   final TextEditingController _pinController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   int failedAttempts = 0;
   bool isLoading = false;
   String? errorMessage;
-  String? newPin;
+  String? firstPin; // Store the first PIN entry
+  PinScreenMode currentMode = PinScreenMode.set;
 
   @override
   void initState() {
     super.initState();
-    // Auto-focus the PIN input when screen loads
+    authenticationProvider = context.read<AuthenticationProvider>();
+    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
+
+    currentMode = widget.mode;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -45,55 +62,206 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       errorMessage = null;
     });
 
-    // Simulate authentication delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    if (pin == "12345678") {
-      // PIN is correct - navigate to next screen
-      if (mounted) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => MainScreen(),));
-      }
-    } else {
-      // PIN is incorrect
+    if (currentMode == PinScreenMode.set) {
+      // First entry: save it and prompt for confirmation
+      firstPin = pin;
       setState(() {
-        failedAttempts++;
+        currentMode = PinScreenMode.confirm;
+        _pinController.clear();
         isLoading = false;
-
-        if (failedAttempts >= 5) {
-          errorMessage = "Too many failed attempts. All data will be wiped.";
-          _wipeAppData();
-        } else {
-          errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
-        }
       });
 
-      // Clear the PIN input
-      _pinController.clear();
+      // Request focus again after clearing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+      return;
+    }
+
+    if (currentMode == PinScreenMode.confirm) {
+      // User re-entered PIN to confirm
+      if (firstPin == null) {
+        setState(() {
+          errorMessage = "Something went wrong. Please start over.";
+          currentMode = PinScreenMode.set;
+          firstPin = null;
+          _pinController.clear();
+          isLoading = false;
+        });
+        return;
+      }
+
+      // Check if PINs match
+      if (firstPin == pin) {
+        // PINs match, save the PIN
+        final result = await authenticationController.setNewPin(firstPin!, pin);
+
+        if (result) {
+          // PIN set successfully, prompt biometric
+          setState(() {
+            isLoading = false;
+          });
+          _showBiometricPrompt();
+        } else {
+          setState(() {
+            errorMessage = "Failed to save PIN. Please try again.";
+            currentMode = PinScreenMode.set;
+            firstPin = null;
+            _pinController.clear();
+            isLoading = false;
+          });
+        }
+      } else {
+        // PINs don't match
+        setState(() {
+          errorMessage = "PINs do not match. Please try again.";
+          currentMode = PinScreenMode.set;
+          firstPin = null;
+          _pinController.clear();
+          isLoading = false;
+        });
+      }
+      return;
+    }
+
+    if (currentMode == PinScreenMode.verify) {
+      final isCorrect = await authenticationController.verifyPin(pin);
+      if (isCorrect) {
+        if (mounted) {
+          await NavigationController.navigateToMainScreen(
+            navigationOperationParameters: NavigationOperationParameters(
+              context: context,
+              navigationType: NavigationType.pushNamedAndRemoveUntil,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          failedAttempts++;
+          isLoading = false;
+          if (failedAttempts >= 5) {
+            errorMessage = "Too many failed attempts. All data will be wiped.";
+            _wipeAppData();
+          } else {
+            errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+          }
+          _pinController.clear();
+        });
+      }
+      return;
     }
   }
 
-  void _wipeAppData() {
-    // Simulate data wipe process
+  void _showBiometricPrompt() async {
+    final canBiometric = await authenticationController.canCheckBiometrics();
+    if (!canBiometric) {
+      _goToHome();
+      return;
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Security Alert'),
-            content: const Text(
-              'All app data has been wiped for security purposes.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // Exit app or redirect to initial setup
-                },
-                child: const Text('OK'),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text('Enable Biometric Unlock?'),
+        content: const Text('Would you like to use fingerprint or Face ID to unlock the app faster?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _goToHome();
+            },
+            child: const Text('Not Now'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final enabled = await authenticationController.enableBiometric(true);
+              if (enabled) {
+                final success = await authenticationController.authenticateWithBiometric();
+                if (success) {
+                  // Optionally show a success toast/dialog
+                  MyToast.showSuccess(context: context, msg: "Biometric unlock enabled!");
+                } else {
+                  // Optionally show fail toast/dialog
+                  MyToast.showSuccess(context: context, msg: "Biometric setup can be enabled later in settings.");
+                }
+              }
+              _goToHome();
+            },
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
     );
+  }
+
+  void _goToHome() async {
+    if (!mounted) return;
+
+    await NavigationController.navigateToMainScreen(
+      navigationOperationParameters: NavigationOperationParameters(
+        context: context,
+        navigationType: NavigationType.pushNamedAndRemoveUntil,
+      ),
+    );
+  }
+
+  void _wipeAppData() async {
+    // Wipe all authentication data
+    await authenticationController.wipeAllAuthData();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Security Alert'),
+        content: const Text(
+          'All app data has been wiped for security purposes. You will need to register again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navigate back to login/registration
+              NavigationController.navigateToLoginScreen(
+                navigationOperationParameters: NavigationOperationParameters(
+                  context: context,
+                  navigationType: NavigationType.pushNamedAndRemoveUntil,
+                ),
+              );
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTitle() {
+    switch (currentMode) {
+      case PinScreenMode.set:
+        return "Set Your PIN";
+      case PinScreenMode.confirm:
+        return "Confirm Your PIN";
+      case PinScreenMode.verify:
+        return "Enter Your PIN";
+    }
+  }
+
+  String _getSubtitle() {
+    switch (currentMode) {
+      case PinScreenMode.set:
+        return "Choose a 6 or 8-digit PIN for secure access";
+      case PinScreenMode.confirm:
+        return "Re-enter the PIN to confirm";
+      case PinScreenMode.verify:
+        return "Enter your PIN to access secure chat";
+    }
   }
 
   @override
@@ -132,41 +300,23 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       borderRadius: BorderRadius.circular(12),
     );
 
-    late final String title;
-    late final String subtitle;
-    switch (widget.mode) {
-      case PinScreenMode.set:
-        title = "Set Your PIN";
-        subtitle = "Choose a 6 or 8-digit PIN for secure access";
-        break;
-      case PinScreenMode.confirm:
-        title = "Confirm Your PIN";
-        subtitle = "Re-enter the PIN to confirm";
-        break;
-      case PinScreenMode.verify:
-        title = "Enter Your PIN";
-        subtitle = "Enter your PIN to access secure chat";
-        break;
-    }
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
+        leading: widget.mode == PinScreenMode.verify ? IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black54),
           onPressed: () => Navigator.of(context).pop(),
-        ),
+        ) : null, // Don't show back button during PIN setup
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight:
-                  MediaQuery.of(context).size.height -
+              minHeight: MediaQuery.of(context).size.height -
                   MediaQuery.of(context).viewInsets.bottom -
                   MediaQuery.of(context).padding.top -
                   kToolbarHeight,
@@ -185,7 +335,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
-                      Icons.security,
+                      currentMode == PinScreenMode.verify ? Icons.lock : Icons.security,
                       size: 40,
                       color: themeData.primaryColor,
                     ),
@@ -195,7 +345,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
 
                   // Title
                   Text(
-                    title,
+                    _getTitle(),
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -204,12 +354,14 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    subtitle,
+                    _getSubtitle(),
                     style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                     textAlign: TextAlign.center,
                   ),
 
                   const SizedBox(height: 40),
+
+                  // PIN Input
                   Pinput(
                     controller: _pinController,
                     focusNode: _focusNode,
@@ -219,13 +371,16 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                     defaultPinTheme: defaultPinTheme,
                     focusedPinTheme: focusedPinTheme,
                     submittedPinTheme: submittedPinTheme,
-                    errorPinTheme: errorPinTheme,
+                    errorPinTheme: errorMessage != null ? errorPinTheme : null,
                     pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
                     showCursor: true,
                     onCompleted: _onPinCompleted,
                     enabled: !isLoading,
                   ),
+
                   const SizedBox(height: 20),
+
+                  // Error Message
                   if (errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -265,72 +420,79 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                         themeData.primaryColor,
                       ),
                     ),
+
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: themeData.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Security: 5 failed attempts will trigger data wipe',
-                            style: TextStyle(
-                              color: Colors.orange.shade800,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+
+                  // Security Warning (only show during verify mode)
+                  if (currentMode == PinScreenMode.verify)
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: themeData.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.orange,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Security: 5 failed attempts will trigger data wipe',
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    onPressed: () {
-                      // Handle forgot PIN
-                      showDialog(
-                        context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('Forgot PIN?'),
-                              content: const Text(
-                                'Please contact support or reset your account to recover access.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    // Navigate to account recovery
-                                  },
-                                  child: const Text('Reset Account'),
-                                ),
-                              ],
-                            ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot PIN?',
-                      style: TextStyle(
-                        color: themeData.primaryColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        ],
                       ),
                     ),
-                  ),
+
+                  if (currentMode == PinScreenMode.verify)
+                    const SizedBox(height: 20),
+
+                  // Forgot PIN button (only show during verify mode)
+                  if (currentMode == PinScreenMode.verify)
+                    TextButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Forgot PIN?'),
+                            content: const Text(
+                              'Please contact support or reset your account to recover access.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  // Navigate to account recovery
+                                },
+                                child: const Text('Reset Account'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Forgot PIN?',
+                        style: TextStyle(
+                          color: themeData.primaryColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
 
                   const SizedBox(height: 24),
                 ],

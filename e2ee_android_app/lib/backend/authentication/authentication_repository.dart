@@ -11,8 +11,32 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 
 class AuthenticationRepository {
-  final String baseUrl = 'https://kehilahserver.com';
-  // final String baseUrl = 'http://172.20.10.4:8080';
+  final String baseUrl = 'https://172.86.92.130.sslip.io/api';
+
+  Future<Map<String, dynamic>?> registerNewUserFromPayload(Map<String, dynamic> payload) async {
+    try {
+      final url = '$baseUrl/auth/register';
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      );
+
+      MyPrint.printOnConsole("Register response code: ${response.statusCode}");
+      MyPrint.printOnConsole("Register response body: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        return responseData;
+      } else {
+        MyPrint.printOnConsole("Registration failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      MyPrint.printOnConsole("Error in registerNewUserFromPayload: $e");
+      return null;
+    }
+  }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
