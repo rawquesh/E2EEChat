@@ -36,6 +36,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   String? errorMessage;
   String? firstPin; // Store the first PIN entry
   PinScreenMode currentMode = PinScreenMode.set;
+  bool hasCheckedBiometric = false;
 
   @override
   void initState() {
@@ -50,8 +51,21 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       "PinEntryScreen initialized with mode: $currentMode",
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _focusNode.requestFocus();
+
+      // New: Try biometric first if in verify mode
+      if (currentMode == PinScreenMode.verify && !hasCheckedBiometric) {
+        hasCheckedBiometric = true;
+        bool biometricEnabled = await authenticationController.isBiometricEnabled();
+        if (biometricEnabled) {
+          final success = await authenticationController.authenticateWithBiometric();
+          if (success) {
+            if (mounted) _goToHome();
+          }
+          // If failed, just fall through to PIN entry as normal.
+        }
+      }
     });
   }
 

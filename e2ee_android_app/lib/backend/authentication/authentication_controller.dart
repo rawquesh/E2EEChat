@@ -112,6 +112,11 @@ class AuthenticationController {
     }
   }
 
+  Future<bool> hasPin() async {
+    final storedPin = await _storage.read(key: _pinKey);
+    return storedPin != null && storedPin.isNotEmpty;
+  }
+
   Future<bool> setNewPin(String pin, String confirmPin) async {
     try {
       // Validate PIN length

@@ -9,12 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../configs/constants.dart';
+import '../views/authentication/screens/pin_entry_screen.dart';
 import 'authentication/authentication_controller.dart';
 import 'authentication/authentication_provider.dart';
 import 'common/app_controller.dart';
 import 'common/app_theme/app_theme_controller.dart';
 import 'common/app_theme/app_theme_provider.dart';
 import 'common/dependency_injection.dart';
+import 'navigation/navigation_arguments.dart';
 import 'navigation/navigation_controller.dart';
 
 class AppInitController {
@@ -95,20 +97,13 @@ class AppInitController {
       authenticationProvider: authenticationProvider,
     );
 
-    String? userId = await SharedPrefManager().getString('user_id');
-    String? authToken = await SharedPrefManager().getString('auth_token');
+    // 1. Check for stored auth token
+    String? authToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    MyPrint.printOnConsole("Stored authToken: ${authToken != null && authToken.isNotEmpty}", tag: tag);
 
-    MyPrint.printOnConsole("Stored credentials - userId: $userId, authToken: ${authToken != null && authToken.isNotEmpty}", tag: tag);
-
-    bool isUserLoggedIn = await authenticationController.isUserLoggedIn();
-    MyPrint.printOnConsole("isUserLoggedIn:$isUserLoggedIn", tag: tag);
-
-    if (!isUserLoggedIn) {
-      MyPrint.printOnConsole(
-        "Returning from AppInitController().performInitialAppOpeningOperations() because Navigated to Login Screen",
-        tag: tag,
-      );
-
+    // 2. If no token, go to login/signup
+    if (authToken == null || authToken.isEmpty) {
+      MyPrint.printOnConsole("No token found, navigating to Login", tag: tag);
       NavigationController.navigateToLoginScreen(
         navigationOperationParameters: NavigationOperationParameters(
           context: context,
@@ -118,55 +113,66 @@ class AppInitController {
       return;
     }
 
+    // 3. If PIN is set, require PIN/biometric unlock
+    bool hasPin = await authenticationController.hasPin();
+    MyPrint.printOnConsole("User has pin: $hasPin", tag: tag);
 
-    // User is logged in, check if profile exists
-    // bool isExist = await authenticationController.checkUserWithIdExistOrNotAndIfNotExistThenCreate(
-    //   userId: authenticationProvider.userId.get(),
-    // );
-
-    UserModel? userModel = authenticationProvider.userModel.get();
-    bool isCreatorMode =
-        await SharedPrefManager().getBool(MySharedPreferenceVariables.isCreatorMode) ?? false;
-
-    if (userModel != null) {
-    // if (userModel != null && (userModel.firstName.isEmpty || userModel.isDeleted || !isExist)) {
-      // User exists but needs to complete profile
-      if (isCreatorMode && userModel.isCreator == true) {
-        await NavigationController.navigateToMainScreen(
-          navigationOperationParameters: NavigationOperationParameters(
-            context: context,
-            navigationType: NavigationType.pushNamedAndRemoveUntil,
-          ),
-        );
-        return;
-      } else {
-        await NavigationController.navigateToMainScreen(
-          navigationOperationParameters: NavigationOperationParameters(
-            context: context,
-            navigationType: NavigationType.pushNamedAndRemoveUntil,
-          ),
-        );
-        return;
-      }
+    if (hasPin) {
+      MyPrint.printOnConsole("Navigating to PIN entry screen", tag: tag);
+      await NavigationController.navigateToPinEntryScreen(
+        navigationOperationParameters: NavigationOperationParameters(
+          context: context,
+          navigationType: NavigationType.pushNamedAndRemoveUntil,
+        ),
+        arguments: PinEntryScreenNavigationArguments(
+          mode: PinScreenMode.verify,
+        ),
+      );
+      return;
     }
 
-    // User is fully logged in with complete profile, navigate to main screen
-    /*if (isCreatorMode && (userModel.isCreator == true)) {
-      await NavigationController.navigateToCreatorMainScreen(
-        navigationOperationParameters: NavigationOperationParameters(
-          context: context,
-          navigationType: NavigationType.pushNamedAndRemoveUntil,
-        ),
-      );
-    } else {
-      await NavigationController.navigateToMainScreen(
-        navigationOperationParameters: NavigationOperationParameters(
-          context: context,
-          navigationType: NavigationType.pushNamedAndRemoveUntil,
-        ),
-      );
-    }*/
+    // 4. If no PIN, force user to set a new PIN
+    MyPrint.printOnConsole("PIN not set, navigating to set PIN", tag: tag);
+    await NavigationController.navigateToPinEntryScreen(
+      navigationOperationParameters: NavigationOperationParameters(
+        context: context,
+        navigationType: NavigationType.pushNamedAndRemoveUntil,
+      ),
+      arguments: PinEntryScreenNavigationArguments(
+        mode: PinScreenMode.set,
+      ),
+    );
+    return;
+
+    // (Optional) After PIN/biometric unlock, you may want to check/refresh token validity:
+    // - If token is expired, call AuthenticationController.refreshToken().
+    // - If refresh fails, log out user and show login screen.
+    // - If refresh succeeds or token is valid, proceed to main screen.
+
+    // Example code for after unlock (you would put this in the PIN screen's success logic):
+    /*
+  bool isUserLoggedIn = await authenticationController.isUserLoggedIn();
+  if (!isUserLoggedIn) {
+    // Token expired/not valid, go to login
+    NavigationController.navigateToLoginScreen(
+      navigationOperationParameters: NavigationOperationParameters(
+        context: context,
+        navigationType: NavigationType.pushNamedAndRemoveUntil,
+      ),
+    );
+    return;
   }
+
+  // User is authenticated, go to main screen
+  await NavigationController.navigateToMainScreen(
+    navigationOperationParameters: NavigationOperationParameters(
+      context: context,
+      navigationType: NavigationType.pushNamedAndRemoveUntil,
+    ),
+  );
+  */
+  }
+
 
   Future<void> loadAssetImages({required BuildContext context}) async {
     String tag = MyUtils.getNewId();
