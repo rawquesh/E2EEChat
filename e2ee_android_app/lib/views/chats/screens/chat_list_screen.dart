@@ -1,6 +1,7 @@
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
 
+import '../../../backend/chats/chat_repository.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
 
@@ -22,6 +23,18 @@ class ChatUser {
     required this.isOnline,
     required this.unreadCount,
   });
+
+  factory ChatUser.fromJson(Map<String, dynamic> json) {
+    return ChatUser(
+      id: json['id'].toString(),
+      name: json['name'] ?? '',
+      avatar: json['avatar'] ?? '',
+      lastMessage: json['last_message'] ?? '',
+      lastMessageTime: json['last_message_time'] ?? '',
+      isOnline: json['is_online'] ?? false,
+      unreadCount: json['unread_count'] ?? 0,
+    );
+  }
 }
 
 class ChatMessage {
@@ -138,11 +151,23 @@ class ChatListScreen extends StatefulWidget {
   _ChatListScreenState createState() => _ChatListScreenState();
 }
 
-class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
+class _ChatListScreenState extends State<ChatListScreen> {
+  late Future<List<ChatUser>> _chatFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // For "u111"
+    final repo = ChatRepository(
+      username: "user2",
+      token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovLzE3Mi44Ni45Mi4xMzAuc3NsaXAuaW8vYXBpL2F1dGgvcmVnaXN0ZXIiLCJpYXQiOjE3NTI3ODEwNDksImV4cCI6MTc1ODc4MTA0OSwibmJmIjoxNzUyNzgxMDQ5LCJqdGkiOiJ5SEVJdzRQN1FJdnVYMHRHIiwic3ViIjoiZGVlMmZiOGItYjVmYS00MmI3LTllYmQtY2QzNDEyZTNkZmY4IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyIsInVzZXJuYW1lIjoidXNlcjEiLCJyb2xlIjpbXSwic2Vzc2lvbl90b2tlbiI6ImZmYWFjOWVkLWYzZDYtNGM1Ni1hY2NmLWJmYzhmZTU5N2QyOCJ9.1GDeNR4CnsOQaS3m6zKM_ruwGMW-c4e6Aj_QELvGdyc",
+    );
+    // For "u1112", swap these two lines above with the token you provided.
+    _chatFuture = repo.fetchChatRooms();
+  }
+
   @override
   Widget build(BuildContext context) {
-    super.pageBuild();
-
     return Scaffold(
       body: Column(
         children: [
@@ -152,24 +177,37 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: themeData.colorScheme.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           SizedBox(height: 16),
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              itemCount: ChatData.users.length,
-              itemBuilder: (context, index) {
-                final user = ChatData.users[index];
-                return ChatListItem(
-                  user: user,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatMessageScreen(user: user),
-                      ),
+            child: FutureBuilder<List<ChatUser>>(
+              future: _chatFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Failed to load chats'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text('No chats found'));
+                }
+                final users = snapshot.data!;
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  itemCount: users.length,
+                  itemBuilder: (context, index) {
+                    final user = users[index];
+                    return ChatListItem(
+                      user: user,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatMessageScreen(user: user),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

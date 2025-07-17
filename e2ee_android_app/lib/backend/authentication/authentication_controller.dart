@@ -66,17 +66,15 @@ class AuthenticationController {
   Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
       MyPrint.printOnConsole("Generating keys...");
-      Map<String, dynamic> keyBundle = await KeyManager.generateAndStoreKeys();
+      final keyBundle = await KeyManager.generateAndStoreKeys();
 
       MyPrint.printOnConsole("Building registration payload...");
       Map<String, dynamic> payload = {
         "username": username,
         "password": password,
-        "identity_public_key": keyBundle["identity_public_key"],
-        "onetime_prekeys": keyBundle["onetime_prekeys"],
-        "signed_prekey": keyBundle["signed_prekey"],
-        "prekey_signature": keyBundle["prekey_signature"],
       };
+
+      MyPrint.printOnConsole("Payload: $payload");
 
       MyPrint.printOnConsole("Sending registration request...");
       final result = await _authenticationRepository.registerNewUserFromPayload(payload);

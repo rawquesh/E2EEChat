@@ -63,7 +63,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           if (success) {
             if (mounted) _goToHome();
           }
-          // If failed, just fall through to PIN entry as normal.
         }
       }
     });

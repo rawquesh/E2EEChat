@@ -43,10 +43,10 @@ class KeyManager {
         value: base64Encode(await signedPreKeyPair.extractPrivateKeyBytes()));
 
     return {
-      'identityKey': base64Encode(identityPublic.bytes),
-      'signedPreKey': base64Encode(signedPreKeyPublic.bytes),
-      'signedPreKeySignature': base64Encode(signature.bytes),
-      'oneTimePreKeys': oneTimePreKeys.map((k) => base64Encode(k.bytes)).toList(),
+      "identity_public_key": base64Encode(identityPublic.bytes),
+      "signed_prekey": base64Encode(signedPreKeyPublic.bytes),
+      "prekey_signature": base64Encode(signature.bytes),
+      "onetime_prekeys": oneTimePreKeys.map((k) => base64Encode(k.bytes)).toList(),
     };
   }
 }
