@@ -1367,6 +1367,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
+  pinenacl:
+    dependency: transitive
+    description:
+      name: pinenacl
+      sha256: "57e907beaacbc3c024a098910b6240758e899674de07d6949a67b52fd984cbdf"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   pinput:
     dependency: "direct dev"
     description:
@@ -1455,6 +1463,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5"
+  pusher_client_socket:
+    dependency: "direct dev"
+    description:
+      name: pusher_client_socket
+      sha256: "8645dd3f45c69442757d44f1f086f3a47b5e3a42bf595334ca8f8d3bd34cd8dd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.5"
   qr:
     dependency: transitive
     description:
@@ -1980,6 +1996,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  web_socket:
+    dependency: transitive
+    description:
+      name: web_socket
+      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
+  web_socket_channel:
+    dependency: transitive
+    description:
+      name: web_socket_channel
+      sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.3"
+  web_socket_client:
+    dependency: transitive
+    description:
+      name: web_socket_client
+      sha256: "394789177aa3bc1b7b071622a1dbf52a4631d7ce23c555c39bb2523e92316b07"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   webview_flutter:
     dependency: "direct dev"
     description:

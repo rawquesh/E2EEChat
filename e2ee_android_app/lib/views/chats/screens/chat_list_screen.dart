@@ -160,7 +160,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     // For "u111"
     final repo = ChatRepository(
       username: "user2",
-      token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovLzE3Mi44Ni45Mi4xMzAuc3NsaXAuaW8vYXBpL2F1dGgvcmVnaXN0ZXIiLCJpYXQiOjE3NTI3ODEwNDksImV4cCI6MTc1ODc4MTA0OSwibmJmIjoxNzUyNzgxMDQ5LCJqdGkiOiJ5SEVJdzRQN1FJdnVYMHRHIiwic3ViIjoiZGVlMmZiOGItYjVmYS00MmI3LTllYmQtY2QzNDEyZTNkZmY4IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyIsInVzZXJuYW1lIjoidXNlcjEiLCJyb2xlIjpbXSwic2Vzc2lvbl90b2tlbiI6ImZmYWFjOWVkLWYzZDYtNGM1Ni1hY2NmLWJmYzhmZTU5N2QyOCJ9.1GDeNR4CnsOQaS3m6zKM_ruwGMW-c4e6Aj_QELvGdyc",
+      token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovLzE3Mi44Ni45Mi4xMzAuc3NsaXAuaW8vYXBpL2F1dGgvcmVnaXN0ZXIiLCJpYXQiOjE3NTI3ODg2ODIsImV4cCI6MTc1ODc4ODY4MiwibmJmIjoxNzUyNzg4NjgyLCJqdGkiOiJmWnhDMVRLcHdoeElFejlrIiwic3ViIjoiZGVlMmZiOGItYjVmYS00MmI3LTllYmQtY2QzNDEyZTNkZmY4IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyIsInVzZXJuYW1lIjoidXNlcjEiLCJyb2xlIjpbXSwic2Vzc2lvbl90b2tlbiI6ImFkY2U0NTNhLWQyNWEtNDdmNi1iY2VmLTI1YTBkMGM2MTBmMiJ9.J84DB_ADRLwPLbiER6A-z028LkW8Av6gTRL6TrhpU9Q",
     );
     // For "u1112", swap these two lines above with the token you provided.
     _chatFuture = repo.fetchChatRooms();

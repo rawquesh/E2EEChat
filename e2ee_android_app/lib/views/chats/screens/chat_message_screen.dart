@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:http/http.dart' as http;
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:pusher_client_socket/pusher_client_socket.dart';
 
 import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
@@ -18,6 +22,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     with TickerProviderStateMixin, MySafeState {
   final TextEditingController _messageController = TextEditingController();
   List<ChatMessage> messages = [];
+  PusherClient? _pusher;
+  Channel? _channel;
+
+  final String currentUserId = 'dee2fb8b-b5fa-42b7-9ebd-cd3412e3dff8';
+  final String currentUserToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovLzE3Mi44Ni45Mi4xMzAuc3NsaXAuaW8vYXBpL2F1dGgvcmVnaXN0ZXIiLCJpYXQiOjE3NTI3ODg2ODIsImV4cCI6MTc1ODc4ODY4MiwibmJmIjoxNzUyNzg4NjgyLCJqdGkiOiJmWnhDMVRLcHdoeElFejlrIiwic3ViIjoiZGVlMmZiOGItYjVmYS00MmI3LTllYmQtY2QzNDEyZTNkZmY4IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyIsInVzZXJuYW1lIjoidXNlcjEiLCJyb2xlIjpbXSwic2Vzc2lvbl90b2tlbiI6ImFkY2U0NTNhLWQyNWEtNDdmNi1iY2VmLTI1YTBkMGM2MTBmMiJ9.J84DB_ADRLwPLbiER6A-z028LkW8Av6gTRL6TrhpU9Q';
+  String? opponentUserId = "b2dbf505-cf02-4f50-abf4-ff644d0bbbf5";
+  String? opponentUsername;
+
+  // API Base URL
+  static const String API_BASE = 'https://172.86.92.130.sslip.io';
 
   // Animation controllers
   late AnimationController _iconAnimationController;
@@ -26,11 +40,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   late Animation<double> _widthAnimation;
 
   bool _hasText = false;
+  bool _isLoadingOpponent = false;
 
   @override
   void initState() {
     super.initState();
-    messages = ChatData.getMessagesForUser(widget.user.id);
+    // Initialize with empty messages for testing
+    messages = [];
 
     // Initialize animation controllers
     _iconAnimationController = AnimationController(
@@ -58,8 +74,98 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       ),
     );
 
-    // Listen to text changes
     _messageController.addListener(_onTextChanged);
+
+    // Hardcoded opponent username for testing
+    _setOpponent('user2');
+  }
+
+  void _initPusher() {
+    // Configure Pusher options
+    final options = PusherOptions(
+      key: 'sip6lkxyrl3d0um6vbv9',
+      cluster: 'mt1',
+      host: '172.86.92.130.sslip.io',
+      wsPort: 8080,
+      wssPort: 443,
+      encrypted: false,
+      authOptions: PusherAuthOptions(
+        'https://172.86.92.130.sslip.io/broadcasting/auth',
+        headers: {
+          'Authorization': 'Bearer $currentUserToken',
+        },
+      ),
+      // enableLogging: true,
+      // autoConnect: false,
+    );
+
+    // Initialize the client
+    _pusher = PusherClient(options: options);
+
+    // Set up connection event handlers
+    _pusher!.onConnectionEstablished((data) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Connection established - socket-id: ${_pusher!.socketId}');
+    });
+
+    _pusher!.onConnectionError((error) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Connection error: $error');
+    });
+
+    _pusher!.onError((error) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Error: $error');
+    });
+
+    _pusher!.onDisconnected((data) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Disconnected: $data');
+    });
+
+    // Connect to Pusher
+    _pusher!.connect();
+
+    final channelName = 'private-chat.$currentUserId';
+    MyPrint.printOnConsole('[PUSHER DEBUG] Subscribing to channel: $channelName');
+
+
+    _channel = _pusher!.channel(channelName);
+
+    // Listen for events on the channel
+    _channel!.bind('MessageSent', (data) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Received MessageSent event: $data');
+      if (data != null) {
+        _handleIncomingMessage(data);
+      }
+    });
+  }
+
+  void _handleIncomingMessage(dynamic data) {
+    MyPrint.printOnConsole('[CHAT DEBUG] Received message event data: $data');
+    try {
+      // Parse the data if it's a string
+      final messageData = data is String ? jsonDecode(data) : data;
+
+      setState(() {
+        messages.add(ChatMessage(
+          id: messageData['id'].toString(),
+          senderId: messageData['sender_id'],
+          message: messageData['message'],
+          timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
+          isMe: messageData['sender_id'] == currentUserId,
+          status: MessageStatus.delivered,
+        ));
+      });
+    } catch (e) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Error parsing message data: $e');
+    }
+  }
+
+  void _disposePusher() {
+    try {
+      _channel?.unbind('MessageSent');
+      _channel?.unsubscribe();
+      _pusher?.disconnect();
+    } catch (e) {
+      MyPrint.printOnConsole('[PUSHER SOCKET] Error disposing pusher: $e');
+    }
   }
 
   @override
@@ -68,6 +174,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
+    _disposePusher();
     super.dispose();
   }
 
@@ -88,31 +195,161 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     }
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isNotEmpty) {
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    // Add temporary message (optimistic UI)
+    setState(() {
+      messages.add(ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        senderId: currentUserId,
+        message: messageText,
+        timestamp: DateTime.now(),
+        isMe: true,
+        status: MessageStatus.sent,
+      ));
+    });
+
+    // Send to backend
+    final url = Uri.parse('https://172.86.92.130.sslip.io/api/chat/send');
+    final body = jsonEncode({
+      "chat_id": opponentUserId,
+      "message": messageText,
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $currentUserToken",
+        },
+        body: body,
+      );
+      if (response.statusCode == 200) {
+        MyPrint.printOnConsole('Message sent!');
+      } else {
+        MyPrint.printOnConsole('Send failed: ${response.body}');
+      }
+    } catch (e) {
+      MyPrint.printOnConsole('Send error: $e');
+    }
+  }
+
+  Future<void> _setOpponent(String username) async {
+    if (_isLoadingOpponent) return;
+
+    setState(() {
+      _isLoadingOpponent = true;
+    });
+
+    try {
+      final url = Uri.parse('$API_BASE/api/chat/getopponent');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $currentUserToken',
+        },
+        body: jsonEncode({
+          'username': username,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body)['data'];
+        setState(() {
+          opponentUserId = data['id'];
+          opponentUsername = data['username'];
+        });
+
+        MyPrint.printOnConsole('Opponent set: $opponentUsername ($opponentUserId)');
+
+        // Initialize Pusher connection after setting opponent
+        _initPusher();
+      } else {
+        MyPrint.printOnConsole('Failed to get opponent: ${response.body}');
+      }
+    } catch (e) {
+      MyPrint.printOnConsole('Error setting opponent: $e');
+    } finally {
       setState(() {
-        messages.add(
-          ChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            senderId: 'me',
-            message: _messageController.text.trim(),
-            timestamp: DateTime.now(),
-            isMe: true,
-            status: MessageStatus.sent,
-          ),
-        );
+        _isLoadingOpponent = false;
       });
-      _messageController.clear();
+    }
+  }
+
+  void _changeOpponent() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final usernameController = TextEditingController();
+        return AlertDialog(
+          title: Text('Enter Username'),
+          content: TextField(
+            controller: usernameController,
+            decoration: InputDecoration(
+              hintText: 'Username',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final username = usernameController.text.trim();
+                if (username.isNotEmpty) {
+                  Navigator.pop(context);
+                  _disposePusher(); // Dispose current connection
+                  _setOpponent(username); // Set new opponent
+                }
+              },
+              child: Text('Connect'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _sendCustomMessage(dynamic messageData) async {
+    if (opponentUserId == null) return;
+
+    final url = Uri.parse('$API_BASE/api/send-message');
+    final body = jsonEncode({
+      "sender_id": currentUserId,
+      "receiver_id": opponentUserId,
+      "message": messageData, // Can be string, int, or JSON structure
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $currentUserToken",
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        MyPrint.printOnConsole('Custom message sent successfully!');
+      } else {
+        MyPrint.printOnConsole('Send failed: ${response.body}');
+      }
+    } catch (e) {
+      MyPrint.printOnConsole('Send error: $e');
     }
   }
 
   void _startVoiceRecording() {
-    // Implement voice recording logic here
-    print('Starting voice recording...');
-    // You can add voice recording functionality using packages like:
-    // - flutter_sound
-    // - record
-    // - speech_to_text
+    MyPrint.printOnConsole('Starting voice recording...');
   }
 
   void _onButtonPressed() {
@@ -211,7 +448,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -244,27 +481,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _openCamera() {
-    // Implement camera functionality here
-    print('Opening camera...');
-    // You can use packages like:
-    // - image_picker (for photos/videos)
-    // - camera (for more control)
+    MyPrint.printOnConsole('Opening camera...');
   }
 
   void _openGallery() {
-    // Implement gallery functionality here
-    print('Opening gallery...');
-    // You can use packages like:
-    // - image_picker
-    // - photo_manager
+    MyPrint.printOnConsole('Opening gallery...');
   }
 
   void _openDocuments() {
-    // Implement document picker functionality here
-    print('Opening document picker...');
-    // You can use packages like:
-    // - file_picker
-    // - document_file_save_plus
+    MyPrint.printOnConsole('Opening document picker...');
   }
 
   @override
@@ -352,8 +577,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       ),
       body: Column(
         children: [
-          // Remove this line to eliminate the border:
-          // Container(height: 1, color: Colors.grey[200]),
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -380,19 +603,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 AnimatedBuilder(
                   animation: _widthAnimation,
                   builder: (context, child) {
-                    final baseWidth =
-                        MediaQuery.of(context).size.width -
-                            32 -
-                            44 -
-                            44 -
-                            16; // Total - padding - buttons - spacing
+                    final baseWidth = MediaQuery.of(context).size.width -
+                        32 -
+                        44 -
+                        44 -
+                        16;
                     final compactWidth = baseWidth * 1;
                     final expandedWidth = baseWidth;
 
-                    final currentWidth =
-                        compactWidth +
-                            (_widthAnimation.value *
-                                (expandedWidth - compactWidth));
+                    final currentWidth = compactWidth +
+                        (_widthAnimation.value *
+                            (expandedWidth - compactWidth));
 
                     return SizedBox(
                       height: 50,
@@ -466,8 +687,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                               ),
                             );
                           },
-                          child:
-                          _hasText
+                          child: _hasText
                               ? Icon(
                             Icons.send,
                             key: ValueKey('send'),
