@@ -8,6 +8,7 @@ import 'package:overlay_support/overlay_support.dart';
 import 'package:responsive_builder/responsive_builder.dart';
 
 import '../backend/app_init_controller.dart';
+import '../backend/chats/chats_provider.dart';
 import '../backend/common/app_theme/app_theme_provider.dart';
 import '../backend/common/dependency_injection.dart';
 import '../backend/navigation/navigation_controller.dart';
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<AppThemeProvider>.value(value: DependencyInjection.appThemeProvider),
         ChangeNotifierProvider<AuthenticationProvider>.value(value: DependencyInjection.authenticationProvider),
+        ChangeNotifierProvider<ChatProvider>.value(value: DependencyInjection.chatProvider),
       ],
       child: const MainApp(),
     );
@@ -47,7 +49,7 @@ class MainApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 navigatorKey: NavigationController.mainScreenNavigator,
                 title: "DarkCrypt Chat",
-                theme: appThemeProvider.getThemeData(),
+                theme: appThemeProvider.getDarkThemeData(),
                 initialRoute: AppInitController.isNavigateToObBoardingScreen ? SplashScreen.routeName : null,
                 onGenerateRoute: NavigationController.onMainAppGeneratedRoutes,
                 builder: (BuildContext context, Widget? child) {

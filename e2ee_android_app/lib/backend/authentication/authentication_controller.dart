@@ -1,3 +1,4 @@
+import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
@@ -72,6 +73,8 @@ class AuthenticationController {
       Map<String, dynamic> payload = {
         "username": username,
         "password": password,
+        "publicKey": keyBundle['publicKey'],
+        "identityKey": keyBundle['identityKey'],
       };
 
       MyPrint.printOnConsole("Payload: $payload");
@@ -83,7 +86,16 @@ class AuthenticationController {
 
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
         MyPrint.printOnConsole("Saving auth token: $accessToken");
-        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+        await SharedPrefManager()
+            .setString(MySharedPreferenceVariables.authToken, accessToken);
+
+        await _authenticationRepository.uploadKeyBundle(
+          token: accessToken,
+          keyBundle: keyBundle,
+        );
+
+        // Save current user id here!
+        await saveCurrentUserId(username: username, accessToken: accessToken);
 
         MyPrint.printOnConsole("Registration successful");
         MyToast.showSuccess(context: context, msg: "Registration successful!");
@@ -106,6 +118,58 @@ class AuthenticationController {
     } catch (e) {
       MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
       MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
+      return false;
+    }
+  }
+
+  Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
+    try {
+      MyPrint.printOnConsole("Generating keys for login...");
+      final keyBundle = await KeyManager.generateAndStoreKeys();
+
+      Map<String, dynamic> payload = {
+        "username": username,
+        "password": password,
+        "publicKey": keyBundle['publicKey'],
+        "identityKey": keyBundle['identityKey'],
+      };
+
+      MyPrint.printOnConsole("Login payload: $payload");
+
+      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+      final accessToken = result?['data']?['access_token'];
+
+      if (result != null && accessToken != null && accessToken.isNotEmpty) {
+        await SharedPrefManager()
+            .setString(MySharedPreferenceVariables.authToken, accessToken);
+
+        await _authenticationRepository.uploadKeyBundle(
+          token: accessToken,
+          keyBundle: keyBundle,
+        );
+
+        // Save current user id here!
+        await saveCurrentUserId(username: username, accessToken: accessToken);
+
+
+        NavigationController.navigateToPinEntryScreen(
+          navigationOperationParameters: NavigationOperationParameters(
+            context: context,
+            navigationType: NavigationType.pushNamedAndRemoveUntil,
+          ),
+          arguments: PinEntryScreenNavigationArguments(
+            mode: PinScreenMode.set,
+          ),
+        );
+        return true;
+      } else {
+        String errorMsg = result?['message'] ?? "Login failed. Please try again.";
+        MyToast.showError(context: context, msg: errorMsg);
+        return false;
+      }
+    } catch (e) {
+      MyPrint.printOnConsole('Error in loginWithUsernamePassword: $e');
+      MyToast.showError(context: context, msg: "An error occurred during login. Please try again.");
       return false;
     }
   }
@@ -141,6 +205,22 @@ class AuthenticationController {
   Future<bool> verifyPin(String pin) async {
     final storedPin = await _storage.read(key: _pinKey);
     return pin == storedPin;
+  }
+
+  Future<void> saveCurrentUserId({
+    required String username,
+    required String accessToken,
+  }) async {
+    final chatUser = await ChatRepository().fetchChatUser(
+      username: username,
+      token: accessToken,
+    );
+    if (chatUser != null && chatUser.id.isNotEmpty) {
+      await SharedPrefManager().setString('current_user_id', chatUser.id);
+      print('[DEBUG] Saved current user id: ${chatUser.id}');
+    } else {
+      print('[ERROR] Could not fetch or save user id!');
+    }
   }
 
   Future<void> wipeAllAuthData() async {

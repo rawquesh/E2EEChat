@@ -1,12 +1,14 @@
 import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/views/authentication/screens/pin_entry_screen.dart';
 import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
-import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
-import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../backend/authentication/authentication_controller.dart';
+import '../../../backend/authentication/authentication_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = "/LoginScreen";
@@ -19,6 +21,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with MySafeState {
   static const double radius = 12;
+
+  late AuthenticationController authenticationController;
+  late AuthenticationProvider authenticationProvider;
 
   bool isLoading = false;
   final TextEditingController usernameController = TextEditingController();
@@ -35,6 +40,11 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   @override
   void initState() {
     super.initState();
+    authenticationProvider = context.read<AuthenticationProvider>();
+    authenticationController = AuthenticationController(
+      authenticationProvider: authenticationProvider,
+    );
+
     usernameController.addListener(_onUsernameChanged);
     passwordController.addListener(_onPasswordChanged);
     // _checkBiometricAvailability();
@@ -159,35 +169,15 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     setState(() => isLoading = true);
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      final success = await authenticationController.loginWithUsernamePassword(
+          context, username, password);
 
-      bool loginSuccess = true; // Change this based on your actual logic
-
-      if (loginSuccess) {
-        MyToast.showSuccess(context: context, msg: "Login successful");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => PinEntryScreen(
-                  arguments: PinEntryScreenNavigationArguments(
-                    mode: PinScreenMode.set,
-                  ),
-                ),
-          ),
-        );
-      } else {
+      if (!success) {
         failedAttempts++;
         await _saveFailedAttempts();
 
         if (failedAttempts >= 5) {
           await _triggerDataWipe();
-        } else {
-          MyToast.showError(
-            context: context,
-            msg:
-                "Invalid credentials. ${5 - failedAttempts} attempts remaining.",
-          );
         }
       }
     } catch (e) {
@@ -211,10 +201,6 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
           context: context,
           msg: "Biometric authentication successful!",
         );
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => PinEntryScreen()),
-        // );
       }
     } catch (e) {
       MyToast.showError(

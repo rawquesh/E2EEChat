@@ -18,9 +18,11 @@ class ChatController {
   ChatRepository get chatRepository => _chatRepository;
 
   Future<bool> searchUser(String username) async {
+    MyPrint.printOnConsole("searchUser called with username: $username");
     try {
       final token = await SharedPrefManager()
           .getString(MySharedPreferenceVariables.authToken);
+      MyPrint.printOnConsole("Token retrieved: $token");
       if (token == null || token.isEmpty) return false;
       final chatUser = await _chatRepository.fetchChatUser(
         username: username,
@@ -42,12 +44,14 @@ class ChatController {
   Future<bool> sendMessage({required String message}) async {
     final opponent = _chatProvider.currentOpponent.get();
     if (opponent == null) return false;
-    final token = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.authToken);
-    if (token == null || token.isEmpty) return false;
+    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    final senderId = await SharedPrefManager().getString('current_user_id');
+    final receiverId = opponent.id;
+    if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
     return _chatRepository.sendMessage(
       token: token,
-      chatId: opponent.id,
+      senderId: senderId,
+      receiverId: receiverId,
       message: message,
     );
   }

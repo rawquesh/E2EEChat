@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:e2ee_android_app/backend/common/dependency_injection.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -11,13 +12,14 @@ import 'package:flutter/material.dart';
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 import 'package:provider/provider.dart';
 
+import '../../../backend/chats/chat_repository.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
 
 class ChatMessageScreen extends StatefulWidget {
-  final ChatUserModel user;
+  final ChatUserModel  user;
 
   const ChatMessageScreen({Key? key, required this.user}) : super(key: key);
 
@@ -27,29 +29,30 @@ class ChatMessageScreen extends StatefulWidget {
 
 class _ChatMessageScreenState extends State<ChatMessageScreen>
     with TickerProviderStateMixin, MySafeState {
+  // --- State & Controllers ---
   final TextEditingController _messageController = TextEditingController();
-  List<ChatMessageModel> messages = [];
-  PusherClient? _pusher;
-  Channel? _channel;
-  late ChatController _chatController;
-  late ChatProvider _chatProvider;
+  final List<ChatMessageModel> messages = [];
+  late final ChatController _chatController;
+  late final ChatProvider _chatProvider;
+
+  // ✨ ADD a ScrollController to manage the ListView's scroll position.
+  final ScrollController _scrollController = ScrollController();
+
+  // NOTE: You'll likely want to inject your repository rather than instantiate it here.
+  // For this example, we'll create it directly.
+  final ChatRepository _chatRepository = ChatRepository();
 
   String currentUserId = '';
   String currentUserToken = '';
   String? opponentUserId;
   String? opponentUsername;
 
-  // API Base URL
-  static const String API_BASE = 'https://172.86.92.130.sslip.io';
-
-  // Animation controllers
-  late AnimationController _iconAnimationController;
-  late AnimationController _widthAnimationController;
-  late Animation<double> _iconAnimation;
-  late Animation<double> _widthAnimation;
-
+  // --- Animation ---
+  late final AnimationController _iconAnimationController;
+  late final AnimationController _widthAnimationController;
+  late final Animation<double> _iconAnimation;
+  late final Animation<double> _widthAnimation;
   bool _hasText = false;
-  bool _isLoadingOpponent = false;
 
   @override
   void initState() {
@@ -57,116 +60,56 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
 
-    messages = [];
-
-    // Initialize animation controllers
-    _iconAnimationController = AnimationController(
-      duration: Duration(milliseconds: 200),
-      vsync: this,
-    );
-
-    _widthAnimationController = AnimationController(
-      duration: Duration(milliseconds: 250),
-      vsync: this,
-    );
-
-    // Create animations
-    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _iconAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _widthAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _messageController.addListener(_onTextChanged);
-
     opponentUserId = widget.user.id;
     opponentUsername = widget.user.name;
-    _initialize();
+
+    _initializeAnimations();
+    _messageController.addListener(_onTextChanged);
+    _initializeChat();
   }
 
-  Future<void> _initialize() async {
-    currentUserId = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.userId) ??
-        '';
-    currentUserToken = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.authToken) ??
-        '';
-    _chatProvider.currentOpponent
-        .set(value: widget.user, isNotify: false);
-    _initPusher();
-  }
-
-
-  void _initPusher() {
-    // Configure Pusher options
-    final options = PusherOptions(
-      key: 'sip6lkxyrl3d0um6vbv9',
-      cluster: 'mt1',
-      host: '172.86.92.130.sslip.io',
-      wsPort: 8080,
-      wssPort: 443,
-      encrypted: false,
-      authOptions: PusherAuthOptions(
-        'https://172.86.92.130.sslip.io/broadcasting/auth',
-        headers: {
-          'Authorization': 'Bearer $currentUserToken',
-        },
-      ),
-      // enableLogging: true,
-      // autoConnect: false,
-    );
-
-    // Initialize the client
-    _pusher = PusherClient(options: options);
-
-    // Set up connection event handlers
-    _pusher!.onConnectionEstablished((data) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Connection established - socket-id: ${_pusher!.socketId}');
-    });
-
-    _pusher!.onConnectionError((error) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Connection error: $error');
-    });
-
-    _pusher!.onError((error) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Error: $error');
-    });
-
-    _pusher!.onDisconnected((data) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Disconnected: $data');
-    });
-
-    // Connect to Pusher
-    _pusher!.connect();
-
-    final channelName = 'private-chat.$currentUserId';
-    MyPrint.printOnConsole('[PUSHER DEBUG] Subscribing to channel: $channelName');
-
-
-    _channel = _pusher!.channel(channelName);
-
-    // Listen for events on the channel
-    _channel!.bind('MessageSent', (data) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Received MessageSent event: $data');
-      if (data != null) {
-        _handleIncomingMessage(data);
+  void _scrollToBottom() {
+    // We use a post-frame callback to ensure the ListView has been updated
+    // before we try to scroll.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
 
+  void _initializeAnimations() {
+    _iconAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
+    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
+    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
+  }
+
+  Future<void> _initializeChat() async {
+    currentUserId = await SharedPrefManager().getString('current_user_id') ?? '';
+    currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+
+    _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
+
+    // Tell the repository to start listening for messages
+    _chatRepository.initPusher(
+      userId: currentUserId,
+      token: currentUserToken,
+      onMessageReceived: _handleIncomingMessage, // Provide the callback
+    );
+  }
+
+  // This is the callback function passed to the repository.
+  // It only contains UI logic.
   void _handleIncomingMessage(dynamic data) {
-    MyPrint.printOnConsole('[CHAT DEBUG] Received message event data: $data');
+    MyPrint.printOnConsole('[CHAT UI] Received message data: $data');
     try {
-      // Parse the data if it's a string
       final messageData = data is String ? jsonDecode(data) : data;
+      if (!mounted) return;
 
       setState(() {
         messages.add(ChatMessageModel(
@@ -178,53 +121,29 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           status: 'delivered',
         ));
       });
+      _scrollToBottom();
     } catch (e) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Error parsing message data: $e');
+      MyPrint.printOnConsole('[CHAT UI] Error parsing message data: $e');
     }
-  }
-
-  void _disposePusher() {
-    try {
-      _channel?.unbind('MessageSent');
-      _channel?.unsubscribe();
-      _pusher?.disconnect();
-    } catch (e) {
-      MyPrint.printOnConsole('[PUSHER SOCKET] Error disposing pusher: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _messageController.removeListener(_onTextChanged);
-    _messageController.dispose();
-    _iconAnimationController.dispose();
-    _widthAnimationController.dispose();
-    _disposePusher();
-    super.dispose();
   }
 
   void _onTextChanged() {
     final hasText = _messageController.text.trim().isNotEmpty;
     if (hasText != _hasText) {
-      setState(() {
-        _hasText = hasText;
-      });
-
-      if (hasText) {
-        _iconAnimationController.forward();
-        _widthAnimationController.forward();
-      } else {
-        _iconAnimationController.reverse();
-        _widthAnimationController.reverse();
-      }
+      if (!mounted) return;
+      setState(() => _hasText = hasText);
+      hasText ? _iconAnimationController.forward() : _iconAnimationController.reverse();
+      hasText ? _widthAnimationController.forward() : _widthAnimationController.reverse();
     }
   }
 
   void _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
-
     final messageText = _messageController.text.trim();
+    if (messageText.isEmpty) return;
+
     _messageController.clear();
+
+    // Optimistically update the UI
     setState(() {
       messages.add(ChatMessageModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -236,100 +155,25 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       ));
     });
 
+    _scrollToBottom();
+
+    // The controller already correctly calls the repository
     final success = await _chatController.sendMessage(message: messageText);
     if (!success) {
       MyPrint.printOnConsole('Send failed');
+      // Here you might want to update the message status to 'failed'
     }
   }
 
-  Future<void> _setOpponent(String username) async {
-    if (_isLoadingOpponent) return;
-
-    setState(() {
-      _isLoadingOpponent = true;
-    });
-
-    try {
-      final success = await _chatController.searchUser(username);
-      if (success) {
-        final opponent = _chatProvider.currentOpponent.get();
-        opponentUserId = opponent?.id;
-        opponentUsername = opponent?.name;
-        _initPusher();
-      }
-    } catch (e) {
-      MyPrint.printOnConsole('Error setting opponent: $e');
-    } finally {
-      setState(() {
-        _isLoadingOpponent = false;
-      });
-    }
-  }
-
-  void _changeOpponent() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final usernameController = TextEditingController();
-        return AlertDialog(
-          title: Text('Enter Username'),
-          content: TextField(
-            controller: usernameController,
-            decoration: InputDecoration(
-              hintText: 'Username',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final username = usernameController.text.trim();
-                if (username.isNotEmpty) {
-                  Navigator.pop(context);
-                  _disposePusher(); // Dispose current connection
-                  _setOpponent(username); // Set new opponent
-                }
-              },
-              child: Text('Connect'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _sendCustomMessage(dynamic messageData) async {
-    if (opponentUserId == null) return;
-
-    final url = Uri.parse('$API_BASE/api/send-message');
-    final body = jsonEncode({
-      "sender_id": currentUserId,
-      "receiver_id": opponentUserId,
-      "message": messageData, // Can be string, int, or JSON structure
-    });
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $currentUserToken",
-        },
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        MyPrint.printOnConsole('Custom message sent successfully!');
-      } else {
-        MyPrint.printOnConsole('Send failed: ${response.body}');
-      }
-    } catch (e) {
-      MyPrint.printOnConsole('Send error: $e');
-    }
+  @override
+  void dispose() {
+    _messageController.removeListener(_onTextChanged);
+    _messageController.dispose();
+    _iconAnimationController.dispose();
+    _widthAnimationController.dispose();
+    // Tell the repository to clean up its connection
+    _chatRepository.disposePusher();
+    super.dispose();
   }
 
   void _startVoiceRecording() {
@@ -481,7 +325,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     super.pageBuild();
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBar  (
         backgroundColor: themeData.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
@@ -563,6 +407,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               itemCount: messages.length,
               itemBuilder: (context, index) {

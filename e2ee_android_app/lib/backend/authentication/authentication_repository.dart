@@ -235,6 +235,31 @@ class AuthenticationRepository {
     }
   }
 
+  Future<bool> uploadKeyBundle({
+    required String token,
+    required Map<String, dynamic> keyBundle,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/keys'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode(keyBundle),
+      );
+
+      MyPrint.printOnConsole(
+          'Key upload response code: ${response.statusCode}');
+      MyPrint.printOnConsole('Key upload response body: ${response.body}');
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      MyPrint.printOnConsole('Error uploading key bundle: $e');
+      return false;
+    }
+  }
+
   Future<UserModel?> getUserFromToken(String token) async {
     try {
       final response = await http.get(

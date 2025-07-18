@@ -1,21 +1,107 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
-
-import '../../views/chats/screens/chat_list_screen.dart';
-import 'package:http/http.dart' as http;
+import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:pusher_client_socket/pusher_client_socket.dart';
 
 class ChatRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
+  PusherClient? _pusher;
+  Channel? _channel;
 
+  // Method to initialize Pusher and listen for messages
+  void initPusher({
+    required String userId,
+    required String token,
+    required Function(dynamic data) onMessageReceived,
+  }) {
+    final options = PusherOptions(
+      key: 'sip6lkxyrl3d0um6vbv9',
+      cluster: 'mt1',
+      host: '172.86.92.130.sslip.io',
+      wsPort: 8080,
+      wssPort: 443,
+      encrypted: false,
+      authOptions: PusherAuthOptions(
+        'https://172.86.92.130.sslip.io/broadcasting/auth',
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+    );
+
+    _pusher = PusherClient(options: options);
+
+    _pusher!.onConnectionEstablished((_) {
+      MyPrint.printOnConsole('[PUSHER REPO] Connection established - socket-id: ${_pusher!.socketId}');
+    });
+
+    _pusher!.onConnectionError((error) => MyPrint.printOnConsole('[PUSHER REPO] Connection error: $error'));
+    _pusher!.onError((error) => MyPrint.printOnConsole('[PUSHER REPO] Error: $error'));
+
+    _pusher!.connect();
+
+    final channelName = 'private-chat.$userId';
+    _channel = _pusher!.channel(channelName);
+
+    _channel!.bind('MessageSent', (data) {
+      MyPrint.printOnConsole('[PUSHER REPO] Received MessageSent event: $data');
+      if (data != null) {
+        // Use the callback to pass the data to the UI layer
+        onMessageReceived(data);
+      }
+    });
+  }
+
+  // Method to clean up Pusher resources
+  void disposePusher() {
+    try {
+      _channel?.unbind('MessageSent');
+      _pusher?.disconnect();
+      MyPrint.printOnConsole('[PUSHER REPO] Disposed Pusher connection.');
+    } catch (e) {
+      MyPrint.printOnConsole('[PUSHER REPO] Error disposing pusher: $e');
+    }
+  }
+
+  Future<bool> sendMessage({
+    required String token,
+    required String senderId,
+    required String receiverId,
+    required String message,
+  }) async {
+    final url = Uri.parse('$baseUrl/send-message');
+    final body = jsonEncode({
+      "sender_id": senderId,
+      "receiver_id": receiverId,
+      "message": message,
+    });
+    MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
+      );
+      MyPrint.printOnConsole('[SEND DEBUG] Status: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      MyPrint.printOnConsole('[SEND DEBUG] Error sending message: $e');
+      return false;
+    }
+  }
+
+  // fetchChatUser remains the same
   Future<ChatUserModel?> fetchChatUser({
     required String username,
     required String token,
   }) async {
+    // ... existing implementation
     final url = Uri.parse('$baseUrl/chat/getopponent');
     final body = jsonEncode({"username": username});
-    print('Making POST request to $url with body: $body');
-
     final response = await http.post(
       url,
       headers: {
@@ -26,32 +112,11 @@ class ChatRepository {
       body: body,
     );
 
-    print('Status code: ${response.statusCode}');
-    print('Response body: ${response.body}');
-
     if (response.statusCode == 200) {
       final dynamic data = json.decode(response.body)['data'];
       return ChatUserModel.fromMap(data);
     } else {
       return null;
     }
-  }
-
-  Future<bool> sendMessage({
-    required String token,
-    required String chatId,
-    required String message,
-  }) async {
-    final url = Uri.parse('$baseUrl/chat/send');
-    final body = jsonEncode({"chat_id": chatId, "message": message});
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: body,
-    );
-    return response.statusCode == 200;
   }
 }
