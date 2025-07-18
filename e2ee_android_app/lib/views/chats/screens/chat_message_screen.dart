@@ -1,16 +1,23 @@
 import 'dart:convert';
+import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
+import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:pusher_client_socket/pusher_client_socket.dart';
+import 'package:provider/provider.dart';
 
+import '../../../backend/chats/chats_controller.dart';
+import '../../../backend/chats/chats_provider.dart';
 import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
 
 class ChatMessageScreen extends StatefulWidget {
-  final ChatUser user;
+  final ChatUserModel user;
 
   const ChatMessageScreen({Key? key, required this.user}) : super(key: key);
 
@@ -21,13 +28,15 @@ class ChatMessageScreen extends StatefulWidget {
 class _ChatMessageScreenState extends State<ChatMessageScreen>
     with TickerProviderStateMixin, MySafeState {
   final TextEditingController _messageController = TextEditingController();
-  List<ChatMessage> messages = [];
+  List<ChatMessageModel> messages = [];
   PusherClient? _pusher;
   Channel? _channel;
+  late ChatController _chatController;
+  late ChatProvider _chatProvider;
 
-  final String currentUserId = 'dee2fb8b-b5fa-42b7-9ebd-cd3412e3dff8';
-  final String currentUserToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovLzE3Mi44Ni45Mi4xMzAuc3NsaXAuaW8vYXBpL2F1dGgvcmVnaXN0ZXIiLCJpYXQiOjE3NTI3ODg2ODIsImV4cCI6MTc1ODc4ODY4MiwibmJmIjoxNzUyNzg4NjgyLCJqdGkiOiJmWnhDMVRLcHdoeElFejlrIiwic3ViIjoiZGVlMmZiOGItYjVmYS00MmI3LTllYmQtY2QzNDEyZTNkZmY4IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyIsInVzZXJuYW1lIjoidXNlcjEiLCJyb2xlIjpbXSwic2Vzc2lvbl90b2tlbiI6ImFkY2U0NTNhLWQyNWEtNDdmNi1iY2VmLTI1YTBkMGM2MTBmMiJ9.J84DB_ADRLwPLbiER6A-z028LkW8Av6gTRL6TrhpU9Q';
-  String? opponentUserId = "b2dbf505-cf02-4f50-abf4-ff644d0bbbf5";
+  String currentUserId = '';
+  String currentUserToken = '';
+  String? opponentUserId;
   String? opponentUsername;
 
   // API Base URL
@@ -45,7 +54,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   @override
   void initState() {
     super.initState();
-    // Initialize with empty messages for testing
+    _chatProvider = context.read<ChatProvider>();
+    _chatController = ChatController(chatProvider: _chatProvider);
+
     messages = [];
 
     // Initialize animation controllers
@@ -76,9 +87,23 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _messageController.addListener(_onTextChanged);
 
-    // Hardcoded opponent username for testing
-    _setOpponent('user2');
+    opponentUserId = widget.user.id;
+    opponentUsername = widget.user.name;
+    _initialize();
   }
+
+  Future<void> _initialize() async {
+    currentUserId = await SharedPrefManager()
+        .getString(MySharedPreferenceVariables.userId) ??
+        '';
+    currentUserToken = await SharedPrefManager()
+        .getString(MySharedPreferenceVariables.authToken) ??
+        '';
+    _chatProvider.currentOpponent
+        .set(value: widget.user, isNotify: false);
+    _initPusher();
+  }
+
 
   void _initPusher() {
     // Configure Pusher options
@@ -144,13 +169,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       final messageData = data is String ? jsonDecode(data) : data;
 
       setState(() {
-        messages.add(ChatMessage(
+        messages.add(ChatMessageModel(
           id: messageData['id'].toString(),
           senderId: messageData['sender_id'],
           message: messageData['message'],
           timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
           isMe: messageData['sender_id'] == currentUserId,
-          status: MessageStatus.delivered,
+          status: 'delivered',
         ));
       });
     } catch (e) {
@@ -200,42 +225,20 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     final messageText = _messageController.text.trim();
     _messageController.clear();
-
-    // Add temporary message (optimistic UI)
     setState(() {
-      messages.add(ChatMessage(
+      messages.add(ChatMessageModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         senderId: currentUserId,
         message: messageText,
         timestamp: DateTime.now(),
         isMe: true,
-        status: MessageStatus.sent,
+        status: 'sent',
       ));
     });
 
-    // Send to backend
-    final url = Uri.parse('https://172.86.92.130.sslip.io/api/chat/send');
-    final body = jsonEncode({
-      "chat_id": opponentUserId,
-      "message": messageText,
-    });
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $currentUserToken",
-        },
-        body: body,
-      );
-      if (response.statusCode == 200) {
-        MyPrint.printOnConsole('Message sent!');
-      } else {
-        MyPrint.printOnConsole('Send failed: ${response.body}');
-      }
-    } catch (e) {
-      MyPrint.printOnConsole('Send error: $e');
+    final success = await _chatController.sendMessage(message: messageText);
+    if (!success) {
+      MyPrint.printOnConsole('Send failed');
     }
   }
 
@@ -247,31 +250,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     });
 
     try {
-      final url = Uri.parse('$API_BASE/api/chat/getopponent');
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $currentUserToken',
-        },
-        body: jsonEncode({
-          'username': username,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body)['data'];
-        setState(() {
-          opponentUserId = data['id'];
-          opponentUsername = data['username'];
-        });
-
-        MyPrint.printOnConsole('Opponent set: $opponentUsername ($opponentUserId)');
-
-        // Initialize Pusher connection after setting opponent
+      final success = await _chatController.searchUser(username);
+      if (success) {
+        final opponent = _chatProvider.currentOpponent.get();
+        opponentUserId = opponent?.id;
+        opponentUsername = opponent?.name;
         _initPusher();
-      } else {
-        MyPrint.printOnConsole('Failed to get opponent: ${response.body}');
       }
     } catch (e) {
       MyPrint.printOnConsole('Error setting opponent: $e');

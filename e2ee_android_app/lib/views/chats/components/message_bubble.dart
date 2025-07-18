@@ -1,10 +1,11 @@
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 
 import '../screens/chat_list_screen.dart';
 
 class MessageBubble extends StatefulWidget {
-  final ChatMessage message;
+  final ChatMessageModel message;
 
   const MessageBubble({Key? key, required this.message}) : super(key: key);
 
@@ -103,13 +104,13 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                     if (widget.message.isMe) ...[
                       SizedBox(width: 4),
                       Icon(
-                        widget.message.status == MessageStatus.sent
+                        widget.message.status == "sent"
                             ? Icons.check
-                            : widget.message.status == MessageStatus.delivered
+                            : widget.message.status == "delivered"
                             ? Icons.done_all
                             : Icons.done_all,
                         size: 12,
-                        color: widget.message.status == MessageStatus.read
+                        color: widget.message.status == "read"
                             ? Color(0xFFE6A532)
                             : Colors.grey[500],
                       ),

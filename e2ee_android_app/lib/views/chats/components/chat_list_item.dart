@@ -1,10 +1,11 @@
+import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
 
 import '../screens/chat_list_screen.dart';
 
 class ChatListItem extends StatefulWidget {
-  final ChatUser user;
+  final ChatUserModel user;
   final VoidCallback onTap;
 
   const ChatListItem({
