@@ -1,3 +1,4 @@
+import '../../utils/my_utils.dart';
 import '../../utils/parsing_helper.dart';
 
 class ChatMessageModel {
@@ -26,5 +27,21 @@ class ChatMessageModel {
       isMe: ParsingHelper.parseStringMethod(map['sender_id']) == currentUserId,
       status: ParsingHelper.parseStringMethod(map['status']),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'sender_id': senderId,
+      'message': message,
+      'timestamp': timestamp.toIso8601String(),
+      'is_me': isMe,
+      'status': status,
+    };
+  }
+
+  @override
+  String toString() {
+    return MyUtils.encodeJson(toMap());
   }
 }

@@ -1,0 +1,64 @@
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
+import 'package:e2ee_models_app/utils/hive_manager.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:hive/hive.dart';
+
+class MessageRepository {
+  Future<Box?> _openBox(String chatId) {
+    return HiveManager().openBox(boxName: 'messages_'
+        '$chatId');
+  }
+
+  Future<void> addMessage({
+    required String chatId,
+    required ChatMessageModel message,
+  }) async {
+    final box = await _openBox(chatId);
+    try {
+      await box?.put(message.id, message.toMap());
+    } catch (e) {
+      MyPrint.printOnConsole('Error saving message: $e');
+    }
+  }
+
+  Future<List<ChatMessageModel>> getMessagesPage({
+    required String chatId,
+    required int limit,
+    required int offset,
+    required String currentUserId,
+  }) async {
+    final box = await _openBox(chatId);
+    if (box == null) return [];
+    final entries = box.toMap().entries.toList();
+    entries.sort((a, b) {
+      final at = DateTime.tryParse(a.value['timestamp'] ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bt = DateTime.tryParse(b.value['timestamp'] ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return bt.compareTo(at);
+    });
+    final page = entries.skip(offset).take(limit).toList();
+    return page
+        .map((e) => ChatMessageModel.fromMap(
+      Map<String, dynamic>.from(e.value),
+      currentUserId: currentUserId,
+    ))
+        .toList();
+  }
+
+  Stream<ChatMessageModel?> watchMessages({
+    required String chatId,
+    required String currentUserId,
+  }) async* {
+    final box = await _openBox(chatId);
+    if (box == null) return;
+    await for (final event in box.watch()) {
+      if (event.value != null) {
+        yield ChatMessageModel.fromMap(
+          Map<String, dynamic>.from(event.value),
+          currentUserId: currentUserId,
+        );
+      }
+    }
+  }
+}

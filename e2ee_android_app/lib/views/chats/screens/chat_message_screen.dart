@@ -35,11 +35,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   late final ChatController _chatController;
   late final ChatProvider _chatProvider;
 
-  // ✨ ADD a ScrollController to manage the ListView's scroll position.
+  int _loadedMessages = 0;
+  final int _pageSize = 50;
+  bool _isLoadingMore = false;
+
   final ScrollController _scrollController = ScrollController();
 
-  // NOTE: You'll likely want to inject your repository rather than instantiate it here.
-  // For this example, we'll create it directly.
   final ChatRepository _chatRepository = ChatRepository();
 
   String currentUserId = '';
@@ -95,11 +96,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
-    messages.addAll(_chatProvider.getMessagesFor(widget.user.id));
-    if (mounted) {
-      setState(() {});
-      _scrollToBottom();
-    }
+    await _loadInitialMessages();
+
+    _scrollController.addListener(() {
+      if (_scrollController.offset <= _scrollController.position.minScrollExtent + 50 && !_isLoadingMore) {
+        _loadMoreMessages();
+      }
+    });
 
     // Tell the repository to start listening for messages
     _chatRepository.initPusher(
@@ -108,27 +111,55 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       onMessageReceived: _handleIncomingMessage, // Provide the callback
     );
   }
+  Future<void> _loadInitialMessages() async {
+    final fetched = await _chatController.fetchMessagesPage(
+      chatId: widget.user.id,
+      limit: _pageSize,
+      offset: _loadedMessages,
+      currentUserId: currentUserId,
+    );
+    _loadedMessages += fetched.length;
+    messages.insertAll(0, fetched.reversed.toList());
+    if (mounted) setState(() {});
+    _scrollToBottom();
+  }
 
-  // This is the callback function passed to the repository.
-  // It only contains UI logic.
-  void _handleIncomingMessage(dynamic data) {
+  Future<void> _loadMoreMessages() async {
+    _isLoadingMore = true;
+    final fetched = await _chatController.fetchMessagesPage(
+      chatId: widget.user.id,
+      limit: _pageSize,
+      offset: _loadedMessages,
+      currentUserId: currentUserId,
+    );
+    _loadedMessages += fetched.length;
+    messages.insertAll(0, fetched.reversed.toList());
+    if (mounted) setState(() {});
+    _isLoadingMore = false;
+  }
+
+  Future<void> _handleIncomingMessage(dynamic data) async {
     MyPrint.printOnConsole('[CHAT UI] Received message data: $data');
     try {
       final messageData = data is String ? jsonDecode(data) : data;
       if (!mounted) return;
 
+      final msg = ChatMessageModel(
+        id: messageData['id'].toString(),
+        senderId: messageData['sender_id'],
+        message: messageData['message'],
+        timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
+        isMe: messageData['sender_id'] == currentUserId,
+        status: 'delivered',
+      );
+
       setState(() {
-        final msg = ChatMessageModel(
-          id: messageData['id'].toString(),
-          senderId: messageData['sender_id'],
-          message: messageData['message'],
-          timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
-          isMe: messageData['sender_id'] == currentUserId,
-          status: 'delivered',
-        );
         messages.add(msg);
-        _chatProvider.addMessageFor(widget.user.id, msg);
       });
+
+      _chatProvider.addMessageFor(widget.user.id, msg);
+      await _chatController.saveLocalMessage(chatId: widget.user.id, message: msg);
+
       _scrollToBottom();
     } catch (e) {
       MyPrint.printOnConsole('[CHAT UI] Error parsing message data: $e');
@@ -166,6 +197,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     });
 
     _chatProvider.addMessageFor(widget.user.id, localMessage);
+
+    await _chatController.saveLocalMessage(chatId: widget.user.id, message: localMessage);
 
     _scrollToBottom();
 
