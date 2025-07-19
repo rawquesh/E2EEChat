@@ -96,6 +96,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
     messages.addAll(_chatProvider.getMessagesFor(widget.user.id));
+    if (mounted) {
+      setState(() {});
+      _scrollToBottom();
+    }
 
     // Tell the repository to start listening for messages
     _chatRepository.initPusher(
