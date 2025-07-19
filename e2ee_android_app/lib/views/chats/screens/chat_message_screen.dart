@@ -95,6 +95,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
+    messages.addAll(_chatProvider.getMessagesFor(widget.user.id));
+
     // Tell the repository to start listening for messages
     _chatRepository.initPusher(
       userId: currentUserId,
@@ -112,14 +114,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       if (!mounted) return;
 
       setState(() {
-        messages.add(ChatMessageModel(
+        final msg = ChatMessageModel(
           id: messageData['id'].toString(),
           senderId: messageData['sender_id'],
           message: messageData['message'],
           timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
           isMe: messageData['sender_id'] == currentUserId,
           status: 'delivered',
-        ));
+        );
+        messages.add(msg);
+        _chatProvider.addMessageFor(widget.user.id, msg);
       });
       _scrollToBottom();
     } catch (e) {
@@ -143,17 +147,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _messageController.clear();
 
+    final localMessage = ChatMessageModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: currentUserId,
+      message: messageText,
+      timestamp: DateTime.now(),
+      isMe: true,
+      status: 'sent',
+    );
+
     // Optimistically update the UI
     setState(() {
-      messages.add(ChatMessageModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: currentUserId,
-        message: messageText,
-        timestamp: DateTime.now(),
-        isMe: true,
-        status: 'sent',
-      ));
+      messages.add(localMessage);
     });
+
+    _chatProvider.addMessageFor(widget.user.id, localMessage);
 
     _scrollToBottom();
 

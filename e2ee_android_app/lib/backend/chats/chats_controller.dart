@@ -19,6 +19,9 @@ class ChatController {
 
   Future<bool> searchUser(String username) async {
     MyPrint.printOnConsole("searchUser called with username: $username");
+
+    _chatProvider.searchState.set(value: SearchState.loading, isNotify: true);
+
     try {
       final token = await SharedPrefManager()
           .getString(MySharedPreferenceVariables.authToken);
@@ -32,10 +35,15 @@ class ChatController {
         _chatProvider.chatUsers
             .setList(list: [chatUser], isClear: true, isNotify: true);
         _chatProvider.currentOpponent.set(value: chatUser, isNotify: true);
+        _chatProvider.searchState.set(value: SearchState.success, isNotify: true);
         return true;
       }
+
+      _chatProvider.chatUsers.setList(list: [], isClear: true, isNotify: true);
+      _chatProvider.searchState.set(value: SearchState.empty, isNotify: true);
       return false;
     } catch (e) {
+      _chatProvider.searchState.set(value: SearchState.error, isNotify: true);
       MyPrint.printOnConsole('Error searching user: $e');
       return false;
     }
