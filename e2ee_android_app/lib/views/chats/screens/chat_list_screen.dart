@@ -25,6 +25,8 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState{
     super.initState();
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
+
+    _chatController.loadStoredChatUsers();
   }
 
   void _onSearch() {

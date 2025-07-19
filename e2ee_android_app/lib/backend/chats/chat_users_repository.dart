@@ -144,8 +144,11 @@ class ChatUsersRepository {
       // Assuming ChatUserModel has lastMessage and lastMessageTime fields
       // If not, you'll need to add them to your model
       ChatUserModel updatedUser = ChatUserModel(
-        lastMessage: lastMessage,
-        lastMessageTime: lastMessageTime.toIso8601String(),
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        isOnline: user.isOnline,
+        unreadCount: user.unreadCount,
       );
 
       return await saveChatUser(updatedUser);
