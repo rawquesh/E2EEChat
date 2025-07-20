@@ -35,6 +35,34 @@ class MessageRepository {
     }
   }
 
+  Future<void> deleteMessage({
+    required String chatId,
+    required String messageId,
+  }) async {
+    final box = await _openBox(chatId);
+    if (box == null) return;
+    try {
+      await box.delete(messageId);
+    } catch (e) {
+      MyPrint.printOnConsole('Error deleting message: $e');
+    }
+  }
+
+  Future<void> replaceMessage({
+    required String chatId,
+    required String oldMessageId,
+    required ChatMessageModel newMessage,
+  }) async {
+    final box = await _openBox(chatId);
+    if (box == null) return;
+    try {
+      await box.delete(oldMessageId);
+      await box.put(newMessage.id, newMessage.toMap());
+    } catch (e) {
+      MyPrint.printOnConsole('Error replacing message: $e');
+    }
+  }
+
 
   Future<List<ChatMessageModel>> getMessagesPage({
     required String chatId,

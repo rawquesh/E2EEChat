@@ -179,14 +179,32 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         status: 'delivered',
       );
 
-      // 1. Save to Hive FIRST (persistence)
-      await _chatController.saveMessageToHive(
-        chatId: widget.user.id,
-        message: msg,
-      );
+      final isFromMe = msg.senderId == currentUserId;
+      final existing = _chatProvider.getMessagesFor(widget.user.id);
+      int pendingIndex = -1;
+      if (isFromMe) {
+        pendingIndex = existing.indexWhere(
+            (m) => m.isMe && m.message == msg.message && m.status == 'sent');
+      } else {
+        pendingIndex = existing.indexWhere((m) => m.id == msg.id);
+      }
 
-      _chatProvider.addMessageFor(widget.user.id, msg);
-      _loadedMessages += 1;
+      if (pendingIndex != -1) {
+        final oldId = existing[pendingIndex].id;
+        _chatProvider.replaceMessageFor(widget.user.id, oldId, msg);
+        await _chatController.replaceMessageInHive(
+          chatId: widget.user.id,
+          oldMessageId: oldId,
+          newMessage: msg,
+        );
+      } else {
+        await _chatController.saveMessageToHive(
+          chatId: widget.user.id,
+          message: msg,
+        );
+        _chatProvider.addMessageFor(widget.user.id, msg);
+        _loadedMessages += 1;
+      }
 
       await _chatController.addUserToChatList(
         ChatUserModel(

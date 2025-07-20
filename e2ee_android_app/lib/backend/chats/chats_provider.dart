@@ -81,4 +81,25 @@ class ChatProvider extends CommonProvider {
     current[userId] = unique;
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
+
+  /// Replace an existing message for a user
+  void replaceMessageFor(String userId, String oldMessageId, ChatMessageModel newMessage) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
+    final index = list.indexWhere((m) => m.id == oldMessageId);
+    if (index != -1) {
+      list[index] = newMessage;
+      current[userId] = list;
+      messages.setMap(map: current, isClear: true, isNotify: true);
+    }
+  }
+
+  /// Remove a message for a user by id
+  void removeMessageFor(String userId, String messageId) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
+    list.removeWhere((m) => m.id == messageId);
+    current[userId] = list;
+    messages.setMap(map: current, isClear: true, isNotify: true);
+  }
 }

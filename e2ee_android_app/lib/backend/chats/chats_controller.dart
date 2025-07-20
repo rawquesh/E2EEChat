@@ -54,6 +54,25 @@ class ChatController {
     await _messageRepository.addMessage(chatId: chatId, message: message);
   }
 
+  Future<void> deleteMessageFromHive({
+    required String chatId,
+    required String messageId,
+  }) async {
+    await _messageRepository.deleteMessage(chatId: chatId, messageId: messageId);
+  }
+
+  Future<void> replaceMessageInHive({
+    required String chatId,
+    required String oldMessageId,
+    required ChatMessageModel newMessage,
+  }) async {
+    await _messageRepository.replaceMessage(
+      chatId: chatId,
+      oldMessageId: oldMessageId,
+      newMessage: newMessage,
+    );
+  }
+
   Future<List<ChatMessageModel>> fetchMessagesPage({
     required String chatId,
     required int limit,
