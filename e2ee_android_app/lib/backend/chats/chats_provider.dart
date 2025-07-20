@@ -50,7 +50,8 @@ class ChatProvider extends CommonProvider {
   void addMessageFor(String userId, ChatMessageModel message) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
     final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
-    list.add(message);
+    final exists = list.any((m) => m.id == message.id);
+    if (!exists) list.add(message);
     current[userId] = list;
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
