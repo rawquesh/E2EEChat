@@ -25,15 +25,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void showCustomNotification(String title, String body) {
+  void showCustomNotification(String title, String? body) {
     _notificationTitle = title;
-    _notificationBody = body;
+    _notificationBody = "";
     _showInAppNotification = true;
     notifyListeners();
 
     showSimpleNotification(
       Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: Text(body, style: const TextStyle(color: Colors.white70)),
+      subtitle: Text(body ?? "", style: const TextStyle(color: Colors.white70)),
       background: Colors.black87,
       autoDismiss: true,
       duration: const Duration(seconds: 4),

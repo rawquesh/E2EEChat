@@ -171,50 +171,73 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   Future<void> _handleIncomingMessage(dynamic data) async {
-    final messageData = data is String ? jsonDecode(data) : data;
+    final messageData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
     if (!mounted) return;
 
-    // If the message has no id, generate one
+    // 1. Ensure a unique message id
     String messageId = "";
     if (messageData.containsKey('id') && messageData['id'].toString().isNotEmpty) {
       messageId = messageData['id'].toString();
     } else {
-      // Use senderId + timestamp + message text to make it more unique (or just use uuid)
-      messageId = MyUtils.getNewId(); // uuid: ^3.0.0 or newer in pubspec.yaml
+      messageId = MyUtils.getNewId();
     }
+
+    final senderId = messageData['sender_id']?.toString() ?? '';
+    final receiverId = messageData['receiver_id']?.toString() ?? '';
+    final text = messageData['message']?.toString() ?? '';
+    final timeStr = messageData['timestamp']?.toString() ?? '';
+    final isMe = senderId == currentUserId;
+    final otherUserId = isMe ? receiverId : senderId;
+    final time = DateTime.tryParse(timeStr) ?? DateTime.now();
+
 
     final msg = ChatMessageModel(
       id: messageId,
-      senderId: messageData['sender_id'],
-      message: messageData['message'],
-      timestamp: DateTime.now(), // Use actual time or backend-sent time if available
-      isMe: messageData['sender_id'] == currentUserId,
+      senderId: senderId,
+      message: text,
+      timestamp: time,
+      isMe: isMe,
       status: 'delivered',
     );
 
     await _chatController.saveMessageToHive(
-      chatId: widget.user.id,
+      chatId: otherUserId,
       message: msg,
     );
-
-    _chatProvider.addMessageFor(widget.user.id, msg);
+    _chatProvider.addMessageFor(otherUserId, msg);
     _scrollToBottom();
 
-    // Notification handling
-    final senderId = messageData['sender_id']?.toString() ?? '';
-    final text = messageData['message']?.toString() ?? '';
+    String senderName = messageData['sender_name']?.toString() ?? '';
+    String senderUsername = messageData['sender_username']?.toString() ?? '';
+
+    if (senderName.isEmpty) {
+      final fetched = await _chatRepository.fetchChatUser(
+        userId: senderId,
+        token: currentUserToken,
+      );
+      if (fetched != null && fetched.name.isNotEmpty) {
+        senderName = fetched.name;
+      }
+    }
+
+    final displayName = senderName.isNotEmpty
+        ? senderName
+        : (senderUsername.isNotEmpty ? senderUsername : senderId);
+
     if (_appState.lifecycleState == AppLifecycleState.resumed) {
-      if (_appState.currentChattingWithUserId != senderId) {
-        _appState.showCustomNotification('New message from $senderId', text);
+      if (_appState.currentChattingWithUserId != otherUserId) {
+
+        _appState.showCustomNotification(displayName, "");
       }
     } else if (_appState.lifecycleState == AppLifecycleState.paused) {
       NotificationService().showSystemNotification(
         DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        'New message from $senderId',
-        text,
+        displayName,
+        "",
       );
     }
   }
+
 
   void _onTextChanged() {
     final hasText = _messageController.text.trim().isNotEmpty;
@@ -521,21 +544,23 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
             child: Consumer<ChatProvider>(
               builder: (context, chatProvider, child) {
                 final msgList = chatProvider.getMessagesFor(widget.user.id);
-                final isLoadingMore = _isLoadingMore; // or chatProvider.isLoadingMore if you move it there
+                final isLoadingMore =
+                    _isLoadingMore; // or chatProvider.isLoadingMore if you move it there
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  reverse: false, // latest message at bottom
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  reverse: false,
+                  // latest message at bottom
                   itemCount: msgList.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (isLoadingMore && index == 0) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Center(
-                          heightFactor: 1,
-                          child: LoadingWidget(),
-                        ),
+                        child: Center(heightFactor: 1, child: LoadingWidget()),
                       );
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;

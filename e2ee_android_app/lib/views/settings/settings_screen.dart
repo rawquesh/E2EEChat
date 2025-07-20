@@ -1,3 +1,6 @@
+import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -209,7 +212,14 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                     ),
                   ),
                   onTap: () {
-                    // Handle logout logic
+                    NavigationController.navigateToLoginScreen(
+                      navigationOperationParameters:
+                          NavigationOperationParameters(
+                            context: context,
+                            navigationType:
+                                NavigationType.pushNamedAndRemoveUntil,
+                          ),
+                    );
                   },
                 ),
                 SizedBox(height: 16),
@@ -289,7 +299,10 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                       child: Icon(
                         Icons.wb_sunny_outlined,
                         size: 24,
-                        color: !isDark ? Colors.black : themeData.colorScheme.onSurface,
+                        color:
+                            !isDark
+                                ? Colors.black
+                                : themeData.colorScheme.onSurface,
                       ),
                     ),
                   ),

@@ -80,8 +80,7 @@ class _MainScreenState extends State<MainScreen>
       final bool isMe = senderId == _currentUserId;
       final otherUserId = isMe ? receiverId : senderId;
 
-      final DateTime time =
-          DateTime.tryParse(timeStr) ?? DateTime.now();
+      final DateTime time = DateTime.tryParse(timeStr) ?? DateTime.now();
 
       final chatMessage = ChatMessageModel(
         id: messageData['id']?.toString() ?? '',
@@ -92,7 +91,6 @@ class _MainScreenState extends State<MainScreen>
         status: 'delivered',
       );
 
-
       _chatProvider.addMessageFor(otherUserId, chatMessage);
       await _chatController.saveMessageToHive(
           chatId: otherUserId, message: chatMessage);
@@ -102,20 +100,16 @@ class _MainScreenState extends State<MainScreen>
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
+      String name;
       if (index == -1) {
         ChatUserModel? fetched = await _chatRepository.fetchChatUser(
           userId: otherUserId,
           token: _currentUserToken,
         );
-
-        String name = fetched?.name.isNotEmpty == true
+        name = fetched?.name.isNotEmpty == true
             ? fetched!.name
-            : (messageData['sender_name'] ??
-            messageData['receiver_name'] ??
-            otherUserId);
-        String avatar = name.toString().isNotEmpty
-            ? name[0].toUpperCase()
-            : '';
+            : (messageData['sender_name'] ?? messageData['receiver_name'] ?? otherUserId);
+        String avatar = name.toString().isNotEmpty ? name[0].toUpperCase() : '';
         user = ChatUserModel(
           id: otherUserId,
           name: name,
@@ -136,6 +130,7 @@ class _MainScreenState extends State<MainScreen>
             user.avatar = fetched.name[0].toUpperCase();
           }
         }
+        name = user.name;
         user.lastMessage = message;
         user.lastMessageTime = timeStr;
         if (!isMe) user.unreadCount = user.unreadCount + 1;
@@ -144,15 +139,18 @@ class _MainScreenState extends State<MainScreen>
 
       await _chatController.addUserToChatList(user);
 
+      final displayName = name.isNotEmpty ? name : otherUserId;
+
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
-          _appState.showCustomNotification('New message from $senderId', message);
+          // Use sender name as title, message as body
+          _appState.showCustomNotification(displayName, "");
         }
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
         NotificationService().showSystemNotification(
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          'New message from $senderId',
-          message,
+          displayName,  // title
+          "",      // body
         );
       }
     } catch (e) {
