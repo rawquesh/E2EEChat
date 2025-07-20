@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../backend/chats/chat_repository.dart';
+import '../../backend/chats/chats_controller.dart';
 import '../../backend/chats/chats_provider.dart';
 import '../../backend/common/dependency_injection.dart';
 import '../common/components/flashy_tab_bar.dart';
@@ -37,6 +38,8 @@ class _MainScreenState extends State<MainScreen>
 
   late final ChatRepository _chatRepository;
   late final ChatProvider _chatProvider;
+  late final ChatController _chatController;
+
   String _currentUserId = '';
   String _currentUserToken = '';
 
@@ -61,7 +64,7 @@ class _MainScreenState extends State<MainScreen>
     );
   }
 
-  void _handleIncomingMessage(dynamic data) {
+  void _handleIncomingMessage(dynamic data) async {
     try {
       final messageData =
       data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
@@ -69,66 +72,62 @@ class _MainScreenState extends State<MainScreen>
       final senderId = messageData['sender_id']?.toString() ?? '';
       final receiverId = messageData['receiver_id']?.toString() ?? '';
       final message = messageData['message']?.toString() ?? '';
-      final time = messageData['timestamp']?.toString() ?? '';
+      final timeStr = messageData['timestamp']?.toString() ?? '';
 
       final bool isMe = senderId == _currentUserId;
       final otherUserId = isMe ? receiverId : senderId;
 
-      _chatProvider.addMessageFor(
-        otherUserId,
-        ChatMessageModel(
-          id: messageData['id']?.toString() ?? '',
-          senderId: senderId,
-          message: message,
-          timestamp: DateTime.tryParse(time) ?? DateTime.now(),
-          isMe: isMe,
-          status: 'delivered',
-        ),
+      final DateTime time =
+          DateTime.tryParse(timeStr) ?? DateTime.now();
+
+      final chatMessage = ChatMessageModel(
+        id: messageData['id']?.toString() ?? '',
+        senderId: senderId,
+        message: message,
+        timestamp: time,
+        isMe: isMe,
+        status: 'delivered',
       );
 
 
-      final List<ChatUserModel> users =
+      _chatProvider.addMessageFor(otherUserId, chatMessage);
+      await _chatController.saveLocalMessage(
+          chatId: otherUserId, message: chatMessage);
+
+      List<ChatUserModel> users =
       List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
 
       int index = users.indexWhere((u) => u.id == otherUserId);
+      ChatUserModel user;
       if (index == -1) {
-        users.insert(
-          0,
-          ChatUserModel(
-            id: otherUserId,
-            name: messageData['sender_name'] ??
-                messageData['receiver_name'] ??
-                otherUserId,
-            avatar: (messageData['sender_name'] ??
-                messageData['receiver_name'] ??
-                otherUserId)
-                .toString()
-                .isNotEmpty
-                ? (messageData['sender_name'] ??
-                messageData['receiver_name'] ??
-                otherUserId)[0]
-                .toUpperCase()
-                : '',
-            lastMessage: message,
-            lastMessageTime: time,
-            unreadCount: isMe ? 0 : 1,
-          ),
+        user = ChatUserModel(
+          id: otherUserId,
+          name: messageData['sender_name'] ??
+              messageData['receiver_name'] ??
+              otherUserId,
+          avatar: (messageData['sender_name'] ??
+              messageData['receiver_name'] ??
+              otherUserId)
+              .toString()
+              .isNotEmpty
+              ? (messageData['sender_name'] ??
+              messageData['receiver_name'] ??
+              otherUserId)[0]
+              .toUpperCase()
+              : '',
+          lastMessage: message,
+          lastMessageTime: timeStr,
+          unreadCount: isMe ? 0 : 1,
         );
       } else {
-        final user = users[index];
+        user = users[index];
         user.lastMessage = message;
-        user.lastMessageTime = time;
+        user.lastMessageTime = timeStr;
         if (!isMe) user.unreadCount = user.unreadCount + 1;
-        users
-          ..removeAt(index)
-          ..insert(0, user);
+        users..removeAt(index);
       }
 
-      _chatProvider.chatUsers.setList(
-        list: users,
-        isClear: true,
-        isNotify: true,
-      );
+      await _chatController.addUserToChatList(user);
     } catch (e) {
       // ignore errors parsing the message
     }
@@ -140,6 +139,9 @@ class _MainScreenState extends State<MainScreen>
     WidgetsBinding.instance.addObserver(this);
     _chatProvider = context.read<ChatProvider>();
     _chatRepository = ChatRepository();
+    _chatController = ChatController(
+      chatProvider: _chatProvider,
+    );
     _initializeSocket();
   }
 

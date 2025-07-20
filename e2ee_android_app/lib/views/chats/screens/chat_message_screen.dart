@@ -158,7 +158,18 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       });
 
       _chatProvider.addMessageFor(widget.user.id, msg);
-      await _chatController.saveLocalMessage(chatId: widget.user.id, message: msg);
+
+      await _chatController.addUserToChatList(
+        ChatUserModel(
+          id: widget.user.id,
+          name: widget.user.name,
+          avatar: widget.user.avatar,
+          lastMessage: msg.message,
+          lastMessageTime: msg.timestamp.toIso8601String(),
+          isOnline: widget.user.isOnline,
+          unreadCount: 0,
+        ),
+      );
 
       _scrollToBottom();
     } catch (e) {
@@ -192,13 +203,24 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     );
 
     // Optimistically update the UI
-    setState(() {
-      messages.add(localMessage);
-    });
+    messages.add(localMessage);
+    mySetState();
 
     _chatProvider.addMessageFor(widget.user.id, localMessage);
 
     await _chatController.saveLocalMessage(chatId: widget.user.id, message: localMessage);
+
+    await _chatController.addUserToChatList(
+      ChatUserModel(
+        id: widget.user.id,
+        name: widget.user.name,
+        avatar: widget.user.avatar,
+        lastMessage: localMessage.message,
+        lastMessageTime: localMessage.timestamp.toIso8601String(),
+        isOnline: widget.user.isOnline,
+        unreadCount: 0,
+      ),
+    );
 
     _scrollToBottom();
 

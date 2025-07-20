@@ -149,6 +149,7 @@ class ChatController {
     try {
       // Save to Hive
       final saved = await _chatUsersRepository.saveChatUser(user);
+      MyPrint.printOnConsole('User saved to Hive: ${user.name} - $saved');
       if (saved) {
         // Update provider
         final currentUsers = _chatProvider.chatUsers.getList();
