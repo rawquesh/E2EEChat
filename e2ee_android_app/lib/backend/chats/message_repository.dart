@@ -15,11 +15,26 @@ class MessageRepository {
   }) async {
     final box = await _openBox(chatId);
     try {
-      await box?.put(message.id, message.toMap());
+      if (box == null) {
+        MyPrint.printOnConsole('Hive box for $chatId is null! Message not saved.');
+        return;
+      }
+      final key = message.id;
+      if (key.isEmpty) {
+        MyPrint.printOnConsole("Message ID is empty, skipping save.");
+        return;
+      }
+      if (!box.containsKey(key)) {
+        await box.put(key, message.toMap());
+        MyPrint.printOnConsole('Message saved: ${message.id} - ${message.message}');
+      } else {
+        MyPrint.printOnConsole('Duplicate message ignored: ${message.id}');
+      }
     } catch (e) {
       MyPrint.printOnConsole('Error saving message: $e');
     }
   }
+
 
   Future<List<ChatMessageModel>> getMessagesPage({
     required String chatId,

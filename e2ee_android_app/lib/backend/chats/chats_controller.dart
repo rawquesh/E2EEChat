@@ -47,7 +47,7 @@ class ChatController {
     );
   }
 
-  Future<void> saveLocalMessage({
+  Future<void> saveMessageToHive({
     required String chatId,
     required ChatMessageModel message,
   }) async {

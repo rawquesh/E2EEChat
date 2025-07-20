@@ -19,7 +19,7 @@ import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
 
 class ChatMessageScreen extends StatefulWidget {
-  final ChatUserModel  user;
+  final ChatUserModel user;
 
   const ChatMessageScreen({Key? key, required this.user}) : super(key: key);
 
@@ -84,22 +84,45 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _initializeAnimations() {
-    _iconAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
-    _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
-    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
-    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
+    _iconAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _widthAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _iconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _widthAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> _initializeChat() async {
-    currentUserId = await SharedPrefManager().getString('current_user_id') ?? '';
-    currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    currentUserId =
+        await SharedPrefManager().getString('current_user_id') ?? '';
+    currentUserToken =
+        await SharedPrefManager().getString(
+          MySharedPreferenceVariables.authToken,
+        ) ??
+        '';
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
     await _loadInitialMessages();
 
     _scrollController.addListener(() {
-      if (_scrollController.offset <= _scrollController.position.minScrollExtent + 50 && !_isLoadingMore) {
+      if (_scrollController.offset <=
+              _scrollController.position.minScrollExtent + 50 &&
+          !_isLoadingMore) {
         _loadMoreMessages();
       }
     });
@@ -111,6 +134,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       onMessageReceived: _handleIncomingMessage, // Provide the callback
     );
   }
+
   Future<void> _loadInitialMessages() async {
     final fetched = await _chatController.fetchMessagesPage(
       chatId: widget.user.id,
@@ -148,14 +172,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         id: messageData['id'].toString(),
         senderId: messageData['sender_id'],
         message: messageData['message'],
-        timestamp: DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
+        timestamp:
+            DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
         isMe: messageData['sender_id'] == currentUserId,
         status: 'delivered',
       );
 
-      setState(() {
-        messages.add(msg);
-      });
+      // 1. Save to Hive FIRST (persistence)
+      await _chatController.saveMessageToHive(
+        chatId: widget.user.id,
+        message: msg,
+      );
+
+      // 2. Update UI/provider
+      messages.add(msg);
+      mySetState();
 
       _chatProvider.addMessageFor(widget.user.id, msg);
 
@@ -182,8 +213,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     if (hasText != _hasText) {
       if (!mounted) return;
       setState(() => _hasText = hasText);
-      hasText ? _iconAnimationController.forward() : _iconAnimationController.reverse();
-      hasText ? _widthAnimationController.forward() : _widthAnimationController.reverse();
+      hasText
+          ? _iconAnimationController.forward()
+          : _iconAnimationController.reverse();
+      hasText
+          ? _widthAnimationController.forward()
+          : _widthAnimationController.reverse();
     }
   }
 
@@ -193,6 +228,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _messageController.clear();
 
+    // Optimistically update the UI
     final localMessage = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: currentUserId,
@@ -202,13 +238,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       status: 'sent',
     );
 
-    // Optimistically update the UI
     messages.add(localMessage);
     mySetState();
 
+
     _chatProvider.addMessageFor(widget.user.id, localMessage);
 
-    await _chatController.saveLocalMessage(chatId: widget.user.id, message: localMessage);
+    await _chatController.saveMessageToHive(
+      chatId: widget.user.id,
+      message: localMessage,
+    );
 
     await _chatController.addUserToChatList(
       ChatUserModel(
@@ -392,7 +431,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     super.pageBuild();
 
     return Scaffold(
-      appBar: AppBar  (
+      appBar: AppBar(
         backgroundColor: themeData.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
@@ -484,9 +523,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           ),
           Container(
             padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: themeData.colorScheme.surface,
-            ),
+            decoration: BoxDecoration(color: themeData.colorScheme.surface),
             child: Row(
               children: [
                 // Media attachment button
@@ -499,15 +536,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 AnimatedBuilder(
                   animation: _widthAnimation,
                   builder: (context, child) {
-                    final baseWidth = MediaQuery.of(context).size.width -
-                        32 -
-                        44 -
-                        44 -
-                        16;
+                    final baseWidth =
+                        MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
                     final compactWidth = baseWidth * 1;
                     final expandedWidth = baseWidth;
 
-                    final currentWidth = compactWidth +
+                    final currentWidth =
+                        compactWidth +
                         (_widthAnimation.value *
                             (expandedWidth - compactWidth));
 
@@ -572,9 +607,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                         icon: AnimatedSwitcher(
                           duration: Duration(milliseconds: 200),
                           transitionBuilder: (
-                              Widget child,
-                              Animation<double> animation,
-                              ) {
+                            Widget child,
+                            Animation<double> animation,
+                          ) {
                             return ScaleTransition(
                               scale: animation,
                               child: FadeTransition(
@@ -583,19 +618,20 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                               ),
                             );
                           },
-                          child: _hasText
-                              ? Icon(
-                            Icons.send,
-                            key: ValueKey('send'),
-                            color: Colors.white,
-                            size: 20,
-                          )
-                              : Icon(
-                            Icons.mic,
-                            key: ValueKey('mic'),
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                          child:
+                              _hasText
+                                  ? Icon(
+                                    Icons.send,
+                                    key: ValueKey('send'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                  : Icon(
+                                    Icons.mic,
+                                    key: ValueKey('mic'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                         ),
                         onPressed: _onButtonPressed,
                       );

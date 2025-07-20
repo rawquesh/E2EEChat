@@ -3,7 +3,6 @@ import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:hive/hive.dart';
 
-
 class ChatUsersRepository {
   static const String _chatUsersBoxName = 'chat_users';
   Box? _chatUsersBox;

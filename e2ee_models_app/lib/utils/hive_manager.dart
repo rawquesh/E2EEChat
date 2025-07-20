@@ -29,7 +29,7 @@ class HiveManager {
         String? databasePath;
         if (!kIsWeb) {
           try {
-            final appDocumentDir = await getTemporaryDirectory();
+            final appDocumentDir = await getApplicationDocumentsDirectory();
             databasePath = "${appDocumentDir.path}/$_databaseName";
           } catch (e, s) {
             MyPrint.printOnConsole("Error in Getting Path in HiveManager.initializeHiveDatabase():$e");

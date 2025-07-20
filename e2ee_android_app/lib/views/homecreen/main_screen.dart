@@ -91,7 +91,7 @@ class _MainScreenState extends State<MainScreen>
 
 
       _chatProvider.addMessageFor(otherUserId, chatMessage);
-      await _chatController.saveLocalMessage(
+      await _chatController.saveMessageToHive(
           chatId: otherUserId, message: chatMessage);
 
       List<ChatUserModel> users =
