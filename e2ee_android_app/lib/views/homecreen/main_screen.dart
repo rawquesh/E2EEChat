@@ -19,7 +19,9 @@ import 'package:provider/provider.dart';
 import '../../backend/chats/chat_repository.dart';
 import '../../backend/chats/chats_controller.dart';
 import '../../backend/chats/chats_provider.dart';
+import '../../backend/common/app_state.dart';
 import '../../backend/common/dependency_injection.dart';
+import '../../backend/notification/notification_service.dart';
 import '../common/components/flashy_tab_bar.dart';
 import '../tab_state.dart';
 
@@ -39,6 +41,7 @@ class _MainScreenState extends State<MainScreen>
   late final ChatRepository _chatRepository;
   late final ChatProvider _chatProvider;
   late final ChatController _chatController;
+  late final AppState _appState;
 
   String _currentUserId = '';
   String _currentUserToken = '';
@@ -46,7 +49,7 @@ class _MainScreenState extends State<MainScreen>
   final List<Widget> _screens = [
     ChatListScreen(),
     CallsScreen(),
-    FilesMediaScreen(),
+    // FilesMediaScreen(),
     SettingsScreen(username: "rishi234")
   ];
 
@@ -100,27 +103,39 @@ class _MainScreenState extends State<MainScreen>
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
       if (index == -1) {
+        ChatUserModel? fetched = await _chatRepository.fetchChatUser(
+          userId: otherUserId,
+          token: _currentUserToken,
+        );
+
+        String name = fetched?.name.isNotEmpty == true
+            ? fetched!.name
+            : (messageData['sender_name'] ??
+            messageData['receiver_name'] ??
+            otherUserId);
+        String avatar = name.toString().isNotEmpty
+            ? name[0].toUpperCase()
+            : '';
         user = ChatUserModel(
           id: otherUserId,
-          name: messageData['sender_name'] ??
-              messageData['receiver_name'] ??
-              otherUserId,
-          avatar: (messageData['sender_name'] ??
-              messageData['receiver_name'] ??
-              otherUserId)
-              .toString()
-              .isNotEmpty
-              ? (messageData['sender_name'] ??
-              messageData['receiver_name'] ??
-              otherUserId)[0]
-              .toUpperCase()
-              : '',
+          name: name,
+          avatar: avatar,
           lastMessage: message,
           lastMessageTime: timeStr,
           unreadCount: isMe ? 0 : 1,
         );
       } else {
         user = users[index];
+        if (user.name.isEmpty || user.name == user.id) {
+          ChatUserModel? fetched = await _chatRepository.fetchChatUser(
+            userId: otherUserId,
+            token: _currentUserToken,
+          );
+          if (fetched != null && fetched.name.isNotEmpty) {
+            user.name = fetched.name;
+            user.avatar = fetched.name[0].toUpperCase();
+          }
+        }
         user.lastMessage = message;
         user.lastMessageTime = timeStr;
         if (!isMe) user.unreadCount = user.unreadCount + 1;
@@ -128,6 +143,18 @@ class _MainScreenState extends State<MainScreen>
       }
 
       await _chatController.addUserToChatList(user);
+
+      if (_appState.lifecycleState == AppLifecycleState.resumed) {
+        if (_appState.currentChattingWithUserId != otherUserId) {
+          _appState.showCustomNotification('New message from $senderId', message);
+        }
+      } else if (_appState.lifecycleState == AppLifecycleState.paused) {
+        NotificationService().showSystemNotification(
+          DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          'New message from $senderId',
+          message,
+        );
+      }
     } catch (e) {
       // ignore errors parsing the message
     }
@@ -138,6 +165,7 @@ class _MainScreenState extends State<MainScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _chatProvider = context.read<ChatProvider>();
+    _appState = context.read<AppState>();
     _chatRepository = ChatRepository();
     _chatController = ChatController(
       chatProvider: _chatProvider,
@@ -150,6 +178,11 @@ class _MainScreenState extends State<MainScreen>
     WidgetsBinding.instance.removeObserver(this);
     _chatRepository.disposePusher();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appState.setLifecycleState(state);
   }
 
   @override
@@ -211,7 +244,7 @@ class _MainScreenState extends State<MainScreen>
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
             ),
-            FlashyTabBarItem(
+            /*FlashyTabBarItem(
               icon: Image.asset(
                 AppAssets.files_icon,
                 height: 26,
@@ -229,7 +262,7 @@ class _MainScreenState extends State<MainScreen>
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
-            ),
+            ),*/
             FlashyTabBarItem(
               icon: Image.asset(
                 AppAssets.settings_icon,

@@ -18,6 +18,7 @@ import 'common/app_theme/app_theme_provider.dart';
 import 'common/dependency_injection.dart';
 import 'navigation/navigation_arguments.dart';
 import 'navigation/navigation_controller.dart';
+import 'notification/notification_service.dart';
 
 class AppInitController {
   static bool isNavigateToObBoardingScreen = false;
@@ -63,6 +64,7 @@ class AppInitController {
     AppThemeController themeController =
     AppThemeController(appThemeProvider: themeProvider);
     futures.add(themeController.init());
+    futures.add(NotificationService().init());
 
     await Future.wait(futures);
 

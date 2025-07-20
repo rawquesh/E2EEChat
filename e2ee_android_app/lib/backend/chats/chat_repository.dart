@@ -96,12 +96,16 @@ class ChatRepository {
 
   // fetchChatUser remains the same
   Future<ChatUserModel?> fetchChatUser({
-    required String username,
+    String? username,
+    String? userId,
     required String token,
   }) async {
-    // ... existing implementation
     final url = Uri.parse('$baseUrl/chat/getopponent');
-    final body = jsonEncode({"username": username});
+    final Map<String, dynamic> bodyMap = {};
+    if (username != null && username.isNotEmpty) bodyMap['username'] = username;
+    if (userId != null && userId.isNotEmpty) bodyMap['userid'] = userId;
+    if (bodyMap.isEmpty) return null;
+    final body = jsonEncode(bodyMap);
     final response = await http.post(
       url,
       headers: {

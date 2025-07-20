@@ -68,6 +68,9 @@ dev_dependencies:
   local_auth: ^2.3.0
   pusher_client_socket: ^0.0.5
 
+  #notification
+  flutter_local_notifications: ^19.3.1
+
 flutter_icons:
   android: true
   ios: true

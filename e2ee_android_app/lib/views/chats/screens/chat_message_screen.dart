@@ -17,6 +17,8 @@ import 'package:provider/provider.dart';
 import '../../../backend/chats/chat_repository.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
+import '../../../backend/common/app_state.dart';
+import '../../../backend/notification/notification_service.dart';
 import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
 
@@ -35,6 +37,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   final TextEditingController _messageController = TextEditingController();
   late final ChatController _chatController;
   late final ChatProvider _chatProvider;
+  late final AppState _appState;
 
   int _loadedMessages = 0;
   final int _pageSize = 10;
@@ -61,6 +64,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     super.initState();
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
+
+    _appState = context.read<AppState>();
+    _appState.setCurrentChattingWithUserId(widget.user.id);
 
     opponentUserId = widget.user.id;
     opponentUsername = widget.user.name;
@@ -193,6 +199,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _chatProvider.addMessageFor(widget.user.id, msg);
     _scrollToBottom();
+
+    // Notification handling
+    final senderId = messageData['sender_id']?.toString() ?? '';
+    final text = messageData['message']?.toString() ?? '';
+    if (_appState.lifecycleState == AppLifecycleState.resumed) {
+      if (_appState.currentChattingWithUserId != senderId) {
+        _appState.showCustomNotification('New message from $senderId', text);
+      }
+    } else if (_appState.lifecycleState == AppLifecycleState.paused) {
+      NotificationService().showSystemNotification(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        'New message from $senderId',
+        text,
+      );
+    }
   }
 
   void _onTextChanged() {
@@ -263,6 +284,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _widthAnimationController.dispose();
     // Tell the repository to clean up its connection
     _chatRepository.disposePusher();
+    _appState.setCurrentChattingWithUserId(null);
     super.dispose();
   }
 

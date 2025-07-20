@@ -9,6 +9,7 @@ import 'package:responsive_builder/responsive_builder.dart';
 
 import '../backend/app_init_controller.dart';
 import '../backend/chats/chats_provider.dart';
+import '../backend/common/app_state.dart';
 import '../backend/common/app_theme/app_theme_provider.dart';
 import '../backend/common/dependency_injection.dart';
 import '../backend/navigation/navigation_controller.dart';
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<AppThemeProvider>.value(value: DependencyInjection.appThemeProvider),
         ChangeNotifierProvider<AuthenticationProvider>.value(value: DependencyInjection.authenticationProvider),
         ChangeNotifierProvider<ChatProvider>.value(value: DependencyInjection.chatProvider),
+        ChangeNotifierProvider<AppState>.value(value: DependencyInjection.appState),
       ],
       child: const MainApp(),
     );

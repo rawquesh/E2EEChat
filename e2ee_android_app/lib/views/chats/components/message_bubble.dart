@@ -101,20 +101,6 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                         color: Colors.grey[500],
                       ),
                     ),
-                    if (widget.message.isMe) ...[
-                      SizedBox(width: 4),
-                      Icon(
-                        widget.message.status == "sent"
-                            ? Icons.check
-                            : widget.message.status == "delivered"
-                            ? Icons.done_all
-                            : Icons.done_all,
-                        size: 12,
-                        color: widget.message.status == "read"
-                            ? Color(0xFFE6A532)
-                            : Colors.grey[500],
-                      ),
-                    ],
                   ],
                 ),
               ],
