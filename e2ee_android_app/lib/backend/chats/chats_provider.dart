@@ -54,4 +54,31 @@ class ChatProvider extends CommonProvider {
     current[userId] = list;
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
+
+  /// Clear all messages stored for a user
+  void clearMessagesFor(String userId) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    if (current.containsKey(userId)) {
+      current.remove(userId);
+      messages.setMap(map: current, isClear: true, isNotify: true);
+    }
+  }
+
+  /// Add a batch of messages for a user. Optionally clear existing messages.
+  void addMessagesFor(String userId, List<ChatMessageModel> newMessages, {bool clear = false}) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
+    if (clear) list.clear();
+    list.addAll(newMessages);
+    // Deduplicate by id while maintaining order
+    final seen = <String>{};
+    final unique = <ChatMessageModel>[];
+    for (final m in list) {
+      if (seen.add(m.id)) {
+        unique.add(m);
+      }
+    }
+    current[userId] = unique;
+    messages.setMap(map: current, isClear: true, isNotify: true);
+  }
 }

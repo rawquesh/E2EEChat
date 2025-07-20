@@ -5,6 +5,7 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:http/http.dart' as http;
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/cupertino.dart';
@@ -31,12 +32,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     with TickerProviderStateMixin, MySafeState {
   // --- State & Controllers ---
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessageModel> messages = [];
   late final ChatController _chatController;
   late final ChatProvider _chatProvider;
 
   int _loadedMessages = 0;
-  final int _pageSize = 50;
+  final int _pageSize = 10;
   bool _isLoadingMore = false;
 
   final ScrollController _scrollController = ScrollController();
@@ -121,7 +121,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     _scrollController.addListener(() {
       if (_scrollController.offset <=
-              _scrollController.position.minScrollExtent + 50 &&
+              _scrollController.position.minScrollExtent + 10 &&
           !_isLoadingMore) {
         _loadMoreMessages();
       }
@@ -136,28 +136,29 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   Future<void> _loadInitialMessages() async {
-    final fetched = await _chatController.fetchMessagesPage(
+    await _chatController.loadMessagesToProvider(
       chatId: widget.user.id,
       limit: _pageSize,
       offset: _loadedMessages,
       currentUserId: currentUserId,
     );
-    _loadedMessages += fetched.length;
-    messages.insertAll(0, fetched.reversed.toList());
+    final fetchedCount = _chatProvider.getMessagesFor(widget.user.id).length;
+    _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _scrollToBottom();
   }
 
   Future<void> _loadMoreMessages() async {
     _isLoadingMore = true;
-    final fetched = await _chatController.fetchMessagesPage(
+    await _chatController.loadMessagesToProvider(
       chatId: widget.user.id,
       limit: _pageSize,
       offset: _loadedMessages,
       currentUserId: currentUserId,
+      clear: false,
     );
-    _loadedMessages += fetched.length;
-    messages.insertAll(0, fetched.reversed.toList());
+    final fetchedCount = _chatProvider.getMessagesFor(widget.user.id).length;
+    _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _isLoadingMore = false;
   }
@@ -184,11 +185,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         message: msg,
       );
 
-      // 2. Update UI/provider
-      messages.add(msg);
-      mySetState();
-
       _chatProvider.addMessageFor(widget.user.id, msg);
+      _loadedMessages += 1;
 
       await _chatController.addUserToChatList(
         ChatUserModel(
@@ -238,11 +236,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       status: 'sent',
     );
 
-    messages.add(localMessage);
-    mySetState();
-
-
     _chatProvider.addMessageFor(widget.user.id, localMessage);
+    _loadedMessages += 1;
 
     await _chatController.saveMessageToHive(
       chatId: widget.user.id,
@@ -512,12 +507,32 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return MessageBubble(message: messages[index]);
+            child: Consumer<ChatProvider>(
+              builder: (context, chatProvider, child) {
+                final msgList = chatProvider.getMessagesFor(widget.user.id);
+                final isLoadingMore = _isLoadingMore; // or chatProvider.isLoadingMore if you move it there
+
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  reverse: false, // latest message at bottom
+                  itemCount: msgList.length + (isLoadingMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (isLoadingMore && index == 0) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                          heightFactor: 1,
+                          child: LoadingWidget(),
+                        ),
+                      );
+                    }
+                    final msgIndex = isLoadingMore ? index - 1 : index;
+                    final message = msgList[msgIndex];
+                    // You can also add showTime headers, etc., here if needed
+                    return MessageBubble(message: message);
+                  },
+                );
               },
             ),
           ),

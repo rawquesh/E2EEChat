@@ -252,4 +252,27 @@ class ChatController {
       return false;
     }
   }
+
+  Future<void> loadMessagesToProvider({
+    required String chatId,
+    required int limit,
+    required int offset,
+    required String currentUserId,
+    bool clear = false,
+  }) async {
+    try {
+      final fetched = await fetchMessagesPage(
+        chatId: chatId,
+        limit: limit,
+        offset: offset,
+        currentUserId: currentUserId,
+      );
+
+      // Reverse so the order is oldest -> newest
+      final ordered = fetched.reversed.toList();
+      _chatProvider.addMessagesFor(chatId, ordered, clear: clear);
+    } catch (e) {
+      MyPrint.printOnConsole('Error loading messages to provider: $e');
+    }
+  }
 }
