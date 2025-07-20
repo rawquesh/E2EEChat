@@ -4,6 +4,7 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:http/http.dart' as http;
@@ -164,46 +165,34 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   Future<void> _handleIncomingMessage(dynamic data) async {
-    MyPrint.printOnConsole('[CHAT UI] Received message data: $data');
-    try {
-      final messageData = data is String ? jsonDecode(data) : data;
-      if (!mounted) return;
+    final messageData = data is String ? jsonDecode(data) : data;
+    if (!mounted) return;
 
-      final msg = ChatMessageModel(
-        id: messageData['id'].toString(),
-        senderId: messageData['sender_id'],
-        message: messageData['message'],
-        timestamp:
-            DateTime.tryParse(messageData['timestamp'] ?? '') ?? DateTime.now(),
-        isMe: messageData['sender_id'] == currentUserId,
-        status: 'delivered',
-      );
-
-      // 1. Save to Hive FIRST (persistence)
-      await _chatController.saveMessageToHive(
-        chatId: widget.user.id,
-        message: msg,
-      );
-
-      _chatProvider.addMessageFor(widget.user.id, msg);
-      _loadedMessages += 1;
-
-      await _chatController.addUserToChatList(
-        ChatUserModel(
-          id: widget.user.id,
-          name: widget.user.name,
-          avatar: widget.user.avatar,
-          lastMessage: msg.message,
-          lastMessageTime: msg.timestamp.toIso8601String(),
-          isOnline: widget.user.isOnline,
-          unreadCount: 0,
-        ),
-      );
-
-      _scrollToBottom();
-    } catch (e) {
-      MyPrint.printOnConsole('[CHAT UI] Error parsing message data: $e');
+    // If the message has no id, generate one
+    String messageId = "";
+    if (messageData.containsKey('id') && messageData['id'].toString().isNotEmpty) {
+      messageId = messageData['id'].toString();
+    } else {
+      // Use senderId + timestamp + message text to make it more unique (or just use uuid)
+      messageId = MyUtils.getNewId(); // uuid: ^3.0.0 or newer in pubspec.yaml
     }
+
+    final msg = ChatMessageModel(
+      id: messageId,
+      senderId: messageData['sender_id'],
+      message: messageData['message'],
+      timestamp: DateTime.now(), // Use actual time or backend-sent time if available
+      isMe: messageData['sender_id'] == currentUserId,
+      status: 'delivered',
+    );
+
+    await _chatController.saveMessageToHive(
+      chatId: widget.user.id,
+      message: msg,
+    );
+
+    _chatProvider.addMessageFor(widget.user.id, msg);
+    _scrollToBottom();
   }
 
   void _onTextChanged() {
