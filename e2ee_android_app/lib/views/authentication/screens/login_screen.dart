@@ -316,20 +316,20 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                 ),
               ),
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _navigateToForgotPassword,
-                  style: TextButton.styleFrom(
-                    foregroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text(
-                    "Forgot Password?",
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-              ),
+              // Align(
+              //   alignment: Alignment.centerRight,
+              //   child: TextButton(
+              //     onPressed: _navigateToForgotPassword,
+              //     style: TextButton.styleFrom(
+              //       foregroundColor: primaryColor,
+              //       padding: const EdgeInsets.symmetric(horizontal: 8),
+              //     ),
+              //     child: const Text(
+              //       "Forgot Password?",
+              //       style: TextStyle(fontSize: 13),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 20),
               SizedBox(
                 height: 50,
@@ -359,52 +359,52 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                   label: Text(isLoading ? "Logging in..." : "Login"),
                 ),
               ),
-              if (isBiometricAvailable) ...[
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "OR",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 50,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                      side: BorderSide(color: primaryColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(radius),
-                      ),
-                    ),
-                    onPressed: _authenticateWithBiometrics,
-                    icon: const Icon(Icons.password),
-                    label: const Text("Use Digital Pin To Login"),
-                  ),
-                ),
+              // if (isBiometricAvailable) ...[
+              //   const SizedBox(height: 16),
+              //   Row(
+              //     children: [
+              //       Expanded(child: Divider(color: Colors.grey[300])),
+              //       Padding(
+              //         padding: const EdgeInsets.symmetric(horizontal: 16),
+              //         child: Text(
+              //           "OR",
+              //           style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              //         ),
+              //       ),
+              //       Expanded(child: Divider(color: Colors.grey[300])),
+              //     ],
+              //   ),
+                // const SizedBox(height: 16),
+                // SizedBox(
+                //   height: 50,
+                //   child: OutlinedButton.icon(
+                //     style: OutlinedButton.styleFrom(
+                //       foregroundColor: primaryColor,
+                //       side: BorderSide(color: primaryColor),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(radius),
+                //       ),
+                //     ),
+                //     onPressed: _authenticateWithBiometrics,
+                //     icon: const Icon(Icons.password),
+                //     label: const Text("Use Digital Pin To Login"),
+                //   ),
+                // ),
               ],
 
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account?"),
-                  TextButton(
-                    onPressed: _navigateToSignup,
-                    style: TextButton.styleFrom(foregroundColor: primaryColor),
-                    child: const Text("Sign up"),
-                  ),
-                ],
-              ),
-            ],
+              // const SizedBox(height: 24),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.center,
+              //   children: [
+              //     const Text("Don't have an account?"),
+              //     TextButton(
+              //       onPressed: _navigateToSignup,
+              //       style: TextButton.styleFrom(foregroundColor: primaryColor),
+              //       child: const Text("Sign up"),
+              //     ),
+              //   ],
+              // ),
+            // ],
           ),
         ),
       ),

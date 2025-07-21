@@ -10,7 +10,9 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -37,19 +39,16 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin, MySafeState, WidgetsBindingObserver {
   int _currentIndex = 0;
-
   late final ChatRepository _chatRepository;
   late final ChatProvider _chatProvider;
   late final ChatController _chatController;
   late final AppState _appState;
-
   String _currentUserId = '';
   String _currentUserToken = '';
 
   final List<Widget> _screens = [
     ChatListScreen(),
     CallsScreen(),
-    // FilesMediaScreen(),
     SettingsScreen(username: "rishi234")
   ];
 
@@ -57,7 +56,7 @@ class _MainScreenState extends State<MainScreen>
     _currentUserId =
         await SharedPrefManager().getString('current_user_id') ?? '';
     _currentUserToken = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.authToken) ??
+            .getString(MySharedPreferenceVariables.authToken) ??
         '';
 
     _chatRepository.initPusher(
@@ -70,20 +69,33 @@ class _MainScreenState extends State<MainScreen>
   void _handleIncomingMessage(dynamic data) async {
     try {
       final messageData =
-      data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+          data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
 
       final senderId = messageData['sender_id']?.toString() ?? '';
+      if (senderId.isEmpty) return; // Ignore invalid messages
+
+      // ✨ FIX: Fetch sender name if it's missing from the payload
+      String senderName = messageData['sender_name']?.toString() ?? '';
+      if (senderName.isEmpty) {
+        MyPrint.printOnConsole("Sender name not in payload, fetching from API for ID: $senderId");
+        final fetchedUser = await _chatRepository.fetchChatUser(
+          userId: senderId,
+          token: _currentUserToken,
+        );
+        senderName = fetchedUser?.name ?? 'Unknown User';
+      }
+      
       final receiverId = messageData['receiver_id']?.toString() ?? '';
       final message = messageData['message']?.toString() ?? '';
       final timeStr = messageData['timestamp']?.toString() ?? '';
-
       final bool isMe = senderId == _currentUserId;
       final otherUserId = isMe ? receiverId : senderId;
 
       final DateTime time = DateTime.tryParse(timeStr) ?? DateTime.now();
+      final String messageId = messageData['id']?.toString() ?? '';
 
       final chatMessage = ChatMessageModel(
-        id: messageData['id']?.toString() ?? '',
+        id: messageId.isNotEmpty ? messageId : MyUtils.getNewId(),
         senderId: senderId,
         message: message,
         timestamp: time,
@@ -96,45 +108,29 @@ class _MainScreenState extends State<MainScreen>
           chatId: otherUserId, message: chatMessage);
 
       List<ChatUserModel> users =
-      List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
+          List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
-      String name;
+
       if (index == -1) {
-        ChatUserModel? fetched = await _chatRepository.fetchChatUser(
-          userId: otherUserId,
-          token: _currentUserToken,
-        );
-        name = fetched?.name.isNotEmpty == true
-            ? fetched!.name
-            : (messageData['sender_name'] ?? messageData['receiver_name'] ?? otherUserId);
-        String avatar = name.toString().isNotEmpty ? name[0].toUpperCase() : '';
+        String avatar = senderName.isNotEmpty ? senderName[0].toUpperCase() : '?';
         user = ChatUserModel(
           id: otherUserId,
-          name: name,
+          name: senderName,
           avatar: avatar,
           lastMessage: message,
-          lastMessageTime: timeStr,
+          lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
         );
       } else {
         user = users[index];
-        if (user.name.isEmpty || user.name == user.id) {
-          ChatUserModel? fetched = await _chatRepository.fetchChatUser(
-            userId: otherUserId,
-            token: _currentUserToken,
-          );
-          if (fetched != null && fetched.name.isNotEmpty) {
-            user.name = fetched.name;
-            user.avatar = fetched.name[0].toUpperCase();
-          }
-        }
-        name = user.name;
+        user.name = senderName; // Ensure name is up-to-date
         user.lastMessage = message;
-        user.lastMessageTime = timeStr;
-        if (!isMe) user.unreadCount = user.unreadCount + 1;
-        users..removeAt(index);
+        user.lastMessageTime = time.toIso8601String();
+        if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
+            user.unreadCount = user.unreadCount + 1;
+        }
       }
 
       await _chatController.addUserToChatList(user);
@@ -143,21 +139,20 @@ class _MainScreenState extends State<MainScreen>
 
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
-          // Use sender name as title, message as body
-          _appState.showCustomNotification(displayName, "");
+          _appState.showCustomNotification('New message from $senderName', message);
         }
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
         NotificationService().showSystemNotification(
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          displayName,  // title
-          "",      // body
+          'New message from $senderName',
+          message,
         );
       }
     } catch (e) {
-      // ignore errors parsing the message
+      MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");
     }
   }
-
+  
   @override
   void initState() {
     super.initState();
@@ -242,25 +237,6 @@ class _MainScreenState extends State<MainScreen>
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
             ),
-            /*FlashyTabBarItem(
-              icon: Image.asset(
-                AppAssets.files_icon,
-                height: 26,
-                width: 26,
-                color: themeData.primaryColor,
-              ),
-              title: Text(
-                'Files & Media',
-                style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,)
-                        .withEpilogue,
-              ),
-              activeColor: themeData.primaryColor,
-              inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
-            ),*/
             FlashyTabBarItem(
               icon: Image.asset(
                 AppAssets.settings_icon,

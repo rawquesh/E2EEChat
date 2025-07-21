@@ -10,7 +10,7 @@ class ChatRepository {
   PusherClient? _pusher;
   Channel? _channel;
 
-  // Method to initialize Pusher and listen for messages
+  // initPusher remains the same
   void initPusher({
     required String userId,
     required String token,
@@ -46,13 +46,12 @@ class ChatRepository {
     _channel!.bind('MessageSent', (data) {
       MyPrint.printOnConsole('[PUSHER REPO] Received MessageSent event: $data');
       if (data != null) {
-        // Use the callback to pass the data to the UI layer
         onMessageReceived(data);
       }
     });
   }
 
-  // Method to clean up Pusher resources
+  // disposePusher remains the same
   void disposePusher() {
     try {
       _channel?.unbind('MessageSent');
@@ -66,12 +65,14 @@ class ChatRepository {
   Future<bool> sendMessage({
     required String token,
     required String senderId,
+    required String senderName, // ✨ 1. Add senderName parameter
     required String receiverId,
     required String message,
   }) async {
     final url = Uri.parse('$baseUrl/send-message');
     final body = jsonEncode({
       "sender_id": senderId,
+      "sender_name": senderName, // ✨ 2. Include senderName in the request body
       "receiver_id": receiverId,
       "message": message,
     });
