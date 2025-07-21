@@ -185,7 +185,7 @@ class AppInitController {
       AppAssets.onBoardingSubImage2,
       AppAssets.onBoardingSubImage3,
       AppAssets.onBoardingNextButton,
-      AppAssets.kehilah_logo,
+      AppAssets.app_logo,
     ];
     MyPrint.printOnConsole("assetImagesToPreCache:$assetImagesToPreCache", tag: tag);
 

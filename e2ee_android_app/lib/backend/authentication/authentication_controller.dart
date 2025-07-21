@@ -24,19 +24,14 @@ class AuthenticationController {
   late AuthenticationRepository _authenticationRepository;
   String? _authToken;
 
-  AuthenticationController({
-    required AuthenticationProvider? authenticationProvider,
-    AuthenticationRepository? repository,
-  }) {
-    _authenticationProvider =
-        authenticationProvider ?? AuthenticationProvider();
+  AuthenticationController({required AuthenticationProvider? authenticationProvider, AuthenticationRepository? repository}) {
+    _authenticationProvider = authenticationProvider ?? AuthenticationProvider();
     _authenticationRepository = repository ?? AuthenticationRepository();
   }
 
   AuthenticationProvider get authenticationProvider => _authenticationProvider;
 
-  AuthenticationRepository get authenticationRepository =>
-      _authenticationRepository;
+  AuthenticationRepository get authenticationRepository => _authenticationRepository;
 
   static final _storage = FlutterSecureStorage();
   static const _pinKey = "user_app_pin";
@@ -58,10 +53,7 @@ class AuthenticationController {
 
   Future<bool> authenticateWithBiometric() async {
     if (!await isBiometricEnabled()) return false;
-    return await _auth.authenticate(
-      localizedReason: "Unlock with fingerprint or Face ID",
-      options: const AuthenticationOptions(biometricOnly: true),
-    );
+    return await _auth.authenticate(localizedReason: "Unlock with fingerprint or Face ID", options: const AuthenticationOptions(biometricOnly: true));
   }
 
   Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
@@ -86,13 +78,9 @@ class AuthenticationController {
 
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
         MyPrint.printOnConsole("Saving auth token: $accessToken");
-        await SharedPrefManager()
-            .setString(MySharedPreferenceVariables.authToken, accessToken);
+        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
-        await _authenticationRepository.uploadKeyBundle(
-          token: accessToken,
-          keyBundle: keyBundle,
-        );
+        await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
         // Save current user id here!
         await saveCurrentUserId(username: username, accessToken: accessToken);
@@ -100,13 +88,8 @@ class AuthenticationController {
         MyPrint.printOnConsole("Registration successful");
         MyToast.showSuccess(context: context, msg: "Registration successful!");
         NavigationController.navigateToPinEntryScreen(
-          navigationOperationParameters: NavigationOperationParameters(
-            context: context,
-            navigationType: NavigationType.pushNamedAndRemoveUntil,
-          ),
-          arguments: PinEntryScreenNavigationArguments(
-            mode: PinScreenMode.set,
-          ),
+          navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+          arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
         );
         return true;
       } else {
@@ -140,27 +123,22 @@ class AuthenticationController {
       final accessToken = result?['data']?['access_token'];
 
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
-        await SharedPrefManager()
-            .setString(MySharedPreferenceVariables.authToken, accessToken);
+        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
-        await _authenticationRepository.uploadKeyBundle(
-          token: accessToken,
-          keyBundle: keyBundle,
-        );
+        await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
         // Save current user id here!
         await saveCurrentUserId(username: username, accessToken: accessToken);
 
-
         NavigationController.navigateToPinEntryScreen(
-          navigationOperationParameters: NavigationOperationParameters(
-            context: context,
-            navigationType: NavigationType.pushNamedAndRemoveUntil,
-          ),
-          arguments: PinEntryScreenNavigationArguments(
-            mode: PinScreenMode.set,
-          ),
+          navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+          arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
         );
+        SharedPrefManager().setString(MySharedPreferenceVariables.username, username);
+        MyPrint.printOnConsole("Username saved: $username");
+
+        String successMsg = result['message'] ?? "Login Successful.";
+        MyToast.showSuccess(context: context, msg: successMsg);
         return true;
       } else {
         String errorMsg = result?['message'] ?? "Login failed. Please try again.";
@@ -207,14 +185,8 @@ class AuthenticationController {
     return pin == storedPin;
   }
 
-  Future<void> saveCurrentUserId({
-    required String username,
-    required String accessToken,
-  }) async {
-    final chatUser = await ChatRepository().fetchChatUser(
-      username: username,
-      token: accessToken,
-    );
+  Future<void> saveCurrentUserId({required String username, required String accessToken}) async {
+    final chatUser = await ChatRepository().fetchChatUser(username: username, token: accessToken);
     if (chatUser != null && chatUser.id.isNotEmpty) {
       await SharedPrefManager().setString('current_user_id', chatUser.id);
       print('[DEBUG] Saved current user id: ${chatUser.id}');
@@ -230,16 +202,13 @@ class AuthenticationController {
   }
 
   Future<bool> isUserLoggedIn() async {
-    String? token = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.authToken);
-    String? userId =
-        await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
+    String? token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
 
     MyPrint.printOnConsole("Retrieved authToken: $token");
     MyPrint.printOnConsole("Retrieved userId: $userId");
 
-    MyPrint.printOnConsole(
-        'Checking login status - token: ${token != null}, userId: $userId');
+    MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
 
     if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
       MyPrint.printOnConsole('No saved credentials found');
@@ -247,27 +216,20 @@ class AuthenticationController {
     }
 
     try {
-      UserModel? userModel =
-          await _authenticationRepository.getUserFromToken(token);
+      UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
 
       if (userModel != null) {
         MyPrint.printOnConsole('Retrieved user model from token');
 
         MyPrint.logOnConsole("userModel: ${userModel}");
-        _authenticationProvider.userId
-            .set(value: userModel.userId, isNotify: false);
-        _authenticationProvider.email
-            .set(value: userModel.email, isNotify: false);
+        _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
+        _authenticationProvider.email.set(value: userModel.email, isNotify: false);
         _authenticationProvider.userModel.set(value: userModel, isNotify: true);
         _authToken = token;
 
-        String notificationToken = await SharedPrefManager()
-                .getString(MySharedPreferenceVariables.loginSessionId) ??
-            MyUtils.getNewId();
-        await SharedPrefManager().setString(
-            MySharedPreferenceVariables.loginSessionId, notificationToken);
-        _authenticationProvider.loginSessionId
-            .set(value: notificationToken, isNotify: false);
+        String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
+        await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
+        _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
 
         return true;
       }
@@ -281,11 +243,7 @@ class AuthenticationController {
     }
   }
 
-  Future<void> onLoginSuccess({
-    required BuildContext context,
-    required UserModel userModel,
-    String authenticationMode = "",
-  }) async {
+  Future<void> onLoginSuccess({required BuildContext context, required UserModel userModel, String authenticationMode = ""}) async {
     MyPrint.printOnConsole("called onLoginSuccess");
 
     if (userModel.email.isEmpty) {
@@ -293,42 +251,20 @@ class AuthenticationController {
       return;
     }
 
-    authenticationProvider.userModel.set(
-      value: userModel,
-      isNotify: true,
-    );
+    authenticationProvider.userModel.set(value: userModel, isNotify: true);
 
-    authenticationProvider.userId.set(
-      value: userModel.userId,
-      isNotify: false,
-    );
-    authenticationProvider.email.set(
-      value: userModel.email,
-      isNotify: false,
-    );
+    authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
+    authenticationProvider.email.set(value: userModel.email, isNotify: false);
 
     String notificationToken = MyUtils.getNewId();
-    await SharedPrefManager().setString(
-      MySharedPreferenceVariables.authToken,
-      _authToken ?? "",
-    );
-    await SharedPrefManager().setString(
-      MySharedPreferenceVariables.userId,
-      userModel.userId,
-    );
-    await SharedPrefManager().setString(
-      MySharedPreferenceVariables.loginSessionId,
-      notificationToken,
-    );
-    authenticationProvider.loginSessionId.set(
-      value: notificationToken,
-      isNotify: false,
-    );
+    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
+    await SharedPrefManager().setString(MySharedPreferenceVariables.userId, userModel.userId);
+    await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
+    authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
 
     if (context.checkMounted() && context.mounted) {
       if (authenticationMode == AuthenticationModes.google) {
-        bool isUserExist =
-            await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
+        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
           userId: userModel.userId,
           authenticationMode: authenticationMode,
           email: userModel.email,
@@ -338,22 +274,15 @@ class AuthenticationController {
           // New user, navigate to sign-up
           MyPrint.printOnConsole("New Google user, navigating to sign-up");
           await NavigationController.navigateToSignUpScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamedAndRemoveUntil,
-            ),
+            navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
             arguments: SignUpScreenNavigationArguments(userModel: userModel),
           );
           return;
         } else {
           // Existing user, navigate to main screen
-          MyPrint.printOnConsole(
-              "Existing Google user, navigating to main screen");
+          MyPrint.printOnConsole("Existing Google user, navigating to main screen");
           NavigationController.navigateToMainScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamedAndRemoveUntil,
-            ),
+            navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
           );
           return;
         }
@@ -361,25 +290,17 @@ class AuthenticationController {
 
       // For non-Google authentication
       NavigationController.navigateToMainScreen(
-        navigationOperationParameters: NavigationOperationParameters(
-          context: context,
-          navigationType: NavigationType.pushNamedAndRemoveUntil,
-        ),
+        navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
       );
     }
   }
 
-  Future<bool> checkUserWithIdExistOrNotAndIfNotExistThenCreate({
-    required String userId,
-    String? authenticationMode,
-    required String email,
-  }) async {
+  Future<bool> checkUserWithIdExistOrNotAndIfNotExistThenCreate({required String userId, String? authenticationMode, required String email}) async {
     if (userId.isEmpty || email.isEmpty) return false;
 
     try {
       // Check if the email is already in use
-      final emailCheckResult =
-          await _authenticationRepository.checkEmailExists(email);
+      final emailCheckResult = await _authenticationRepository.checkEmailExists(email);
 
       if (emailCheckResult == null) {
         MyPrint.printOnConsole("Failed to check email existence");
@@ -402,11 +323,9 @@ class AuthenticationController {
           lastName: "",
         );
 
-        final Map<String, dynamic>? isRegistered =
-            await _authenticationRepository.registerNewUser(createdUserModel);
+        final Map<String, dynamic>? isRegistered = await _authenticationRepository.registerNewUser(createdUserModel);
         if (isRegistered != null) {
-          authenticationProvider.userModel
-              .set(value: createdUserModel, isNotify: false);
+          authenticationProvider.userModel.set(value: createdUserModel, isNotify: false);
         }
         return false;
       }
@@ -429,11 +348,9 @@ class AuthenticationController {
     _authToken = null;
 
     // Clears stored credentials from SharedPreferences
-    await SharedPrefManager()
-        .setString(MySharedPreferenceVariables.authToken, "");
+    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, "");
-    await SharedPrefManager()
-        .setString(MySharedPreferenceVariables.loginSessionId, "");
+    await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, "");
     await SharedPrefManager().setBool(MySharedPreferenceVariables.isCreatorMode, false);
 
     authenticationProvider.resetData(isNotify: true);

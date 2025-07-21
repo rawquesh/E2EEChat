@@ -23,9 +23,8 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
       BuildContext? context;
       while (context == null || (!context.checkMounted())) {
         context = NavigationController.mainScreenNavigator.currentContext;
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(const Duration(milliseconds: 400));
       }
-
       await appInitController.performInitialAppOpeningOperations(context: context, isNavigatedToOnBoardingScreen: false);
     },
     (e, s) {

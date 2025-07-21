@@ -84,7 +84,7 @@ class AppAssets {
   static const String loginHeader = '$imagesFolder/login_header.png';
   static const String otpHeader = '$imagesFolder/otp_header.png';
   static const String signupBanner = '$imagesFolder/signupBanner.png';
-  static const String kehilah_logo = '$imagesFolder/kehilah_logo.png';
+  static const String app_logo = '$imagesFolder/logo_foreground.png';
   static const String male = '$imagesFolder/male.png';
   static const String community_policy_icon = '$imagesFolder/community_policy_icon.png';
   static const String feature_request_icon = '$imagesFolder/feature_request_icon.png';

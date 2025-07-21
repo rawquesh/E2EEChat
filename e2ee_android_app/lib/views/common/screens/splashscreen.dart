@@ -43,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> with MySafeState {
                     dimension: context.sizeData.width * 0.7,
                     child: Image(
                       // image: AssetImage(AppAssets.splashLogo3),
-                      image: AssetImage(AppAssets.kehilah_logo),
+                      image: AssetImage(AppAssets.app_logo),
                       width: 120,
                       height: 120,
                       loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
