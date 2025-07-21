@@ -21,6 +21,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
   late ChatProvider _chatProvider;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchFocused = false;
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -28,13 +29,36 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
     _chatController.loadStoredChatUsers();
+
+    _searchController.addListener(() {
+        if(mounted) setState(() {});
+    });
+    _searchFocusNode.addListener(() {
+        setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   void _onSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
       _chatController.searchUser(query);
+      _searchFocusNode.unfocus();
     }
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _chatProvider.resetSearch();
+    _chatController.loadStoredChatUsers();
+    _searchFocusNode.unfocus();
+    setState(() {});
   }
 
   @override
@@ -45,10 +69,9 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
       backgroundColor: Theme.of(context).colorScheme.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle(
-          // statusBarColor: Colors.black, // Set your desired color for the status bar
-          statusBarIconBrightness: Brightness.light, // Or Brightness.dark for dark icons
-          systemNavigationBarColor: Colors.white, // Set your desired color for the navigation bar
-          systemNavigationBarIconBrightness: Brightness.light, // Or Brightness.light for light icons
+          statusBarIconBrightness: Brightness.light, 
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
         ),
         child: SafeArea(
           child: Column(
@@ -132,8 +155,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           Expanded(
                             child: TextField(
                               controller: _searchController,
-                              onTap: () => setState(() => _isSearchFocused = true),
-                              onTapOutside: (_) => setState(() => _isSearchFocused = false),
+                              focusNode: _searchFocusNode,
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w500),
                               decoration: InputDecoration(
                                 hintText: 'Search conversations...',
@@ -155,10 +177,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                             duration: Duration(milliseconds: 200),
                             child: _searchController.text.isNotEmpty
                                 ? GestureDetector(
-                                    onTap: () {
-                                      _searchController.clear();
-                                      setState(() {});
-                                    },
+                                    onTap: _clearSearch,
                                     child: Container(
                                       padding: EdgeInsets.all(6),
                                       decoration: BoxDecoration(
@@ -172,8 +191,9 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                                       ),
                                     ),
                                   )
+                                // ✨ Issue 3 & 4 Fix: This button now correctly triggers the search
                                 : GestureDetector(
-                                    onTap: () => _onSearch(),
+                                    onTap: _onSearch,
                                     child: Container(
                                       padding: EdgeInsets.all(8),
                                       decoration: BoxDecoration(
@@ -239,7 +259,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                     }
 
                     final users = _chatProvider.chatUsers.getList();
-                    if (users.isEmpty) {
+                    if (users.isEmpty && state == SearchState.initial) {
                       return _buildEmptyState(
                         icon: Icons.chat_bubble_outline_rounded,
                         title: 'No conversations',
@@ -272,7 +292,10 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                                   },
                                   transitionDuration: Duration(milliseconds: 300),
                                 ),
-                              );
+                              ).then((_) {
+                                // After returning from chat, reload users to reflect any changes
+                                _chatController.loadStoredChatUsers();
+                              });
                             },
                           ),
                         );

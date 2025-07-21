@@ -45,7 +45,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
   final ScrollController _scrollController = ScrollController();
 
-  final ChatRepository _chatRepository = ChatRepository();
+  // Note: ChatRepository is no longer needed here for Pusher.
+  // final ChatRepository _chatRepository = ChatRepository();
 
   String currentUserId = '';
   String currentUserToken = '';
@@ -123,6 +124,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         '';
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
+    
+    // ✨ Issue 2 Fix: Clear unread count when entering the chat
+    await _chatController.clearUnreadCount(widget.user.id);
 
     await _loadInitialMessages();
 
@@ -134,12 +138,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       }
     });
 
-    // Tell the repository to start listening for messages
-    _chatRepository.initPusher(
-      userId: currentUserId,
-      token: currentUserToken,
-      onMessageReceived: _handleIncomingMessage, // Provide the callback
-    );
+    // ✨ Issue 1 Fix: Removed Pusher initialization from this screen.
+    // The global handler in main_screen.dart will manage all incoming messages.
   }
 
   Future<void> _loadInitialMessages() async {
@@ -169,52 +169,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     if (mounted) setState(() {});
     _isLoadingMore = false;
   }
-
-  Future<void> _handleIncomingMessage(dynamic data) async {
-    final messageData = data is String ? jsonDecode(data) : data;
-    if (!mounted) return;
-
-    // If the message has no id, generate one
-    String messageId = "";
-    if (messageData.containsKey('id') && messageData['id'].toString().isNotEmpty) {
-      messageId = messageData['id'].toString();
-    } else {
-      // Use senderId + timestamp + message text to make it more unique (or just use uuid)
-      messageId = MyUtils.getNewId(); // uuid: ^3.0.0 or newer in pubspec.yaml
-    }
-
-    final msg = ChatMessageModel(
-      id: messageId,
-      senderId: messageData['sender_id'],
-      message: messageData['message'],
-      timestamp: DateTime.now(), // Use actual time or backend-sent time if available
-      isMe: messageData['sender_id'] == currentUserId,
-      status: 'delivered',
-    );
-
-    await _chatController.saveMessageToHive(
-      chatId: widget.user.id,
-      message: msg,
-    );
-
-    _chatProvider.addMessageFor(widget.user.id, msg);
-    _scrollToBottom();
-
-    // Notification handling
-    final senderId = messageData['sender_id']?.toString() ?? '';
-    final text = messageData['message']?.toString() ?? '';
-    if (_appState.lifecycleState == AppLifecycleState.resumed) {
-      if (_appState.currentChattingWithUserId != senderId) {
-        _appState.showCustomNotification('New message from $senderId', text);
-      }
-    } else if (_appState.lifecycleState == AppLifecycleState.paused) {
-      NotificationService().showSystemNotification(
-        DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        'New message from $senderId',
-        text,
-      );
-    }
-  }
+  
+  // ✨ Issue 1 Fix: Removed _handleIncomingMessage. The provider will update the UI automatically.
 
   void _onTextChanged() {
     final hasText = _messageController.text.trim().isNotEmpty;
@@ -254,6 +210,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       message: localMessage,
     );
 
+    // ✨ Issue 4 Fix: This is the correct place to add the user to the
+    // persistent chat list—only after the first message is sent.
     await _chatController.addUserToChatList(
       ChatUserModel(
         id: widget.user.id,
@@ -282,8 +240,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
-    // Tell the repository to clean up its connection
-    _chatRepository.disposePusher();
+    // ✨ Issue 1 Fix: Removed Pusher disposal call.
     _appState.setCurrentChattingWithUserId(null);
     super.dispose();
   }
@@ -521,7 +478,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
             child: Consumer<ChatProvider>(
               builder: (context, chatProvider, child) {
                 final msgList = chatProvider.getMessagesFor(widget.user.id);
-                final isLoadingMore = _isLoadingMore; // or chatProvider.isLoadingMore if you move it there
+                final isLoadingMore = _isLoadingMore; 
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -540,7 +497,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    // You can also add showTime headers, etc., here if needed
                     return MessageBubble(message: message);
                   },
                 );
@@ -647,17 +603,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                           child:
                               _hasText
                                   ? Icon(
-                                    Icons.send,
-                                    key: ValueKey('send'),
-                                    color: Colors.white,
-                                    size: 20,
-                                  )
+                                      Icons.send,
+                                      key: ValueKey('send'),
+                                      color: Colors.white,
+                                      size: 20,
+                                    )
                                   : Icon(
-                                    Icons.mic,
-                                    key: ValueKey('mic'),
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
+                                      Icons.mic,
+                                      key: ValueKey('mic'),
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
                         ),
                         onPressed: _onButtonPressed,
                       );

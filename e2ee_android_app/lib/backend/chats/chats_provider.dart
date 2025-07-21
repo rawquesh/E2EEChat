@@ -14,7 +14,6 @@ class ChatProvider extends CommonProvider {
       value: null,
       notify: notify,
     );
-    // ✨ INITIALIZE the new state parameter.
     searchState = CommonProviderPrimitiveParameter<SearchState>(
       value: SearchState.initial,
       notify: notify,
@@ -29,24 +28,24 @@ class ChatProvider extends CommonProvider {
   late CommonProviderListParameter<ChatUserModel> chatUsers;
   late CommonProviderPrimitiveParameter<ChatUserModel?> currentOpponent;
   late CommonProviderMapParameter<String, List<ChatMessageModel>> messages;
-
-  // ✨ ADD a parameter to hold the current search state.
   late CommonProviderPrimitiveParameter<SearchState> searchState;
 
   void reset() {
     chatUsers.setList(list: <ChatUserModel>[], isClear: true, isNotify: false);
     currentOpponent.set(value: null, isNotify: false);
-    // ✨ RESET the search state when needed.
-    searchState.set(value: SearchState.initial, isNotify: true);
+    searchState.set(value: SearchState.initial, isNotify: false);
     messages.setMap(map: <String, List<ChatMessageModel>>{}, isClear: true, isNotify: false);
+    notifyListeners();
+  }
+  
+  void resetSearch() {
+    searchState.set(value: SearchState.initial, isNotify: true);
   }
 
-  /// Retrieve all stored messages for a given user
   List<ChatMessageModel> getMessagesFor(String userId) {
     return messages.getMap()[userId] ?? <ChatMessageModel>[];
   }
 
-  /// Append a message to the list for a user
   void addMessageFor(String userId, ChatMessageModel message) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
     final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
@@ -56,7 +55,6 @@ class ChatProvider extends CommonProvider {
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
 
-  /// Clear all messages stored for a user
   void clearMessagesFor(String userId) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
     if (current.containsKey(userId)) {
@@ -65,21 +63,30 @@ class ChatProvider extends CommonProvider {
     }
   }
 
-  /// Add a batch of messages for a user. Optionally clear existing messages.
+  // ✨ FIX: This method now correctly handles both initial loads and pagination.
   void addMessagesFor(String userId, List<ChatMessageModel> newMessages, {bool clear = false}) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
     final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
-    if (clear) list.clear();
-    list.addAll(newMessages);
-    // Deduplicate by id while maintaining order
+    
+    if (clear) {
+      // For an initial load, clear the list and add the new messages.
+      list.clear();
+      list.addAll(newMessages);
+    } else {
+      // For pagination (loading older messages), insert them at the beginning.
+      list.insertAll(0, newMessages);
+    }
+    
+    // De-duplicate messages to be safe
     final seen = <String>{};
-    final unique = <ChatMessageModel>[];
-    for (final m in list) {
-      if (seen.add(m.id)) {
-        unique.add(m);
+    final uniqueList = <ChatMessageModel>[];
+    for (final msg in list) {
+      if (seen.add(msg.id)) {
+        uniqueList.add(msg);
       }
     }
-    current[userId] = unique;
+    
+    current[userId] = uniqueList;
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
 }
