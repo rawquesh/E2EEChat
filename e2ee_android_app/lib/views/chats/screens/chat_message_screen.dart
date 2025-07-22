@@ -45,9 +45,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
   final ScrollController _scrollController = ScrollController();
 
-  // Note: ChatRepository is no longer needed here for Pusher.
-  // final ChatRepository _chatRepository = ChatRepository();
-
   String currentUserId = '';
   String currentUserToken = '';
   String? opponentUserId;
@@ -169,12 +166,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     if (mounted) setState(() {});
     _isLoadingMore = false;
   }
-
-  // ✨ Issue 1 Fix: Removed _handleIncomingMessage. The provider will update the UI automatically.
-
-  Future<void> _handleIncomingMessage(dynamic data) async {
-    final messageData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
-    if (!mounted) return;
 
   void _onTextChanged() {
     final hasText = _messageController.text.trim().isNotEmpty;
@@ -608,17 +599,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                           child:
                               _hasText
                                   ? Icon(
-                                      Icons.send,
-                                      key: ValueKey('send'),
-                                      color: Colors.white,
-                                      size: 20,
-                                    )
+                                    Icons.send,
+                                    key: ValueKey('send'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
                                   : Icon(
-                                      Icons.mic,
-                                      key: ValueKey('mic'),
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
+                                    Icons.mic,
+                                    key: ValueKey('mic'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                         ),
                         onPressed: _onButtonPressed,
                       );

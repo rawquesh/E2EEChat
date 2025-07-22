@@ -72,7 +72,7 @@ class AuthenticationController {
       MyPrint.printOnConsole("Payload: $payload");
 
       MyPrint.printOnConsole("Sending registration request...");
-      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+      final result = await _authenticationRepository. registerNewUserFromPayload(payload);
 
       final accessToken = result?['data']?['access_token'];
 

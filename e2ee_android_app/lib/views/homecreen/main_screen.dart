@@ -135,8 +135,6 @@ class _MainScreenState extends State<MainScreen>
 
       await _chatController.addUserToChatList(user);
 
-      final displayName = name.isNotEmpty ? name : otherUserId;
-
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
           _appState.showCustomNotification('New message from $senderName', message);
