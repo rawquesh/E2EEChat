@@ -76,6 +76,8 @@ dev_dependencies:
 
   #record audio
   record: ^6.0.0
+  open_filex: ^4.0.0
+  mime: ^2.0.0
 
 flutter_icons:
   android: true

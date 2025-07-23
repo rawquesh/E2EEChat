@@ -388,15 +388,31 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _openCamera() {
-    requestStoragePermission(true);
+    requestStoragePermission(true,true);
   }
 
   void _openGallery() {
-    requestStoragePermission(false);
+    requestStoragePermission(false,true);
   }
 
   void _openDocuments() {
+    pickAnyFile();
+  }
 
+  Future<void> pickAnyFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      final filePath = result.files.first.path;
+      Uint8List? fileBytes = await File(filePath!).readAsBytes();
+
+      if (fileBytes != null) {
+        print("File bytes: ${fileBytes}");
+        _sendMessage("$docTypeChat${base64Encode(fileBytes)}");
+      } else {
+        print("File bytes are null (possibly picked from path, not memory)");
+      }
+    }
   }
 
   void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {
@@ -507,10 +523,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
 
-  String? _fileName;
-  Uint8List? fileBytes;
 
-  Future<void> requestStoragePermission(bool isCamera) async {
+  Future<void> requestStoragePermission(bool isCamera, bool isImage) async {
     if (Platform.isAndroid) {
       if (Platform.isAndroid && Platform.version.compareTo('13') >= 0) {
         await [
@@ -524,18 +538,26 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           Permission.camera,
         ].request();
       }
-
-      pickFile(isCamera);
+      //pickFile(isCamera,isImage);
+      _showMediaPickerDialog(isCamera);
     }
   }
 
-  Future<void> pickFile(bool isCamera) async {
+  /*Future<void> pickFile(bool isCamera,bool isImage) async {
     final picker = ImagePicker();
     late XFile? image;
     if(isCamera){
-      image = await picker.pickImage(source: ImageSource.camera);
+      if(isImage){
+        image = await picker.pickImage(source: ImageSource.camera);
+      }else{
+        image = await picker.pickVideo(source: ImageSource.camera);
+      }
     }else{
-      image = await picker.pickImage(source: ImageSource.gallery);
+      if(isImage){
+        image = await picker.pickImage(source: ImageSource.gallery);
+      }else{
+        image = await picker.pickVideo(source: ImageSource.gallery);
+      }
     }
 
     if (image != null) {
@@ -546,7 +568,91 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         _sendMessage("$imageTypeChat${base64Encode(fileBytes!)}");
       });
     }
+  }*/
+
+  final ImagePicker _picker = ImagePicker();
+  XFile? image;
+  Uint8List? fileBytes;
+
+  void _showMediaPickerDialog(bool isCamera) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              isCamera?
+              ListTile(
+                leading: Icon(Icons.photo_camera,color: Colors.white),
+                title: Text("Capture Image",style: TextStyle(color: Colors.white),),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final images = await _picker.pickImage(source: ImageSource.camera);
+                  setState(() {
+                    image = images;
+                    prepareForSendMessage(true);
+                  });
+                },
+              ):SizedBox(),
+              isCamera?
+              ListTile(
+                leading: Icon(Icons.videocam,color: Colors.white),
+                title: Text("Capture Video",style: TextStyle(color: Colors.white),),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final video = await _picker.pickVideo(source: ImageSource.camera);
+                  setState(() {
+                    image = video;
+                    prepareForSendMessage(false);
+                  });
+                },
+              ):SizedBox(),
+              !isCamera?
+              ListTile(
+                leading: Icon(Icons.image,color: Colors.white,),
+                title: Text("Choose Image",style: TextStyle(color: Colors.white),),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final images = await _picker.pickImage(source: ImageSource.gallery);
+                  setState(() {
+                    image = images;
+                    prepareForSendMessage(true);
+                  });
+                },
+              ):SizedBox(),
+              !isCamera?ListTile(
+                leading: Icon(Icons.video_library,color: Colors.white),
+                title: Text("Choose Video",style: TextStyle(color: Colors.white),),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final video = await _picker.pickVideo(source: ImageSource.gallery);
+                  setState(() {
+                    image = video;
+                    prepareForSendMessage(false);
+                  });
+                },
+              ):SizedBox(),
+            ],
+          ),
+        );
+      },
+    );
   }
+
+  prepareForSendMessage(bool isImage) async{
+    if (image != null) {
+      final Uint8List bytes = await image!.readAsBytes();
+      setState(() {
+        fileBytes = bytes;
+        if(isImage){
+          _sendMessage("$imageTypeChat${base64Encode(fileBytes!)}");
+        }else{
+          _sendMessage("$videoTypeChat${base64Encode(fileBytes!)}");
+        }
+      });
+    }
+  }
+
 
 
   @override
@@ -727,7 +833,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                               CupertinoIcons.flame_fill,
                               color: themeData.primaryColor,
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+
+                            },
                           ),
                         ),
                         onSubmitted: (_) {

@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen>
     _currentUserId =
         await SharedPrefManager().getString('current_user_id') ?? '';
     _currentUserToken = await SharedPrefManager()
-            .getString(MySharedPreferenceVariables.authToken) ??
+        .getString(MySharedPreferenceVariables.authToken) ??
         '';
 
     _chatRepository.initPusher(
@@ -69,7 +69,8 @@ class _MainScreenState extends State<MainScreen>
   void _handleIncomingMessage(dynamic data) async {
     try {
       final messageData =
-          data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+      data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+      debugPrint("messageData ==> ${messageData}");
 
       final senderId = messageData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
@@ -84,7 +85,7 @@ class _MainScreenState extends State<MainScreen>
         );
         senderName = fetchedUser?.name ?? 'Unknown User';
       }
-      
+
       final receiverId = messageData['receiver_id']?.toString() ?? '';
       final message = messageData['message']?.toString() ?? '';
       final timeStr = messageData['timestamp']?.toString() ?? '';
@@ -108,7 +109,7 @@ class _MainScreenState extends State<MainScreen>
           chatId: otherUserId, message: chatMessage);
 
       List<ChatUserModel> users =
-          List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
+      List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
@@ -129,7 +130,7 @@ class _MainScreenState extends State<MainScreen>
         user.lastMessage = message;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
-            user.unreadCount = user.unreadCount + 1;
+          user.unreadCount = user.unreadCount + 1;
         }
       }
 
@@ -137,20 +138,24 @@ class _MainScreenState extends State<MainScreen>
 
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
-          _appState.showCustomNotification('New message from $senderName', message);
+          _appState.showCustomNotification('New message from $senderName',
+              //message
+              message.startsWith(imageTypeChat) ? "Image" : message.startsWith(audioTypeChat) ? "Audio" : message.startsWith(videoTypeChat) ? "Video" : message.startsWith(docTypeChat) ? "Document" :  message
+          );
         }
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
         NotificationService().showSystemNotification(
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
           'New message from $senderName',
-          message,
+          //message,
+          message.startsWith(imageTypeChat) ? "Image" : message.startsWith(audioTypeChat) ? "Audio" : message.startsWith(videoTypeChat) ? "Video" : message.startsWith(docTypeChat) ? "Document" :  message,
         );
       }
     } catch (e) {
       MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");
     }
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -180,7 +185,7 @@ class _MainScreenState extends State<MainScreen>
   Widget build(BuildContext context) {
     UserModel userModel =
         DependencyInjection.authenticationProvider.userModel.get() ??
-        UserModel();
+            UserModel();
     super.pageBuild();
     return ChangeNotifierProvider(
       create: (_) => TabState(),
@@ -205,13 +210,13 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Chats',
                 style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(
-                          fontSize: 10,
-                          color: themeData.colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                        )
-                        .withEpilogue,
+                themeData.textTheme.labelSmall
+                    ?.copyWith(
+                  fontSize: 10,
+                  color: themeData.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                )
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -226,11 +231,11 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Calls & Contacts',
                 style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,)
-                        .withEpilogue,
+                themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10,
+                  color: themeData.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -245,11 +250,11 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Settings',
                 style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,)
-                        .withEpilogue,
+                themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10,
+                  color: themeData.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
