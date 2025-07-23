@@ -1,3 +1,4 @@
+import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
@@ -206,7 +207,7 @@ class _ChatListItemState extends State<ChatListItem>
                           children: [
                             Expanded(
                               child: Text(
-                                widget.user.lastMessage,
+                                widget.user.lastMessage.startsWith(imageTypeChat) ? "Image" : widget.user.lastMessage.startsWith(audioTypeChat) ? "Audio" :  widget.user.lastMessage,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,

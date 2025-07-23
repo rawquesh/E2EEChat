@@ -1,10 +1,10 @@
+import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-
-import '../../../backend/chats/chat_repository.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../components/chat_list_item.dart';

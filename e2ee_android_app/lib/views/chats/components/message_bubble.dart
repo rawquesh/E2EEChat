@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
-
+import 'dart:typed_data';
+import '../../../configs/constants.dart';
 import '../screens/chat_list_screen.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MessageBubble extends StatefulWidget {
   final ChatMessageModel message;
@@ -26,6 +32,25 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       return '${diff.inHours}h ago';
     } else {
       return '${diff.inDays}d ago';
+    }
+  }
+
+  //base64 image part
+  Uint8List? imageBytes;
+  Uint8List? audioBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.message.message.startsWith(imageTypeChat)) {
+      String base64String = widget.message.message.split(",").last;
+      imageBytes = base64Decode(base64String);
+    }
+
+    if (widget.message.message.startsWith(audioTypeChat)) {
+      //String base64String = widget.message.message.replaceFirst(audioTypeChat, "");
+      String base64String = widget.message.message.split(",").last;
+      audioBytes = base64Decode(base64String);
     }
   }
 
@@ -82,7 +107,28 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                       ),
                     ],
                   ),
-                  child: Text(
+                  child: widget.message.message.startsWith(imageTypeChat) ? imageBytes == null ? SizedBox():Image.memory(imageBytes!,height: 120,width: 120,fit: BoxFit.cover):
+
+                  widget.message.message.startsWith(audioTypeChat) ? audioBytes == null ? SizedBox(): InkWell(
+                    onTap: () async {
+                      if (isPlaying) {
+                        await _audioPlayer.stop();
+                        setState(() => isPlaying = false);
+                      } else {
+                        await _playAudioFromBase64();
+                      }
+                    },
+                    child: Container(width: 120,
+                    child: Row(
+                      children: [
+                        Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded,color: Colors.white,size: 30,),
+                        Text("Audio File",style: TextStyle(color: Colors.white,fontSize: 15),),
+                      ],
+                    ),
+                    ),
+                  ):
+
+                  Text(
                     widget.message.message,
                     style: TextStyle(
                       fontSize: 13,
@@ -131,4 +177,39 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       ),
     );
   }
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  bool isPlaying = false;
+  bool isLoading = false;
+
+  Future<void> _playAudioFromBase64() async {
+    if (!widget.message.message.startsWith(audioTypeChat)) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      // Decode base64
+      String base64String = widget.message.message.replaceFirst(audioTypeChat, "");
+      Uint8List audioBytes = base64Decode(base64String);
+
+      // Write to temp file
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final file = File(filePath);
+      await file.writeAsBytes(audioBytes);
+
+      // Play from file
+      await _audioPlayer.play(DeviceFileSource(filePath));
+      setState(() => isPlaying = true);
+
+      _audioPlayer.onPlayerComplete.listen((event) {
+        setState(() => isPlaying = false);
+      });
+    } catch (e) {
+      print("Audio playback error: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
 }

@@ -3,8 +3,10 @@ import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
+import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
@@ -12,6 +14,7 @@ import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:hive/hive.dart';
 
 import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../navigation/navigation_arguments.dart';
@@ -198,7 +201,26 @@ class AuthenticationController {
   Future<void> wipeAllAuthData() async {
     await _storage.delete(key: _pinKey);
     await _storage.delete(key: _biometricKey);
-    // TODO: Clear chats, user data, tokens, etc.
+
+    //start code for delete all chat data
+    Box? box = await HiveManager().openBox(boxName: "chat_users");
+    if(box != null){
+      for (final entry in box.toMap().entries) {
+        try {
+          final user = ChatUserModel.fromMap(Map<String, dynamic>.from(entry.value));
+          final messageBox = await Hive.openBox("messages_${user.id}");
+          await messageBox.clear();
+          await messageBox.close();
+          await box.delete(user.id);
+          MyPrint.printOnConsole('User Chat delete successfully');
+        } catch (e) {
+          MyPrint.printOnConsole('Error parsing chat user: $e');
+        }
+      }
+      await box.clear();
+    }
+    //end code for delete all chat data
+    // TODO: user data, tokens, etc.
   }
 
   Future<bool> isUserLoggedIn() async {

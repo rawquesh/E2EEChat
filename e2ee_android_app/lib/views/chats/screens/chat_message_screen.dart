@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:e2ee_android_app/backend/common/dependency_injection.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
@@ -19,8 +20,17 @@ import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/common/app_state.dart';
 import '../../../backend/notification/notification_service.dart';
+import '../../../configs/constants.dart';
 import '../components/message_bubble.dart';
 import 'chat_list_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
+
 
 class ChatMessageScreen extends StatefulWidget {
   final ChatUserModel user;
@@ -181,11 +191,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     }
   }
 
-  void _sendMessage() async {
-    final messageText = _messageController.text.trim();
+  void _sendMessage(String msgText) async {
+    //final messageText = _messageController.text.trim();
+    final messageText = msgText;
     if (messageText.isEmpty) return;
 
-    _messageController.clear();
+    //_messageController.clear();
 
     // Optimistically update the UI
     final localMessage = ChatMessageModel(
@@ -241,12 +252,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _startVoiceRecording() {
-    MyPrint.printOnConsole('Starting voice recording...');
+    showAudioDialog(context, (base64Audio) {
+      print("Send this to API or chat: $base64Audio");
+      _sendMessage("$audioTypeChat$base64Audio");
+    });
   }
 
   void _onButtonPressed() {
     if (_hasText) {
-      _sendMessage();
+      _sendMessage(_messageController.text.trim());
+      _messageController.clear();
     } else {
       _startVoiceRecording();
     }
@@ -373,16 +388,166 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _openCamera() {
-    MyPrint.printOnConsole('Opening camera...');
+    requestStoragePermission(true);
   }
 
   void _openGallery() {
-    MyPrint.printOnConsole('Opening gallery...');
+    requestStoragePermission(false);
   }
 
   void _openDocuments() {
-    MyPrint.printOnConsole('Opening document picker...');
+
   }
+
+  void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {
+    final record = AudioRecorder();
+    String? audioPath;
+    bool isRecording = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            Future<void> startRecording() async {
+              if (await record.hasPermission()) {
+                final dir = await getTemporaryDirectory();
+                audioPath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                await record.start(const RecordConfig(), path: audioPath!);
+                setState(() {
+                  isRecording = true;
+                });
+              }
+            }
+
+            Future<void> stopRecording() async {
+              await record.stop();
+              setState(() {
+                isRecording = false;
+              });
+            }
+
+            Future<void> sendAudio() async {
+              if (audioPath != null) {
+                final file = File(audioPath!);
+                if (await file.exists()) {
+                  final bytes = await file.readAsBytes();
+                  final base64Audio = base64Encode(bytes);
+                  onSend(base64Audio);
+                }
+              }
+              Navigator.of(context).pop();
+            }
+
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Text("Record Audio",style: TextStyle(color: Colors.black),),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isRecording ? Icons.mic : Icons.mic_none,
+                    color: isRecording ? Colors.red : Colors.black,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isRecording ? 'Recording...' : 'Tap "Record" to start',style: TextStyle(color: Colors.black),
+                  ),
+                ],
+              ),
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+
+
+                    TextButton(
+                      onPressed: () {
+                        isRecording ? stopRecording() : startRecording();
+                      },
+                      child: Text(isRecording ? 'Stop' : 'Record'),
+                    ),
+
+
+                    InkWell(
+                      onTap: () async {
+                        if(!isRecording && audioPath != null) {
+                          await sendAudio();
+                        }
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 40,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(100),
+                            color: !isRecording && audioPath != null ? Colors.orange : Colors.black.withOpacity(0.2)
+                        ),
+                        child: Center(child: Text("Send")),
+                      ),
+                    ),
+
+                    /*ElevatedButton(
+                      onPressed: (!isRecording && audioPath != null)
+                          ? () async {
+                        await sendAudio();
+                      }
+                          : null,
+                      child: const Text('Send'),
+                    ),*/
+                  ],
+                )
+
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  String? _fileName;
+  Uint8List? fileBytes;
+
+  Future<void> requestStoragePermission(bool isCamera) async {
+    if (Platform.isAndroid) {
+      if (Platform.isAndroid && Platform.version.compareTo('13') >= 0) {
+        await [
+          Permission.photos,
+          Permission.audio,
+          Permission.camera,
+        ].request();
+      } else {
+        await [
+          Permission.storage,
+          Permission.camera,
+        ].request();
+      }
+
+      pickFile(isCamera);
+    }
+  }
+
+  Future<void> pickFile(bool isCamera) async {
+    final picker = ImagePicker();
+    late XFile? image;
+    if(isCamera){
+      image = await picker.pickImage(source: ImageSource.camera);
+    }else{
+      image = await picker.pickImage(source: ImageSource.gallery);
+    }
+
+    if (image != null) {
+      final Uint8List bytes = await image.readAsBytes();
+      setState(() {
+        _fileName = image?.name;
+        fileBytes = bytes;
+        _sendMessage("$imageTypeChat${base64Encode(fileBytes!)}");
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -565,7 +730,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                             onPressed: () {},
                           ),
                         ),
-                        onSubmitted: (_) => _hasText ? _sendMessage() : null,
+                        onSubmitted: (_) {
+                          _hasText ? _sendMessage(_messageController.text.trim()) : null;
+                          _messageController.clear();
+                        } ,
                       ),
                     );
                   },
