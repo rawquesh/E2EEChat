@@ -13,6 +13,10 @@ class NotificationService {
     await _plugin.initialize(settings);
   }
 
+  Future<bool?> requestNotificationPermissions() async {
+    return await _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+  }
+
   Future<void> showSystemNotification(int id, String title, String body) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'high_importance_channel',
