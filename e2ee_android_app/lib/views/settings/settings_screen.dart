@@ -165,7 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                 // ),
                 _settingTile(icon: CupertinoIcons.doc_text, title: "Terms of Service", onTap: () {}),
                 _settingTile(icon: CupertinoIcons.lock_shield, title: "Privacy Policy", onTap: () {}),
-                _settingTile(icon: CupertinoIcons.info_circle, title: "App Info & Version", onTap: () {}),
+                // _settingTile(icon: CupertinoIcons.info_circle, title: "App Info & Version", onTap: () {}),
                 // Logout - visually separated
                 SizedBox(height: 20),
                 ListTile(
@@ -175,13 +175,36 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                     style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                   ),
                   onTap: () {
-                    NavigationController.navigateToLoginScreen(
-                      navigationOperationParameters:
-                          NavigationOperationParameters(
-                            context: context,
-                            navigationType:
-                                NavigationType.pushNamedAndRemoveUntil,
-                          ),
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Confirm Logout'),
+                          content: const Text('Are you sure you want to log out? All your local data will be wiped.'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // Dismiss dialog
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // Dismiss dialog
+                                // DataWipingUtils.wipeAllData();
+
+                                NavigationController.navigateToLoginScreen(
+                                  navigationOperationParameters: NavigationOperationParameters(
+                                    context: context,
+                                    navigationType: NavigationType.pushNamedAndRemoveUntil,
+                                  ),
+                                );
+                              },
+                              child: const Text('Logout'),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
