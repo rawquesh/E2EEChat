@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen>
     _currentUserId =
         await SharedPrefManager().getString('current_user_id') ?? '';
     _currentUserToken = await SharedPrefManager()
-        .getString(MySharedPreferenceVariables.authToken) ??
+            .getString(MySharedPreferenceVariables.authToken) ??
         '';
 
     _chatRepository.initPusher(
@@ -69,7 +69,7 @@ class _MainScreenState extends State<MainScreen>
   void _handleIncomingMessage(dynamic data) async {
     try {
       final messageData =
-      data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+          data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
       debugPrint("messageData ==> ${messageData}");
 
       final senderId = messageData['sender_id']?.toString() ?? '';
@@ -85,9 +85,18 @@ class _MainScreenState extends State<MainScreen>
         );
         senderName = fetchedUser?.name ?? 'Unknown User';
       }
-
+      
       final receiverId = messageData['receiver_id']?.toString() ?? '';
-      final message = messageData['message']?.toString() ?? '';
+      //final message = messageData['message']?.toString() ?? '';
+      final message = messageData['message']['message']?.toString() ?? '';
+      final tempDestructTimer = messageData['message']['destructTimer'] ?? 0;
+      DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
+      if(tempDestructTimer == 0){
+        destructTimer = DateTime.now().add(Duration(days: 365*100));
+      }
+      debugPrint("tempDestructTimer1 ==> ${tempDestructTimer}");
+      debugPrint("tempDestructTimer2 ==> ${destructTimer}");
+
       final timeStr = messageData['timestamp']?.toString() ?? '';
       final bool isMe = senderId == _currentUserId;
       final otherUserId = isMe ? receiverId : senderId;
@@ -102,6 +111,7 @@ class _MainScreenState extends State<MainScreen>
         timestamp: time,
         isMe: isMe,
         status: 'delivered',
+        destructTimestamp: destructTimer,
       );
 
       _chatProvider.addMessageFor(otherUserId, chatMessage);
@@ -109,7 +119,7 @@ class _MainScreenState extends State<MainScreen>
           chatId: otherUserId, message: chatMessage);
 
       List<ChatUserModel> users =
-      List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
+          List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
@@ -130,7 +140,7 @@ class _MainScreenState extends State<MainScreen>
         user.lastMessage = message;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
-          user.unreadCount = user.unreadCount + 1;
+            user.unreadCount = user.unreadCount + 1;
         }
       }
 
@@ -155,7 +165,7 @@ class _MainScreenState extends State<MainScreen>
       MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");
     }
   }
-
+  
   @override
   void initState() {
     super.initState();
@@ -185,7 +195,7 @@ class _MainScreenState extends State<MainScreen>
   Widget build(BuildContext context) {
     UserModel userModel =
         DependencyInjection.authenticationProvider.userModel.get() ??
-            UserModel();
+        UserModel();
     super.pageBuild();
     return ChangeNotifierProvider(
       create: (_) => TabState(),
@@ -210,13 +220,13 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Chats',
                 style:
-                themeData.textTheme.labelSmall
-                    ?.copyWith(
-                  fontSize: 10,
-                  color: themeData.colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                )
-                    .withEpilogue,
+                    themeData.textTheme.labelSmall
+                        ?.copyWith(
+                          fontSize: 10,
+                          color: themeData.colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                        )
+                        .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -231,11 +241,11 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Calls & Contacts',
                 style:
-                themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10,
-                  color: themeData.colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,)
-                    .withEpilogue,
+                    themeData.textTheme.labelSmall
+                        ?.copyWith(fontSize: 10,
+                      color: themeData.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,)
+                        .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -250,11 +260,11 @@ class _MainScreenState extends State<MainScreen>
               title: Text(
                 'Settings',
                 style:
-                themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10,
-                  color: themeData.colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,)
-                    .withEpilogue,
+                    themeData.textTheme.labelSmall
+                        ?.copyWith(fontSize: 10,
+                      color: themeData.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,)
+                        .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),

@@ -233,7 +233,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _scrollToBottom();
 
     // The controller already correctly calls the repository
-    final success = await _chatController.sendMessage(message: messageText);
+    final success = await _chatController.sendMessage(message: messageText,destructTimer: selectedTimeForDestruct);
     if (!success) {
       MyPrint.printOnConsole('Send failed');
       // Here you might want to update the message status to 'failed'
@@ -828,14 +828,44 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                               width: 1,
                             ),
                           ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              CupertinoIcons.flame_fill,
-                              color: themeData.primaryColor,
-                            ),
-                            onPressed: () {
+                          suffixIcon: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  CupertinoIcons.flame_fill,
+                                  color: themeData.primaryColor,
+                                ),
+                                onPressed: () async{
+                                  final selectedTime = await showTimeSelectionDialog(context);
+                                  if (selectedTime != null) {
+                                    print("User selected: $selectedTimeForDestruct");
+                                  }
+                                },
+                              ),
 
-                            },
+                              selectedTimeForDestruct == 0?SizedBox():
+                              InkWell(
+                                onTap: () async{
+                                  final selectedTime = await showTimeSelectionDialog(context);
+                                  if (selectedTime != null) {
+                                    print("User selected: $selectedTimeForDestruct");
+                                  }
+                                },
+                                child: Container(
+                                  height: 15,
+                                  width: 15,
+                                  margin: EdgeInsets.only(top: 5),
+                                  decoration: BoxDecoration(
+                                      color: Colors.orange,
+                                    shape: BoxShape.circle
+                                  ),
+                                  child: Center(
+                                    child:  Text("$selectedTimeForDestruct",style: TextStyle(fontSize: 10),),
+                                  ),
+                                ),
+                              )
+                            ],
                           ),
                         ),
                         onSubmitted: (_) {
@@ -897,6 +927,49 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           ),
         ],
       ),
+    );
+  }
+
+  int selectedTimeForDestruct = 0;
+  Future<int?> showTimeSelectionDialog(BuildContext context) async {
+    return showDialog<int>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text('Select time for destroy message',style: TextStyle(color: Colors.black,fontSize: 20,fontWeight: FontWeight.w600),),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [0, 5, 10, 15].map((time) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: InkWell(
+                  onTap: () {
+                      selectedTimeForDestruct = time;
+                      Navigator.pop(context, time);
+                      setState(() {});
+                  },
+                    child: Row(
+                      children: [
+                        Container(height: 15,width: 15,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black,width: 2),
+                          borderRadius: BorderRadius.circular(3),
+                          color: selectedTimeForDestruct == time ? Colors.black : Colors.transparent
+                        ),),
+                        SizedBox(width: 7,),
+                        Text(time == 0 ? "None" : 'Destroy message after $time min',style: TextStyle(color: Colors.black),),
+                      ],
+                    )),
+                /*child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, time),
+                  child: Text('After $time min, msg will be destroy'),
+                ),*/
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }

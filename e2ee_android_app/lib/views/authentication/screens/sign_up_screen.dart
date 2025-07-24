@@ -494,7 +494,7 @@
 //                   TextButton(
 //                     onPressed: _navigateToLogin,
 //                     style: TextButton.styleFrom(foregroundColor: primaryColor),
-//                     child: const Text("Login"),
+//                     child: const Text("Authenticate"),
 //                   ),
 //                 ],
 //               ),

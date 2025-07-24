@@ -72,7 +72,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   Widget build(BuildContext context) {
     super.pageBuild();
 
-    return Padding(
+    return DateTime.now().isBefore(widget.message.destructTimestamp) ? Padding(
       padding: EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: widget.message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -217,7 +217,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
           ],
         ],
       ),
-    );
+    ) : SizedBox();
   }
 
   Future<void> openBase64File(String base64String, String fileNameWithoutExt) async {

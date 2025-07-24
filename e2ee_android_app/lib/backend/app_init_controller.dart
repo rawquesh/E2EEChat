@@ -105,7 +105,7 @@ class AppInitController {
 
     // 2. If no token, go to login/signup
     if (authToken == null || authToken.isEmpty) {
-      MyPrint.printOnConsole("No token found, navigating to Login", tag: tag);
+      MyPrint.printOnConsole("No token found, navigating to Authenticate", tag: tag);
       NavigationController.navigateToLoginScreen(
         navigationOperationParameters: NavigationOperationParameters(
           context: context,

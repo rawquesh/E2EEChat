@@ -32,7 +32,7 @@ class ChatController {
   MessageRepository get messageRepository => _messageRepository;
   ChatUsersRepository get chatUsersRepository => _chatUsersRepository;
 
-  Future<bool> sendMessage({required String message}) async {
+  Future<bool> sendMessage({required String message,required int destructTimer}) async {
     final opponent = _chatProvider.currentOpponent.get();
     if (opponent == null) return false;
     final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
@@ -46,6 +46,7 @@ class ChatController {
       receiverId: receiverId,
       message: message,
       senderName: username, // ✨ 3. Use stored sender name
+      destructTimer: destructTimer
     );
   }
 

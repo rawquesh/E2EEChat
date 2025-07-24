@@ -6,6 +6,7 @@ class ChatMessageModel {
   String senderId;
   String message;
   DateTime timestamp;
+  DateTime destructTimestamp;
   bool isMe;
   String status;
 
@@ -14,9 +15,10 @@ class ChatMessageModel {
     this.senderId = '',
     this.message = '',
     DateTime? timestamp,
+	DateTime? destructTimestamp,
     this.isMe = false,
     this.status = '',
-  }) : timestamp = timestamp ?? DateTime.now();
+  }) : timestamp = timestamp ?? DateTime.now(),destructTimestamp = destructTimestamp ?? DateTime.now().add(Duration(days: 365 * 100));
 
   factory ChatMessageModel.fromMap(Map<String, dynamic> map, {required String currentUserId}) {
     return ChatMessageModel(
@@ -24,6 +26,7 @@ class ChatMessageModel {
       senderId: ParsingHelper.parseStringMethod(map['sender_id']),
       message: ParsingHelper.parseStringMethod(map['message']),
       timestamp: DateTime.tryParse(map['timestamp'] ?? '') ?? DateTime.now(),
+	  destructTimestamp: DateTime.tryParse(map['destructTimestamp'] ?? '') ?? DateTime.now().add(Duration(days: 365 * 100)),
       isMe: ParsingHelper.parseStringMethod(map['sender_id']) == currentUserId,
       status: ParsingHelper.parseStringMethod(map['status']),
     );
@@ -35,6 +38,7 @@ class ChatMessageModel {
       'sender_id': senderId,
       'message': message,
       'timestamp': timestamp.toIso8601String(),
+	  'destructTimestamp': destructTimestamp.toIso8601String(),
       'is_me': isMe,
       'status': status,
     };

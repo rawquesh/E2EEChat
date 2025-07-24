@@ -12,14 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
-enum PinScreenMode {
-  set,
-  confirm,
-  verify,
-  changeOld,
-  changeNew,
-  changeConfirm,
-}
+enum PinScreenMode { set, confirm, verify }
 
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
@@ -45,9 +38,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   PinScreenMode currentMode = PinScreenMode.set;
   bool hasCheckedBiometric = false;
 
-  String? oldPin;
-  String? newPin;
-
   @override
   void initState() {
     super.initState();
@@ -67,11 +57,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       // New: Try biometric first if in verify mode
       if (currentMode == PinScreenMode.verify && !hasCheckedBiometric) {
         hasCheckedBiometric = true;
-        bool biometricEnabled =
-            await authenticationController.isBiometricEnabled();
+        bool biometricEnabled = await authenticationController.isBiometricEnabled();
         if (biometricEnabled) {
-          final success =
-              await authenticationController.authenticateWithBiometric();
+          final success = await authenticationController.authenticateWithBiometric();
           if (success) {
             if (mounted) _goToHome();
           }
@@ -93,64 +81,61 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       errorMessage = null;
     });
 
-    // ======== CHANGE PIN FLOW ========
-    if (currentMode == PinScreenMode.changeOld) {
-      final isCorrectPin = await authenticationController.verifyPin(pin);
+    if (currentMode == PinScreenMode.set) {
+      // First entry: save it and prompt for confirmation
+      firstPin = pin;
+      setState(() {
+        currentMode = PinScreenMode.confirm;
+        _pinController.clear();
+        isLoading = false;
+      });
 
-      if (isCorrectPin) {
-        // Old PIN verified, move to new PIN entry
-        oldPin = pin;
-        newPin = null; // Reset new pin just in case
-        currentMode = PinScreenMode.changeNew;
-        _pinController.clear();
-        isLoading = false;
-        mySetState();
-        WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
-      } else {
-        failedAttempts++;
-        isLoading = false;
-        if (failedAttempts >= 5) {
-          errorMessage = "Too many failed attempts. All data will be wiped.";
-          _wipeAppData();
-        } else {
-          errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
-        }
-        _pinController.clear();
-       mySetState();
+      // Request focus again after clearing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+      return;
+    }
+
+    if (currentMode == PinScreenMode.confirm) {
+      // User re-entered PIN to confirm
+      if (firstPin == null) {
+        setState(() {
+          errorMessage = "Something went wrong. Please start over.";
+          currentMode = PinScreenMode.set;
+          firstPin = null;
+          _pinController.clear();
+          isLoading = false;
+        });
+        return;
       }
-      return;
-    } else if (currentMode == PinScreenMode.changeNew) {
-      // Enter new PIN
-      newPin = pin;
-      currentMode = PinScreenMode.changeConfirm;
-      _pinController.clear();
-      isLoading = false;
-      mySetState();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
-      return;
-    } else if (currentMode == PinScreenMode.changeConfirm) {
-      // Confirm new PIN
-      if (newPin == pin) {
-        final result = await authenticationController.setNewPin(newPin!, pin);
-        isLoading = false;
-        mySetState();
+
+      // Check if PINs match
+      if (firstPin == pin) {
+        // PINs match, save the PIN
+        final result = await authenticationController.setNewPin(firstPin!, pin);
+
         if (result) {
-          MyToast.showSuccess(context: context, msg: "PIN changed successfully!");
-          _goToHome();
+          // PIN set successfully, prompt biometric
+          setState(() {
+            isLoading = false;
+          });
+          _showBiometricPrompt();
         } else {
           setState(() {
-            errorMessage = "Failed to change PIN. Please try again.";
-            currentMode = PinScreenMode.changeOld;
-            oldPin = null;
-            newPin = null;
+            errorMessage = "Failed to save PIN. Please try again.";
+            currentMode = PinScreenMode.set;
+            firstPin = null;
             _pinController.clear();
+            isLoading = false;
           });
         }
       } else {
+        // PINs don't match
         setState(() {
           errorMessage = "PINs do not match. Please try again.";
-          currentMode = PinScreenMode.changeNew;
-          newPin = null;
+          currentMode = PinScreenMode.set;
+          firstPin = null;
           _pinController.clear();
           isLoading = false;
         });
@@ -158,48 +143,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       return;
     }
 
-    // ======== REGULAR PIN FLOWS ========
-    else if (currentMode == PinScreenMode.set) {
-      firstPin = pin;
-      currentMode = PinScreenMode.confirm;
-      _pinController.clear();
-      isLoading = false;
-      mySetState();
-      WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
-      return;
-    } else if (currentMode == PinScreenMode.confirm) {
-      if (firstPin == null) {
-        errorMessage = "Something went wrong. Please start over.";
-        currentMode = PinScreenMode.set;
-        firstPin = null;
-        _pinController.clear();
-        isLoading = false;
-        mySetState();
-        return;
-      }
-      if (firstPin == pin) {
-        final result = await authenticationController.setNewPin(firstPin!, pin);
-        isLoading = false;
-       mySetState();
-        if (result) {
-          _showBiometricPrompt();
-        } else {
-          errorMessage = "Failed to save PIN. Please try again.";
-          currentMode = PinScreenMode.set;
-          firstPin = null;
-          _pinController.clear();
-          mySetState();
-        }
-      } else {
-        errorMessage = "PINs do not match. Please try again.";
-        currentMode = PinScreenMode.set;
-        firstPin = null;
-        _pinController.clear();
-        isLoading = false;
-       mySetState();
-      }
-      return;
-    } else if (currentMode == PinScreenMode.verify) {
+    if (currentMode == PinScreenMode.verify) {
       final isCorrect = await authenticationController.verifyPin(pin);
       if (isCorrect) {
         if (mounted) {
@@ -211,21 +155,22 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           );
         }
       } else {
-        failedAttempts++;
-        isLoading = false;
-        if (failedAttempts >= 5) {
-          errorMessage = "Too many failed attempts. All data will be wiped.";
-          _wipeAppData();
-        } else {
-          errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
-        }
-        _pinController.clear();
-        mySetState();
+        setState(() {
+          failedAttempts++;
+          isLoading = false;
+          if (failedAttempts >= 5) {
+            errorMessage = "Too many failed attempts. All data will be wiped.";
+            _wipeAppData();
+          } else {
+            errorMessage =
+                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+          }
+          _pinController.clear();
+        });
       }
       return;
     }
   }
-
 
   void _showBiometricPrompt() async {
     final canBiometric = await authenticationController.canCheckBiometrics();
@@ -335,23 +280,23 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
 
   String _getTitle() {
     switch (currentMode) {
-      case PinScreenMode.set: return "Set Your PIN";
-      case PinScreenMode.confirm: return "Confirm Your PIN";
-      case PinScreenMode.verify: return "Enter Your PIN";
-      case PinScreenMode.changeOld: return "Enter Current PIN";
-      case PinScreenMode.changeNew: return "Enter New PIN";
-      case PinScreenMode.changeConfirm: return "Confirm New PIN";
+      case PinScreenMode.set:
+        return "Set Your PIN";
+      case PinScreenMode.confirm:
+        return "Confirm Your PIN";
+      case PinScreenMode.verify:
+        return "Enter Your PIN";
     }
   }
 
   String _getSubtitle() {
     switch (currentMode) {
-      case PinScreenMode.set: return "Choose a 6 or 8-digit PIN for secure access";
-      case PinScreenMode.confirm: return "Re-enter the PIN to confirm";
-      case PinScreenMode.verify: return "Enter your PIN to access secure chat";
-      case PinScreenMode.changeOld: return "Verify your current PIN";
-      case PinScreenMode.changeNew: return "Enter your new PIN";
-      case PinScreenMode.changeConfirm: return "Re-enter your new PIN to confirm";
+      case PinScreenMode.set:
+        return "Choose a 6 or 8-digit PIN for secure access";
+      case PinScreenMode.confirm:
+        return "Re-enter the PIN to confirm";
+      case PinScreenMode.verify:
+        return "Enter your PIN to access secure chat";
     }
   }
 

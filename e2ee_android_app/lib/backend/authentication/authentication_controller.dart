@@ -6,7 +6,6 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
-import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
@@ -14,13 +13,15 @@ import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:hive/hive.dart';
 
 import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../navigation/navigation_arguments.dart';
 import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
 import 'authentication_repository.dart';
+import 'package:hive/hive.dart';
+import 'package:e2ee_models_app/utils/hive_manager.dart';
+
 
 class AuthenticationController {
   late AuthenticationProvider _authenticationProvider;

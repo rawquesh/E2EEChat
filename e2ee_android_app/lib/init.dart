@@ -16,9 +16,7 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
 
       await appInitController.initApp(appFlavor: appFlavor);
 
-      runApp(
-        const MyApp(),
-      );
+      runApp(const MyApp());
 
       BuildContext? context;
       while (context == null || (!context.checkMounted())) {
