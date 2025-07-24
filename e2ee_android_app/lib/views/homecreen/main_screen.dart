@@ -76,7 +76,7 @@ class _MainScreenState extends State<MainScreen>
       if (senderId.isEmpty) return; // Ignore invalid messages
 
       // ✨ FIX: Fetch sender name if it's missing from the payload
-      var senderName = messageData['message']['message']['senderName']?.toString() ?? '';
+      var senderName = messageData['message']['senderName']?.toString() ?? '';
       if (senderName.isEmpty) {
         MyPrint.printOnConsole("Sender name not in payload, fetching from API for ID: $senderId");
         final fetchedUser = await _chatRepository.fetchChatUser(
