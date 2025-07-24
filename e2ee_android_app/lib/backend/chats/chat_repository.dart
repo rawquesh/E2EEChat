@@ -75,10 +75,9 @@ class ChatRepository {
     final url = Uri.parse('$baseUrl/send-message');
     final body = jsonEncode({
       "sender_id": senderId,
-      "sender_name": senderName, // ✨ 2. Include senderName in the request body
       "receiver_id": receiverId,
       //"message": message,
-      "message": {"message":message, "destructTimer": timeInSecond},
+      "message": {"message":message, "destructTimer": timeInSecond, "senderName": senderName},
     });
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
 
