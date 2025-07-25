@@ -1,5 +1,5 @@
-import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../../views/authentication/screens/login_screen.dart';
 import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../../views/authentication/screens/sign_up_screen.dart';
+import '../../views/calls/screens/voice_call_demo_screen.dart';
 import '../../views/common/screens/splashscreen.dart';
 import '../../views/homecreen/main_screen.dart';
 import 'navigation_arguments.dart';
@@ -94,6 +95,11 @@ class NavigationController {
           page = parsePinEntryScreen(settings: settings);
           break;
         }
+      case VoiceCallDemoScreen.routeName:
+        {
+          page = parseVoiceCallDemoScreen(settings: settings);
+          break;
+        }
       // case MainScreen.routeName:
       //   {
       //     page = parseMainScreen(settings: settings);
@@ -105,9 +111,8 @@ class NavigationController {
       return PageRouteBuilder(
         pageBuilder: (c, a1, a2) => page!,
         //transitionsBuilder: (c, anim, a2, child) => FadeTransition(opacity: anim, child: child),
-        transitionsBuilder:
-            (c, anim, a2, child) =>
-                SizeTransition(sizeFactor: anim, child: child),
+        transitionsBuilder: (c, anim, a2, child) =>
+            SizeTransition(sizeFactor: anim, child: child),
         transitionDuration: const Duration(milliseconds: 0),
         settings: settings,
       );
@@ -141,6 +146,9 @@ class NavigationController {
     }
   }
 
+  static Widget? parseVoiceCallDemoScreen({required RouteSettings settings}) {
+    return const VoiceCallDemoScreen();
+  }
 
   //endregion
 
@@ -189,6 +197,16 @@ class NavigationController {
       navigationOperationParameters: navigationOperationParameters.copyWith(
         routeName: PinEntryScreen.routeName,
         arguments: arguments,
+      ),
+    );
+  }
+
+  static Future<dynamic> navigateToVoiceCallDemoScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+  }) {
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: VoiceCallDemoScreen.routeName,
       ),
     );
   }

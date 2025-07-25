@@ -47,43 +47,57 @@ class CallController {
 
     await webrtcService.initPeerConnection(
       onIceCandidate: _sendIceCandidate,
-      onAddRemoteStream: (stream) {
-        // you can update provider with remote stream here
-      },
+      onAddRemoteStream: (stream) {},
     );
 
     await webrtcService.attachLocalAudio();
 
     final offer = await webrtcService.createOffer();
 
+    print('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
+
     await signalingRepository.sendSignal(
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'offer',
-        data: offer.toMap(),
+        data: {'sdp': offer.sdp, 'type': offer.type},
         senderId: _selfId!,
         receiverId: receiverId,
       ),
     );
+
+    print(
+      '📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}',
+    );
   }
 
-  Future<void> acceptCall() async {
-    if (_remoteId == null) return;
+  Future<void> acceptCall({Map<String, dynamic>? offer}) async {
+    if (_remoteId == null || offer == null) return;
 
     callProvider.callState.set(value: CallState.connected);
 
     await webrtcService.initPeerConnection(
       onIceCandidate: _sendIceCandidate,
       onAddRemoteStream: (stream) {
-        // Handle stream
+        // Handle stream if needed
       },
     );
 
     await webrtcService.attachLocalAudio();
+
+    await sendAnswer(offer); // ✅ Important
   }
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
-    await webrtcService.setRemoteDescription(offer['sdp'], offer['type']);
+    final sdp = offer['sdp'];
+    final type = offer['type'];
+
+    if (sdp == null || type == null) {
+      print('❌ sendAnswer: Missing sdp or type in offer');
+      return;
+    }
+
+    await webrtcService.setRemoteDescription(sdp, type);
 
     final answer = await webrtcService.createAnswer();
 
@@ -91,7 +105,7 @@ class CallController {
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'answer',
-        data: answer.toMap(),
+        data: {'sdp': answer.sdp, 'type': answer.type},
         senderId: _selfId!,
         receiverId: _remoteId!,
       ),
@@ -105,6 +119,8 @@ class CallController {
         callProvider.callState.set(value: CallState.ringing);
         callProvider.currentCallerId.set(value: signal.senderId);
         onIncomingCall?.call(signal.senderId);
+        await acceptCall(offer: signal.data);
+        print('📩 Received offer signal: ${signal.data}');
         break;
 
       case 'answer':
@@ -131,8 +147,11 @@ class CallController {
     }
   }
 
+  bool get _isReadyForSignaling =>
+      _token != null && _selfId != null && _remoteId?.isNotEmpty == true;
+
   Future<void> endCall({bool sendSignal = true}) async {
-    if (sendSignal && _remoteId != null) {
+    if (sendSignal && _isReadyForSignaling) {
       await signalingRepository.sendSignal(
         token: _token!,
         signal: WebRTCSignalModel(
@@ -144,7 +163,6 @@ class CallController {
     }
 
     await webrtcService.dispose();
-
     callProvider.callState.set(value: CallState.ended);
     onCallEnded?.call();
   }

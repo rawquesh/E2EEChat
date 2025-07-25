@@ -6,6 +6,8 @@ import '../../../backend/webrtc/call_controller.dart';
 import '../../../backend/webrtc/call_provider.dart';
 
 class VoiceCallDemoScreen extends StatefulWidget {
+  static const String routeName = "/VoiceCallDemoScreen";
+
   const VoiceCallDemoScreen({super.key});
 
   @override
@@ -22,9 +24,7 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
     super.initState();
     _remoteRenderer.initialize();
 
-    final provider = CallProvider();
-    _controller = CallController(provider: provider);
-    _controller.init(userId: '1', token: '');
+    _controller = context.read<CallProvider>().callController;
     _controller.onCallConnected = () {
       final stream = _controller.webrtcService.remoteStream;
       if (stream != null) _remoteRenderer.srcObject = stream;
@@ -33,12 +33,16 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
 
   @override
   void dispose() {
+    context.read<CallProvider>().callController.onCallConnected = null;
     _remoteRenderer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final callProvider = context.watch<CallProvider>();
+    final controller = callProvider.callController;
+
     return ChangeNotifierProvider.value(
       value: _controller.callProvider,
       child: Consumer<CallProvider>(
@@ -54,25 +58,31 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
                     decoration: const InputDecoration(labelText: 'Receiver ID'),
                   ),
                   const SizedBox(height: 16),
-                  Text('State: ${p.callState.get().toString()}'),
+                  Text('State: ${callProvider.callState.get().toString()}'),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton(
                         onPressed: () =>
-                            _controller.startCall(_idController.text),
-                        child: const Text('Start Call'),
+                            controller.startCall(_idController.text),
+                        child: const Text('Start'),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _controller.acceptCall,
+                        onPressed: controller.acceptCall,
                         child: const Text('Accept'),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _controller.endCall,
+                        onPressed: controller.endCall,
                         child: const Text('End'),
                       ),
                     ],
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        controller.mute(!callProvider.isMuted.get()),
+                    child: Text(callProvider.isMuted.get() ? 'Unmute' : 'Mute'),
                   ),
                   Row(
                     children: [

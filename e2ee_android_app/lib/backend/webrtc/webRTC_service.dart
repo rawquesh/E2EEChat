@@ -60,7 +60,9 @@ class WebRTCService {
     });
 
     if (_peerConnection != null && _localStream != null) {
-      _peerConnection!.addStream(_localStream!);
+      for (var track in _localStream!.getTracks()) {
+        _peerConnection!.addTrack(track, _localStream!); // ✅ FIXED
+      }
     }
   }
 
@@ -83,7 +85,12 @@ class WebRTCService {
   }
 
   /// Set the remote peer's SDP
-  Future<void> setRemoteDescription(String sdp, String type) async {
+  Future<void> setRemoteDescription(String? sdp, String? type) async {
+    if (sdp == null || type == null) {
+      print('❌ setRemoteDescription: sdp or type is null. Aborting.');
+      return;
+    }
+
     final description = RTCSessionDescription(sdp, type);
     await _peerConnection?.setRemoteDescription(description);
   }

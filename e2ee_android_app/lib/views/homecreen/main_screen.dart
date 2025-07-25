@@ -1,10 +1,11 @@
 import 'dart:convert';
 
+import 'package:e2ee_android_app/backend/webrtc/call_controller.dart';
+import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
 import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_android_app/configs/font_manager.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
-import 'package:e2ee_android_app/views/files_and_media/files_media_screen.dart';
 import 'package:e2ee_android_app/views/settings/settings_screen.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
@@ -15,7 +16,6 @@ import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../backend/chats/chat_repository.dart';
@@ -43,20 +43,28 @@ class _MainScreenState extends State<MainScreen>
   late final ChatProvider _chatProvider;
   late final ChatController _chatController;
   late final AppState _appState;
+  late CallController callController;
+  late CallProvider callProvider;
+
   String _currentUserId = '';
   String _currentUserToken = '';
 
   final List<Widget> _screens = [
     ChatListScreen(),
     CallsScreen(),
-    SettingsScreen(username: "rishi234")
+    SettingsScreen(username: "rishi234"),
   ];
 
   Future<void> _initializeSocket() async {
+    callController = CallController();
+    callProvider = context.read<CallProvider>();
     _currentUserId =
         await SharedPrefManager().getString('current_user_id') ?? '';
-    _currentUserToken = await SharedPrefManager()
-            .getString(MySharedPreferenceVariables.authToken) ??
+    MyPrint.printOnConsole('userId: $_currentUserId');
+    _currentUserToken =
+        await SharedPrefManager().getString(
+          MySharedPreferenceVariables.authToken,
+        ) ??
         '';
 
     _chatRepository.initPusher(
@@ -64,12 +72,18 @@ class _MainScreenState extends State<MainScreen>
       token: _currentUserToken,
       onMessageReceived: _handleIncomingMessage,
     );
+
+    callProvider.initController(
+      userId: _currentUserId,
+      token: _currentUserToken,
+    );
   }
 
   void _handleIncomingMessage(dynamic data) async {
     try {
-      final messageData =
-          data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+      final messageData = data is String
+          ? jsonDecode(data)
+          : Map<String, dynamic>.from(data);
       debugPrint("messageData ==> ${messageData}");
 
       final senderId = messageData['sender_id']?.toString() ?? '';
@@ -78,21 +92,25 @@ class _MainScreenState extends State<MainScreen>
       // ✨ FIX: Fetch sender name if it's missing from the payload
       var senderName = messageData['message']['senderName']?.toString() ?? '';
       if (senderName.isEmpty) {
-        MyPrint.printOnConsole("Sender name not in payload, fetching from API for ID: $senderId");
+        MyPrint.printOnConsole(
+          "Sender name not in payload, fetching from API for ID: $senderId",
+        );
         final fetchedUser = await _chatRepository.fetchChatUser(
           userId: senderId,
           token: _currentUserToken,
         );
         senderName = fetchedUser?.name ?? 'Unknown User';
       }
-      
+
       final receiverId = messageData['receiver_id']?.toString() ?? '';
       //final message = messageData['message']?.toString() ?? '';
       final message = messageData['message']['message']?.toString() ?? '';
       final tempDestructTimer = messageData['message']['destructTimer'] ?? 0;
-      DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
-      if(tempDestructTimer == 0){
-        destructTimer = DateTime.now().add(Duration(days: 365*100));
+      DateTime destructTimer = DateTime.now().add(
+        Duration(seconds: tempDestructTimer),
+      );
+      if (tempDestructTimer == 0) {
+        destructTimer = DateTime.now().add(Duration(days: 365 * 100));
       }
       debugPrint("tempDestructTimer1 ==> ${tempDestructTimer}");
       debugPrint("tempDestructTimer2 ==> ${destructTimer}");
@@ -116,16 +134,21 @@ class _MainScreenState extends State<MainScreen>
 
       _chatProvider.addMessageFor(otherUserId, chatMessage);
       await _chatController.saveMessageToHive(
-          chatId: otherUserId, message: chatMessage);
+        chatId: otherUserId,
+        message: chatMessage,
+      );
 
-      List<ChatUserModel> users =
-          List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
+      List<ChatUserModel> users = List<ChatUserModel>.from(
+        _chatProvider.chatUsers.getList(),
+      );
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
 
       if (index == -1) {
-        String avatar = senderName.isNotEmpty ? senderName[0].toUpperCase() : '?';
+        String avatar = senderName.isNotEmpty
+            ? senderName[0].toUpperCase()
+            : '?';
         user = ChatUserModel(
           id: otherUserId,
           name: senderName,
@@ -140,7 +163,7 @@ class _MainScreenState extends State<MainScreen>
         user.lastMessage = message;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
-            user.unreadCount = user.unreadCount + 1;
+          user.unreadCount = user.unreadCount + 1;
         }
       }
 
@@ -148,9 +171,18 @@ class _MainScreenState extends State<MainScreen>
 
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
-          _appState.showCustomNotification('New message from $senderName',
-              //message
-              message.startsWith(imageTypeChat) ? "Image" : message.startsWith(audioTypeChat) ? "Audio" : message.startsWith(videoTypeChat) ? "Video" : message.startsWith(docTypeChat) ? "Document" :  message
+          _appState.showCustomNotification(
+            'New message from $senderName',
+            //message
+            message.startsWith(imageTypeChat)
+                ? "Image"
+                : message.startsWith(audioTypeChat)
+                ? "Audio"
+                : message.startsWith(videoTypeChat)
+                ? "Video"
+                : message.startsWith(docTypeChat)
+                ? "Document"
+                : message,
           );
         }
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
@@ -158,14 +190,22 @@ class _MainScreenState extends State<MainScreen>
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
           'New message from $senderName',
           //message,
-          message.startsWith(imageTypeChat) ? "Image" : message.startsWith(audioTypeChat) ? "Audio" : message.startsWith(videoTypeChat) ? "Video" : message.startsWith(docTypeChat) ? "Document" :  message,
+          message.startsWith(imageTypeChat)
+              ? "Image"
+              : message.startsWith(audioTypeChat)
+              ? "Audio"
+              : message.startsWith(videoTypeChat)
+              ? "Video"
+              : message.startsWith(docTypeChat)
+              ? "Document"
+              : message,
         );
       }
     } catch (e) {
       MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");
     }
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -173,9 +213,7 @@ class _MainScreenState extends State<MainScreen>
     _chatProvider = context.read<ChatProvider>();
     _appState = context.read<AppState>();
     _chatRepository = ChatRepository();
-    _chatController = ChatController(
-      chatProvider: _chatProvider,
-    );
+    _chatController = ChatController(chatProvider: _chatProvider);
     _initializeSocket();
   }
 
@@ -219,14 +257,13 @@ class _MainScreenState extends State<MainScreen>
               ),
               title: Text(
                 'Chats',
-                style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(
-                          fontSize: 10,
-                          color: themeData.colorScheme.onSurface,
-                          fontWeight: FontWeight.bold,
-                        )
-                        .withEpilogue,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(
+                      fontSize: 10,
+                      color: themeData.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    )
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -240,12 +277,13 @@ class _MainScreenState extends State<MainScreen>
               ),
               title: Text(
                 'Calls & Contacts',
-                style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(fontSize: 10,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(
+                      fontSize: 10,
                       color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,)
-                        .withEpilogue,
+                      fontWeight: FontWeight.bold,
+                    )
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -259,12 +297,13 @@ class _MainScreenState extends State<MainScreen>
               ),
               title: Text(
                 'Settings',
-                style:
-                    themeData.textTheme.labelSmall
-                        ?.copyWith(fontSize: 10,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(
+                      fontSize: 10,
                       color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,)
-                        .withEpilogue,
+                      fontWeight: FontWeight.bold,
+                    )
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),

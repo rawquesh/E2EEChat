@@ -1,19 +1,18 @@
 import 'package:e2ee_android_app/configs/constants.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
 
-import '../screens/chat_list_screen.dart';
+import '../../../backend/navigation/navigation_controller.dart';
 
 class ChatListItem extends StatefulWidget {
   final ChatUserModel user;
   final VoidCallback onTap;
 
-  const ChatListItem({
-    Key? key,
-    required this.user,
-    required this.onTap,
-  }) : super(key: key);
+  const ChatListItem({Key? key, required this.user, required this.onTap})
+    : super(key: key);
 
   @override
   State<ChatListItem> createState() => _ChatListItemState();
@@ -32,13 +31,9 @@ class _ChatListItemState extends State<ChatListItem>
       duration: Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.98,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
   }
 
   String _formatTime(String timeString) {
@@ -57,8 +52,13 @@ class _ChatListItemState extends State<ChatListItem>
           if (timeString.contains(':') && timeString.length <= 5) {
             final parts = timeString.split(':');
             final now = DateTime.now();
-            dateTime = DateTime(now.year, now.month, now.day,
-                int.parse(parts[0]), int.parse(parts[1]));
+            dateTime = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              int.parse(parts[0]),
+              int.parse(parts[1]),
+            );
           }
         } catch (e) {
           return timeString; // Return original if all parsing fails
@@ -97,16 +97,39 @@ class _ChatListItemState extends State<ChatListItem>
 
       // Within current year - show date without year
       if (dateTime.year == now.year) {
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
         return '${months[dateTime.month - 1]} ${dateTime.day}';
       }
 
       // Older than current year - show full date
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
-
     } catch (e) {
       // If all parsing fails, return the original string
       return timeString;
@@ -157,7 +180,9 @@ class _ChatListItemState extends State<ChatListItem>
                     : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.05),
                   width: 1,
                 ),
                 boxShadow: [
@@ -192,7 +217,9 @@ class _ChatListItemState extends State<ChatListItem>
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   letterSpacing: -0.2,
                                 ),
                                 maxLines: 1,
@@ -200,6 +227,19 @@ class _ChatListItemState extends State<ChatListItem>
                               ),
                             ),
                             _buildTimeAndUnreadBadge(),
+                            IconButton(
+                              icon: Icon(Icons.phone, color: Colors.grey[600]),
+                              onPressed: () {
+                                NavigationController.navigateToVoiceCallDemoScreen(
+                                  navigationOperationParameters:
+                                      NavigationOperationParameters(
+                                        context: context,
+                                        navigationType:
+                                            NavigationType.pushNamed,
+                                      ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                         SizedBox(height: 6),
@@ -207,11 +247,29 @@ class _ChatListItemState extends State<ChatListItem>
                           children: [
                             Expanded(
                               child: Text(
-                                widget.user.lastMessage.startsWith(imageTypeChat) ? "Image" : widget.user.lastMessage.startsWith(audioTypeChat) ? "Audio" : widget.user.lastMessage.startsWith(videoTypeChat) ? "Video" : widget.user.lastMessage.startsWith(docTypeChat) ? "Document" :  widget.user.lastMessage,
+                                widget.user.lastMessage.startsWith(
+                                      imageTypeChat,
+                                    )
+                                    ? "Image"
+                                    : widget.user.lastMessage.startsWith(
+                                        audioTypeChat,
+                                      )
+                                    ? "Audio"
+                                    : widget.user.lastMessage.startsWith(
+                                        videoTypeChat,
+                                      )
+                                    ? "Video"
+                                    : widget.user.lastMessage.startsWith(
+                                        docTypeChat,
+                                      )
+                                    ? "Document"
+                                    : widget.user.lastMessage,
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7),
                                   height: 1.3,
                                 ),
                                 maxLines: 1,
@@ -344,10 +402,7 @@ class _ChatListItemState extends State<ChatListItem>
             constraints: BoxConstraints(minWidth: 20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Color(0xFFFF6B6B),
-                  Color(0xFFFF5252),
-                ],
+                colors: [Color(0xFFFF6B6B), Color(0xFFFF5252)],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
@@ -359,7 +414,9 @@ class _ChatListItemState extends State<ChatListItem>
               ],
             ),
             child: Text(
-              widget.user.unreadCount > 99 ? '99+' : widget.user.unreadCount.toString(),
+              widget.user.unreadCount > 99
+                  ? '99+'
+                  : widget.user.unreadCount.toString(),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 11,
