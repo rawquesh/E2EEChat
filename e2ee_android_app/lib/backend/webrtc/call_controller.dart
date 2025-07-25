@@ -8,6 +8,8 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'call_provider.dart';
 
 class CallController {
+  Map<String, dynamic>? _receivedOffer;
+
   late CallProvider callProvider;
   late WebRTCSignalingRepository signalingRepository;
   late WebRTCService webrtcService;
@@ -71,8 +73,11 @@ class CallController {
     );
   }
 
-  Future<void> acceptCall({Map<String, dynamic>? offer}) async {
-    if (_remoteId == null || offer == null) return;
+  Future<void> acceptCall() async {
+    if (_remoteId == null || _receivedOffer == null) {
+      print('❌ Cannot accept call: No valid offer has been received.');
+      return;
+    }
 
     callProvider.callState.set(value: CallState.connected);
 
@@ -84,8 +89,8 @@ class CallController {
     );
 
     await webrtcService.attachLocalAudio();
-
-    await sendAnswer(offer); // ✅ Important
+    await sendAnswer(_receivedOffer!);
+    _receivedOffer = null;
   }
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
@@ -116,11 +121,17 @@ class CallController {
     switch (signal.type) {
       case 'offer':
         _remoteId = signal.senderId;
-        callProvider.callState.set(value: CallState.ringing);
-        callProvider.currentCallerId.set(value: signal.senderId);
-        onIncomingCall?.call(signal.senderId);
-        await acceptCall(offer: signal.data);
-        print('📩 Received offer signal: ${signal.data}');
+
+        // ✅ CORRECTED: The data is already a Map. No need for jsonDecode.
+        _receivedOffer = signal.data;
+
+        if (_receivedOffer != null) {
+          callProvider.callState.set(value: CallState.ringing);
+          callProvider.currentCallerId.set(value: signal.senderId);
+          onIncomingCall?.call(signal.senderId);
+        } else {
+          print('❌ Received offer but its data is null.');
+        }
         break;
 
       case 'answer':
