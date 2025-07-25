@@ -1,9 +1,9 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
 import 'package:e2ee_models_app/models/calling/WebRTCSignalModel.dart';
-import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'call_provider.dart';
@@ -57,13 +57,18 @@ class CallController {
 
     final offer = await webrtcService.createOffer();
 
+    final offerData = {
+      'sdp': base64Encode(utf8.encode(offer.sdp!)),
+      'type': offer.type,
+    };
+
     print('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
 
     await signalingRepository.sendSignal(
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'offer',
-        data: {'sdp': offer.sdp, 'type': offer.type},
+        data: offerData, // Use the new encoded data
         senderId: _selfId!,
         receiverId: receiverId,
       ),
@@ -95,42 +100,38 @@ class CallController {
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
     final sdp = offer['sdp'];
-    var type = offer['type'];
+    final type = offer['type'];
 
-    if (sdp == null) {
-      MyPrint.printOnConsole('❌ sendAnswer: Missing SDP in offer');
+    // This should already be handled by your decoding logic in _handleSignal,
+    // but it's good practice to keep the check.
+    if (sdp == null || type == null) {
+      print('❌ sendAnswer: Missing sdp or type in offer');
       return;
     }
 
-    if (type == null) {
-      MyPrint.printOnConsole(
-        '⚠️ sendAnswer: Type was null, defaulting to "offer"',
-      );
-      type = 'offer'; // fallback
-    }
-
-    MyPrint.printOnConsole(
-      '📥 Applying remote SDP in sendAnswer:\nSDP: $sdp\nType: $type',
-    );
-
     try {
       await webrtcService.setRemoteDescription(sdp, type);
-    } catch (e, stack) {
-      MyPrint.printOnConsole('❌ setRemoteDescription failed: $e\n$stack');
+      print('✅ Remote offer SDP applied successfully by receiver.');
+    } catch (e) {
+      print('❌ Receiver failed to set remote description: $e');
       return;
     }
 
     final answer = await webrtcService.createAnswer();
 
-    MyPrint.printOnConsole(
-      '📤 Sending answer:\nSDP: ${answer.sdp}\nType: ${answer.type}',
-    );
+    // ✅ ENCODE THE ANSWER'S SDP
+    // This is the crucial fix on the receiver's side when answering.
+    final answerData = {
+      'sdp': base64Encode(utf8.encode(answer.sdp!)),
+      'type': answer.type,
+    };
 
+    print('📤 Sending encoded answer...');
     await signalingRepository.sendSignal(
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'answer',
-        data: {'sdp': answer.sdp, 'type': answer.type},
+        data: answerData, // Send the encoded data
         senderId: _selfId!,
         receiverId: _remoteId!,
       ),
@@ -140,46 +141,62 @@ class CallController {
   Future<void> _handleSignal(WebRTCSignalModel signal) async {
     switch (signal.type) {
       case 'offer':
-        MyPrint.printOnConsole(
-          '🕵️‍ RAW DATA RECEIVED on receiver: ${signal.data}',
-        );
-        MyPrint.printOnConsole(
-          '🕵️‍ DATA TYPE on receiver: ${signal.data.runtimeType}',
-        );
-
         _remoteId = signal.senderId;
         _receivedOffer = signal.data;
 
         if (_receivedOffer != null) {
-          if (!_receivedOffer!.containsKey('type')) {
-            _receivedOffer!['type'] = 'offer';
-            MyPrint.printOnConsole(
-              'ℹ️ Added missing "type" key with value "offer" to received SDP',
+          try {
+            // ✅ DECODE THE OFFER'S SDP
+            final decodedSdp = utf8.decode(
+              base64Decode(_receivedOffer!['sdp']),
             );
-          }
+            _receivedOffer!['sdp'] = decodedSdp;
 
-          callProvider.callState.set(value: CallState.ringing);
-          callProvider.currentCallerId.set(value: signal.senderId);
-          onIncomingCall?.call(signal.senderId);
+            if (!_receivedOffer!.containsKey('type')) {
+              _receivedOffer!['type'] = 'offer';
+            }
+
+            callProvider.callState.set(value: CallState.ringing);
+            callProvider.currentCallerId.set(value: signal.senderId);
+            onIncomingCall?.call(signal.senderId);
+          } catch (e) {
+            print('❌ Error decoding OFFER SDP: $e');
+          }
         } else {
-          MyPrint.printOnConsole('❌ Received offer with null data.');
+          print('❌ Received offer with null data.');
         }
         break;
 
       case 'answer':
-        await webrtcService.setRemoteDescription(
-          signal.data?['sdp'],
-          signal.data?['type'],
-        );
-        callProvider.callState.set(value: CallState.connected);
-        onCallConnected?.call();
+        if (signal.data == null) {
+          print('❌ Received answer with null data.');
+          return;
+        }
+        try {
+          // ✅ DECODE THE ANSWER'S SDP
+          // This is the crucial fix on the sender's side when receiving an answer.
+          final sdp = utf8.decode(base64Decode(signal.data!['sdp']));
+          final type = signal.data!['type'];
+
+          print('✅ Received and decoded answer. Applying...');
+          await webrtcService.setRemoteDescription(sdp, type);
+
+          callProvider.callState.set(value: CallState.connected);
+          Helper.setSpeakerphoneOn(
+            true,
+          ); // Enable speakerphone for audio output
+          onCallConnected?.call();
+        } catch (e) {
+          print('❌ Error decoding ANSWER SDP: $e');
+        }
         break;
 
       case 'ice-candidate':
+        if (signal.data == null) return;
         final candidate = RTCIceCandidate(
-          signal.data?['candidate'],
-          signal.data?['sdpMid'],
-          signal.data?['sdpMLineIndex'],
+          signal.data!['candidate'],
+          signal.data!['sdpMid'],
+          signal.data!['sdpMLineIndex'],
         );
         await webrtcService.addIceCandidate(candidate);
         break;
