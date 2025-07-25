@@ -66,6 +66,7 @@ class _MainScreenState extends State<MainScreen>
           MySharedPreferenceVariables.authToken,
         ) ??
         '';
+    MyPrint.printOnConsole("auth_token: ${_currentUserToken}");
 
     _chatRepository.initPusher(
       userId: _currentUserId,

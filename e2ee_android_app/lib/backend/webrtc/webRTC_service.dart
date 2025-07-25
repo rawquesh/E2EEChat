@@ -1,3 +1,4 @@
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 class WebRTCService {
@@ -39,6 +40,7 @@ class WebRTCService {
     _onAddRemoteStreamCallback = onAddRemoteStream;
 
     _peerConnection = await createPeerConnection(_iceServers, _constraints);
+    print('✅ PeerConnection created: $_peerConnection');
 
     _peerConnection?.onIceCandidate = (candidate) {
       if (candidate.candidate != null) {
@@ -86,13 +88,32 @@ class WebRTCService {
 
   /// Set the remote peer's SDP
   Future<void> setRemoteDescription(String? sdp, String? type) async {
-    if (sdp == null || type == null) {
-      print('❌ setRemoteDescription: sdp or type is null. Aborting.');
+    if (sdp == null ||
+        sdp.trim().isEmpty ||
+        type == null ||
+        type.trim().isEmpty) {
+      print('❌ setRemoteDescription: SDP or type is null/empty.');
+      MyPrint.printOnConsole(
+        '❌ Cannot apply remote description – invalid sdp or type',
+      );
+      MyPrint.printOnConsole('SDP: $sdp');
+      MyPrint.printOnConsole('Type: $type');
       return;
     }
 
-    final description = RTCSessionDescription(sdp, type);
-    await _peerConnection?.setRemoteDescription(description);
+    try {
+      final description = RTCSessionDescription(sdp, type);
+      MyPrint.printOnConsole(
+        '🎯 Applying remote SDP:\nType: $type\nSDP:\n$sdp',
+      );
+      await _peerConnection?.setRemoteDescription(description);
+      MyPrint.printOnConsole('✅ setRemoteDescription applied successfully.');
+    } catch (e, stack) {
+      MyPrint.printOnConsole(
+        '❌ setRemoteDescription failed with error: $e\n$stack',
+      );
+      rethrow; // optional: remove if you want to fail silently
+    }
   }
 
   /// Add an incoming ICE candidate

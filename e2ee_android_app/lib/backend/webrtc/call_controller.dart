@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
 import 'package:e2ee_models_app/models/calling/WebRTCSignalModel.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'call_provider.dart';
@@ -83,11 +84,10 @@ class CallController {
 
     await webrtcService.initPeerConnection(
       onIceCandidate: _sendIceCandidate,
-      onAddRemoteStream: (stream) {
-        // Handle stream if needed
-      },
+      onAddRemoteStream: (stream) {},
     );
 
+    await Future.delayed(Duration(milliseconds: 100));
     await webrtcService.attachLocalAudio();
     await sendAnswer(_receivedOffer!);
     _receivedOffer = null;
@@ -95,16 +95,36 @@ class CallController {
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
     final sdp = offer['sdp'];
-    final type = offer['type'];
+    var type = offer['type'];
 
-    if (sdp == null || type == null) {
-      print('❌ sendAnswer: Missing sdp or type in offer');
+    if (sdp == null) {
+      MyPrint.printOnConsole('❌ sendAnswer: Missing SDP in offer');
       return;
     }
 
-    await webrtcService.setRemoteDescription(sdp, type);
+    if (type == null) {
+      MyPrint.printOnConsole(
+        '⚠️ sendAnswer: Type was null, defaulting to "offer"',
+      );
+      type = 'offer'; // fallback
+    }
+
+    MyPrint.printOnConsole(
+      '📥 Applying remote SDP in sendAnswer:\nSDP: $sdp\nType: $type',
+    );
+
+    try {
+      await webrtcService.setRemoteDescription(sdp, type);
+    } catch (e, stack) {
+      MyPrint.printOnConsole('❌ setRemoteDescription failed: $e\n$stack');
+      return;
+    }
 
     final answer = await webrtcService.createAnswer();
+
+    MyPrint.printOnConsole(
+      '📤 Sending answer:\nSDP: ${answer.sdp}\nType: ${answer.type}',
+    );
 
     await signalingRepository.sendSignal(
       token: _token!,
@@ -120,17 +140,29 @@ class CallController {
   Future<void> _handleSignal(WebRTCSignalModel signal) async {
     switch (signal.type) {
       case 'offer':
-        _remoteId = signal.senderId;
+        MyPrint.printOnConsole(
+          '🕵️‍ RAW DATA RECEIVED on receiver: ${signal.data}',
+        );
+        MyPrint.printOnConsole(
+          '🕵️‍ DATA TYPE on receiver: ${signal.data.runtimeType}',
+        );
 
-        // ✅ CORRECTED: The data is already a Map. No need for jsonDecode.
+        _remoteId = signal.senderId;
         _receivedOffer = signal.data;
 
         if (_receivedOffer != null) {
+          if (!_receivedOffer!.containsKey('type')) {
+            _receivedOffer!['type'] = 'offer';
+            MyPrint.printOnConsole(
+              'ℹ️ Added missing "type" key with value "offer" to received SDP',
+            );
+          }
+
           callProvider.callState.set(value: CallState.ringing);
           callProvider.currentCallerId.set(value: signal.senderId);
           onIncomingCall?.call(signal.senderId);
         } else {
-          print('❌ Received offer but its data is null.');
+          MyPrint.printOnConsole('❌ Received offer with null data.');
         }
         break;
 

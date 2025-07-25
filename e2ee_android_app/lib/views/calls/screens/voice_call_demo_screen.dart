@@ -59,14 +59,12 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
     if (state == CallState.ended && _isDialogShowing) {
       _dismissCallDialog();
     }
-    // We can also call setState here if parts of the UI that are not
-    // wrapped in a Consumer need to update.
+
     if (mounted) {
       setState(() {});
     }
   }
 
-  // Method to show the incoming call dialog
   void _showIncomingCallDialog(String callerId) {
     if (_isDialogShowing) return;
     _isDialogShowing = true;
@@ -109,8 +107,6 @@ class _VoiceCallDemoScreenState extends State<VoiceCallDemoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // You can use Consumer or context.watch. Here we use the direct provider instance
-    // since we are listening manually and calling setState in _handleProviderChange.
     final callState = _callProvider.callState.get();
     final isMuted = _callProvider.isMuted.get();
 
