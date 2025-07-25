@@ -1,36 +1,28 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:e2ee_android_app/backend/common/dependency_injection.dart';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/my_utils.dart';
+import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
-import 'package:http/http.dart' as http;
-import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:pusher_client_socket/pusher_client_socket.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
 
-import '../../../backend/chats/chat_repository.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/common/app_state.dart';
-import '../../../backend/notification/notification_service.dart';
 import '../../../configs/constants.dart';
 import '../components/message_bubble.dart';
-import 'chat_list_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
-
 
 class ChatMessageScreen extends StatefulWidget {
   final ChatUserModel user;
@@ -155,6 +147,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       limit: _pageSize,
       offset: _loadedMessages,
       currentUserId: currentUserId,
+      clear: true,
     );
     final fetchedCount = _chatProvider.getMessagesFor(widget.user.id).length;
     _loadedMessages = fetchedCount;
@@ -233,7 +226,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _scrollToBottom();
 
     // The controller already correctly calls the repository
-    final success = await _chatController.sendMessage(message: messageText,destructTimer: selectedTimeForDestruct);
+    final success = await _chatController.sendMessage(
+      message: messageText,
+      destructTimer: selectedTimeForDestruct,
+    );
     if (!success) {
       MyPrint.printOnConsole('Send failed');
       // Here you might want to update the message status to 'failed'
@@ -265,6 +261,53 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     } else {
       _startVoiceRecording();
     }
+  }
+
+  void _showClearChatDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear chat'),
+        content: const Text('Remove all messages in this chat?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _chatController.clearChat(widget.user.id);
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteChatDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete chat'),
+        content: const Text('Delete this chat room and all messages?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _chatController.deleteChat(widget.user.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMediaOptions() {
@@ -388,11 +431,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   void _openCamera() {
-    requestStoragePermission(true,true);
+    requestStoragePermission(true, true);
   }
 
   void _openGallery() {
-    requestStoragePermission(false,true);
+    requestStoragePermission(false, true);
   }
 
   void _openDocuments() {
@@ -415,7 +458,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     }
   }
 
-  void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {
+  void showAudioDialog(
+    BuildContext context,
+    Function(String base64Audio) onSend,
+  ) {
     final record = AudioRecorder();
     String? audioPath;
     bool isRecording = false;
@@ -428,7 +474,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
             Future<void> startRecording() async {
               if (await record.hasPermission()) {
                 final dir = await getTemporaryDirectory();
-                audioPath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                audioPath =
+                    '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
                 await record.start(const RecordConfig(), path: audioPath!);
                 setState(() {
                   isRecording = true;
@@ -457,7 +504,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text("Record Audio",style: TextStyle(color: Colors.black),),
+              title: const Text(
+                "Record Audio",
+                style: TextStyle(color: Colors.black),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -468,7 +518,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    isRecording ? 'Recording...' : 'Tap "Record" to start',style: TextStyle(color: Colors.black),
+                    isRecording ? 'Recording...' : 'Tap "Record" to start',
+                    style: TextStyle(color: Colors.black),
                   ),
                 ],
               ),
@@ -476,8 +527,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-
-
                     TextButton(
                       onPressed: () {
                         isRecording ? stopRecording() : startRecording();
@@ -485,10 +534,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                       child: Text(isRecording ? 'Stop' : 'Record'),
                     ),
 
-
                     InkWell(
                       onTap: () async {
-                        if(!isRecording && audioPath != null) {
+                        if (!isRecording && audioPath != null) {
                           await sendAudio();
                         }
                       },
@@ -496,8 +544,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                         width: 100,
                         height: 40,
                         decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(100),
-                            color: !isRecording && audioPath != null ? Colors.orange : Colors.black.withOpacity(0.2)
+                          borderRadius: BorderRadius.circular(100),
+                          color: !isRecording && audioPath != null
+                              ? Colors.orange
+                              : Colors.black.withOpacity(0.2),
                         ),
                         child: Center(child: Text("Send")),
                       ),
@@ -512,8 +562,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                       child: const Text('Send'),
                     ),*/
                   ],
-                )
-
+                ),
               ],
             );
           },
@@ -521,8 +570,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       },
     );
   }
-
-
 
   Future<void> requestStoragePermission(bool isCamera, bool isImage) async {
     if (Platform.isAndroid) {
@@ -533,10 +580,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           Permission.camera,
         ].request();
       } else {
-        await [
-          Permission.storage,
-          Permission.camera,
-        ].request();
+        await [Permission.storage, Permission.camera].request();
       }
       //pickFile(isCamera,isImage);
       _showMediaPickerDialog(isCamera);
@@ -581,57 +625,82 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         return SafeArea(
           child: Wrap(
             children: [
-              isCamera?
-              ListTile(
-                leading: Icon(Icons.photo_camera,color: Colors.white),
-                title: Text("Capture Image",style: TextStyle(color: Colors.white),),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final images = await _picker.pickImage(source: ImageSource.camera);
-                  setState(() {
-                    image = images;
-                    prepareForSendMessage(true);
-                  });
-                },
-              ):SizedBox(),
-              isCamera?
-              ListTile(
-                leading: Icon(Icons.videocam,color: Colors.white),
-                title: Text("Capture Video",style: TextStyle(color: Colors.white),),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final video = await _picker.pickVideo(source: ImageSource.camera);
-                  setState(() {
-                    image = video;
-                    prepareForSendMessage(false);
-                  });
-                },
-              ):SizedBox(),
-              !isCamera?
-              ListTile(
-                leading: Icon(Icons.image,color: Colors.white,),
-                title: Text("Choose Image",style: TextStyle(color: Colors.white),),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final images = await _picker.pickImage(source: ImageSource.gallery);
-                  setState(() {
-                    image = images;
-                    prepareForSendMessage(true);
-                  });
-                },
-              ):SizedBox(),
-              !isCamera?ListTile(
-                leading: Icon(Icons.video_library,color: Colors.white),
-                title: Text("Choose Video",style: TextStyle(color: Colors.white),),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final video = await _picker.pickVideo(source: ImageSource.gallery);
-                  setState(() {
-                    image = video;
-                    prepareForSendMessage(false);
-                  });
-                },
-              ):SizedBox(),
+              isCamera
+                  ? ListTile(
+                      leading: Icon(Icons.photo_camera, color: Colors.white),
+                      title: Text(
+                        "Capture Image",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final images = await _picker.pickImage(
+                          source: ImageSource.camera,
+                        );
+                        setState(() {
+                          image = images;
+                          prepareForSendMessage(true);
+                        });
+                      },
+                    )
+                  : SizedBox(),
+              isCamera
+                  ? ListTile(
+                      leading: Icon(Icons.videocam, color: Colors.white),
+                      title: Text(
+                        "Capture Video",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final video = await _picker.pickVideo(
+                          source: ImageSource.camera,
+                        );
+                        setState(() {
+                          image = video;
+                          prepareForSendMessage(false);
+                        });
+                      },
+                    )
+                  : SizedBox(),
+              !isCamera
+                  ? ListTile(
+                      leading: Icon(Icons.image, color: Colors.white),
+                      title: Text(
+                        "Choose Image",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final images = await _picker.pickImage(
+                          source: ImageSource.gallery,
+                        );
+                        setState(() {
+                          image = images;
+                          prepareForSendMessage(true);
+                        });
+                      },
+                    )
+                  : SizedBox(),
+              !isCamera
+                  ? ListTile(
+                      leading: Icon(Icons.video_library, color: Colors.white),
+                      title: Text(
+                        "Choose Video",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final video = await _picker.pickVideo(
+                          source: ImageSource.gallery,
+                        );
+                        setState(() {
+                          image = video;
+                          prepareForSendMessage(false);
+                        });
+                      },
+                    )
+                  : SizedBox(),
             ],
           ),
         );
@@ -639,21 +708,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     );
   }
 
-  prepareForSendMessage(bool isImage) async{
+  prepareForSendMessage(bool isImage) async {
     if (image != null) {
       final Uint8List bytes = await image!.readAsBytes();
       setState(() {
         fileBytes = bytes;
-        if(isImage){
+        if (isImage) {
           _sendMessage("$imageTypeChat${base64Encode(fileBytes!)}");
-        }else{
+        } else {
           _sendMessage("$videoTypeChat${base64Encode(fileBytes!)}");
         }
       });
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -732,9 +799,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           ],
         ),
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'clear') {
+                _showClearChatDialog();
+              } else if (value == 'delete') {
+                _showDeleteChatDialog();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'clear', child: Text('Clear Chat')),
+              PopupMenuItem(value: 'delete', child: Text('Delete Chat')),
+            ],
           ),
         ],
       ),
@@ -836,42 +913,56 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                   CupertinoIcons.flame_fill,
                                   color: themeData.primaryColor,
                                 ),
-                                onPressed: () async{
-                                  final selectedTime = await showTimeSelectionDialog(context);
+                                onPressed: () async {
+                                  final selectedTime =
+                                      await showTimeSelectionDialog(context);
                                   if (selectedTime != null) {
-                                    print("User selected: $selectedTimeForDestruct");
+                                    print(
+                                      "User selected: $selectedTimeForDestruct",
+                                    );
                                   }
                                 },
                               ),
 
-                              selectedTimeForDestruct == 0?SizedBox():
-                              InkWell(
-                                onTap: () async{
-                                  final selectedTime = await showTimeSelectionDialog(context);
-                                  if (selectedTime != null) {
-                                    print("User selected: $selectedTimeForDestruct");
-                                  }
-                                },
-                                child: Container(
-                                  height: 15,
-                                  width: 15,
-                                  margin: EdgeInsets.only(top: 5),
-                                  decoration: BoxDecoration(
-                                      color: Colors.orange,
-                                    shape: BoxShape.circle
-                                  ),
-                                  child: Center(
-                                    child:  Text("$selectedTimeForDestruct",style: TextStyle(fontSize: 10),),
-                                  ),
-                                ),
-                              )
+                              selectedTimeForDestruct == 0
+                                  ? SizedBox()
+                                  : InkWell(
+                                      onTap: () async {
+                                        final selectedTime =
+                                            await showTimeSelectionDialog(
+                                              context,
+                                            );
+                                        if (selectedTime != null) {
+                                          print(
+                                            "User selected: $selectedTimeForDestruct",
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        height: 15,
+                                        width: 15,
+                                        margin: EdgeInsets.only(top: 5),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            "$selectedTimeForDestruct",
+                                            style: TextStyle(fontSize: 10),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                             ],
                           ),
                         ),
                         onSubmitted: (_) {
-                          _hasText ? _sendMessage(_messageController.text.trim()) : null;
+                          _hasText
+                              ? _sendMessage(_messageController.text.trim())
+                              : null;
                           _messageController.clear();
-                        } ,
+                        },
                       ),
                     );
                   },
@@ -890,32 +981,29 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                       return IconButton(
                         icon: AnimatedSwitcher(
                           duration: Duration(milliseconds: 200),
-                          transitionBuilder: (
-                            Widget child,
-                            Animation<double> animation,
-                          ) {
-                            return ScaleTransition(
-                              scale: animation,
-                              child: FadeTransition(
-                                opacity: animation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child:
-                              _hasText
-                                  ? Icon(
-                                    Icons.send,
-                                    key: ValueKey('send'),
-                                    color: Colors.white,
-                                    size: 20,
-                                  )
-                                  : Icon(
-                                    Icons.mic,
-                                    key: ValueKey('mic'),
-                                    color: Colors.white,
-                                    size: 20,
+                          transitionBuilder:
+                              (Widget child, Animation<double> animation) {
+                                return ScaleTransition(
+                                  scale: animation,
+                                  child: FadeTransition(
+                                    opacity: animation,
+                                    child: child,
                                   ),
+                                );
+                              },
+                          child: _hasText
+                              ? Icon(
+                                  Icons.send,
+                                  key: ValueKey('send'),
+                                  color: Colors.white,
+                                  size: 20,
+                                )
+                              : Icon(
+                                  Icons.mic,
+                                  key: ValueKey('mic'),
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                         ),
                         onPressed: _onButtonPressed,
                       );
@@ -931,13 +1019,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   }
 
   int selectedTimeForDestruct = 0;
+
   Future<int?> showTimeSelectionDialog(BuildContext context) async {
     return showDialog<int>(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('Select time for destroy message',style: TextStyle(color: Colors.black,fontSize: 20,fontWeight: FontWeight.w600),),
+          title: const Text(
+            'Select time for destroy message',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [0, 5, 10, 15].map((time) {
@@ -945,22 +1041,31 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 padding: const EdgeInsets.symmetric(vertical: 7),
                 child: InkWell(
                   onTap: () {
-                      selectedTimeForDestruct = time;
-                      Navigator.pop(context, time);
-                      setState(() {});
+                    selectedTimeForDestruct = time;
+                    Navigator.pop(context, time);
+                    setState(() {});
                   },
-                    child: Row(
-                      children: [
-                        Container(height: 15,width: 15,
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 15,
+                        width: 15,
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black,width: 2),
+                          border: Border.all(color: Colors.black, width: 2),
                           borderRadius: BorderRadius.circular(3),
-                          color: selectedTimeForDestruct == time ? Colors.black : Colors.transparent
-                        ),),
-                        SizedBox(width: 7,),
-                        Text(time == 0 ? "None" : 'Destroy message after $time min',style: TextStyle(color: Colors.black),),
-                      ],
-                    )),
+                          color: selectedTimeForDestruct == time
+                              ? Colors.black
+                              : Colors.transparent,
+                        ),
+                      ),
+                      SizedBox(width: 7),
+                      Text(
+                        time == 0 ? "None" : 'Destroy message after $time min',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ],
+                  ),
+                ),
                 /*child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, time),
                   child: Text('After $time min, msg will be destroy'),

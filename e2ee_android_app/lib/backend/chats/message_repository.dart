@@ -5,8 +5,11 @@ import 'package:hive/hive.dart';
 
 class MessageRepository {
   Future<Box?> _openBox(String chatId) {
-    return HiveManager().openBox(boxName: 'messages_'
-        '$chatId');
+    return HiveManager().openBox(
+      boxName:
+          'messages_'
+          '$chatId',
+    );
   }
 
   Future<void> addMessage({
@@ -16,7 +19,9 @@ class MessageRepository {
     final box = await _openBox(chatId);
     try {
       if (box == null) {
-        MyPrint.printOnConsole('Hive box for $chatId is null! Message not saved.');
+        MyPrint.printOnConsole(
+          'Hive box for $chatId is null! Message not saved.',
+        );
         return;
       }
       final key = message.id;
@@ -26,7 +31,9 @@ class MessageRepository {
       }
       if (!box.containsKey(key)) {
         await box.put(key, message.toMap());
-        MyPrint.printOnConsole('Message saved: ${message.id} - ${message.message}');
+        MyPrint.printOnConsole(
+          'Message saved: ${message.id} - ${message.message}',
+        );
       } else {
         MyPrint.printOnConsole('Duplicate message ignored: ${message.id}');
       }
@@ -34,7 +41,6 @@ class MessageRepository {
       MyPrint.printOnConsole('Error saving message: $e');
     }
   }
-
 
   Future<List<ChatMessageModel>> getMessagesPage({
     required String chatId,
@@ -46,18 +52,22 @@ class MessageRepository {
     if (box == null) return [];
     final entries = box.toMap().entries.toList();
     entries.sort((a, b) {
-      final at = DateTime.tryParse(a.value['timestamp'] ?? '') ??
+      final at =
+          DateTime.tryParse(a.value['timestamp'] ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0);
-      final bt = DateTime.tryParse(b.value['timestamp'] ?? '') ??
+      final bt =
+          DateTime.tryParse(b.value['timestamp'] ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0);
       return bt.compareTo(at);
     });
     final page = entries.skip(offset).take(limit).toList();
     return page
-        .map((e) => ChatMessageModel.fromMap(
-      Map<String, dynamic>.from(e.value),
-      currentUserId: currentUserId,
-    ))
+        .map(
+          (e) => ChatMessageModel.fromMap(
+            Map<String, dynamic>.from(e.value),
+            currentUserId: currentUserId,
+          ),
+        )
         .toList();
   }
 
@@ -74,6 +84,26 @@ class MessageRepository {
           currentUserId: currentUserId,
         );
       }
+    }
+  }
+
+  Future<void> clearMessages(String chatId) async {
+    final box = await _openBox(chatId);
+    try {
+      await box?.clear();
+      MyPrint.printOnConsole('Cleared messages for chat: $chatId');
+    } catch (e) {
+      MyPrint.printOnConsole('Error clearing messages for $chatId: $e');
+    }
+  }
+
+  Future<void> deleteChat(String chatId) async {
+    final box = await _openBox(chatId);
+    try {
+      await box?.deleteFromDisk();
+      MyPrint.printOnConsole('Deleted chat box for: $chatId');
+    } catch (e) {
+      MyPrint.printOnConsole('Error deleting chat $chatId: $e');
     }
   }
 }

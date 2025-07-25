@@ -10,9 +10,14 @@ import '../../../backend/navigation/navigation_controller.dart';
 class ChatListItem extends StatefulWidget {
   final ChatUserModel user;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
-  const ChatListItem({Key? key, required this.user, required this.onTap})
-    : super(key: key);
+  const ChatListItem({
+    Key? key,
+    required this.user,
+    required this.onTap,
+    this.onLongPress,
+  }) : super(key: key);
 
   @override
   State<ChatListItem> createState() => _ChatListItemState();
@@ -171,6 +176,7 @@ class _ChatListItemState extends State<ChatListItem>
             onTapDown: _onTapDown,
             onTapUp: _onTapUp,
             onTapCancel: _onTapCancel,
+            onLongPress: widget.onLongPress,
             child: Container(
               margin: EdgeInsets.symmetric(vertical: 4),
               padding: EdgeInsets.all(16),

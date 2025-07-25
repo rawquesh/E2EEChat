@@ -11,9 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../backend/authentication/authentication_controller.dart';
-import '../../backend/common/app_theme/app_theme_controller.dart';
-import '../../backend/common/app_theme/app_theme_provider.dart';
 import '../../backend/navigation/navigation_arguments.dart';
+import '../../backend/user/my_user_controller.dart';
+import '../../backend/user/user_repository.dart';
 import '../authentication/screens/pin_entry_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -30,6 +30,48 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   bool _biometricEnabled = false;
   late AuthenticationController authenticationController;
   late AuthenticationProvider authenticationProvider;
+  late MyUserController userController;
+
+  Future<void> _showEditNameDialog() async {
+    final TextEditingController controller = TextEditingController(
+      text: username,
+    );
+    final String? result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Display Name'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Enter display name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      final success = await userController.updateDisplayName(result);
+      if (success) {
+        setState(() {
+          username = result;
+        });
+        MyToast.showSuccess(context: context, msg: 'Profile updated');
+      } else {
+        MyToast.showError(context: context, msg: 'Failed to update');
+      }
+    }
+  }
 
   Future<void> getUsername() async {
     var _u =
@@ -42,10 +84,18 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     setState(() {});
   }
 
-  Future<void> _loadBiometricState() async {
-    bool isEnabled = await authenticationController.isBiometricEnabled();
-    _biometricEnabled = isEnabled;
-    mySetState();
+  Future<void> _logoutAndWipeData() async {
+    await authenticationController.logout();
+    await authenticationController.wipeAllAuthData();
+
+    if (!mounted) return;
+
+    NavigationController.navigateToLoginScreen(
+      navigationOperationParameters: NavigationOperationParameters(
+        context: context,
+        navigationType: NavigationType.pushNamedAndRemoveUntil,
+      ),
+    );
   }
 
   @override
@@ -53,6 +103,10 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     super.initState();
     authenticationProvider = context.read<AuthenticationProvider>();
     authenticationController = AuthenticationController(
+      authenticationProvider: authenticationProvider,
+    );
+    userController = MyUserController(
+      repository: UserRepository(),
       authenticationProvider: authenticationProvider,
     );
     getUsername();
@@ -138,29 +192,6 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                           color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
-                      SizedBox(height: 12),
-                      // Edit Profile Button
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accentColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 34,
-                            vertical: 12,
-                          ),
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          // Navigate to edit profile
-                        },
-                        child: Text(
-                          "Edit Profile",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -172,12 +203,11 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
             child: ListView(
               padding: EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildThemeSwitchItem(),
                 SizedBox(height: 10),
                 _settingTile(
                   icon: Icons.person_outline,
                   title: "Edit Profile",
-                  onTap: () {}, // Username editing
+                  onTap: _showEditNameDialog, // Username editing
                 ),
                 _settingTile(
                   icon: Icons.pin_outlined,
@@ -233,18 +263,9 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                               child: const Text('Cancel'),
                             ),
                             TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(); // Dismiss dialog
-                                // DataWipingUtils.wipeAllData();
-
-                                NavigationController.navigateToLoginScreen(
-                                  navigationOperationParameters:
-                                      NavigationOperationParameters(
-                                        context: context,
-                                        navigationType: NavigationType
-                                            .pushNamedAndRemoveUntil,
-                                      ),
-                                );
+                              onPressed: () async {
+                                Navigator.of(context).pop();
+                                _logoutAndWipeData();
                               },
                               child: const Text('Logout'),
                             ),
@@ -288,21 +309,10 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
             children: [
+              const SizedBox(width: 7),
               // Fingerprint Icon
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: Colors.amber[700]?.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.fingerprint,
-                  color: Colors.amber[700],
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
+              Icon(Icons.fingerprint, color: Colors.amber[700], size: 22),
+              const SizedBox(width: 18),
               // Text
               Expanded(
                 child: Column(
@@ -389,108 +399,6 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
           child: Divider(height: 0, thickness: 0.3),
         ),
       ],
-    );
-  }
-
-  Widget _buildThemeSwitchItem() {
-    return Consumer<AppThemeProvider>(
-      builder: (context, themeProvider, child) {
-        final isDark = themeProvider.darkThemeMode;
-
-        return Center(
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            color: Colors.transparent, // Or theme background color
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Sun
-                  GestureDetector(
-                    onTap: () async {
-                      if (isDark) {
-                        AppThemeController controller = AppThemeController(
-                          appThemeProvider: themeProvider,
-                        );
-                        await controller.setDarkThemeEnabledInSharedPreferences(
-                          false,
-                        );
-                        controller.updateThemeMode(false);
-                      }
-                    },
-                    child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      curve: Curves.ease,
-                      decoration: BoxDecoration(
-                        color: !isDark ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.grey.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.wb_sunny_outlined,
-                        size: 24,
-                        color: !isDark
-                            ? Colors.black
-                            : themeData.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 18),
-                  // Moon
-                  GestureDetector(
-                    onTap: () async {
-                      if (!isDark) {
-                        AppThemeController controller = AppThemeController(
-                          appThemeProvider: themeProvider,
-                        );
-                        await controller.setDarkThemeEnabledInSharedPreferences(
-                          true,
-                        );
-                        controller.updateThemeMode(true);
-                      }
-                    },
-                    child: AnimatedContainer(
-                      duration: Duration(milliseconds: 200),
-                      curve: Curves.ease,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          if (isDark)
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.13),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                        ],
-                      ),
-                      padding: EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.nightlight_round,
-                        size: 24,
-                        color: isDark ? Colors.black : Colors.black54,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

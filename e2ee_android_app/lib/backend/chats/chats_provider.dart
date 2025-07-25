@@ -34,10 +34,14 @@ class ChatProvider extends CommonProvider {
     chatUsers.setList(list: <ChatUserModel>[], isClear: true, isNotify: false);
     currentOpponent.set(value: null, isNotify: false);
     searchState.set(value: SearchState.initial, isNotify: false);
-    messages.setMap(map: <String, List<ChatMessageModel>>{}, isClear: true, isNotify: false);
+    messages.setMap(
+      map: <String, List<ChatMessageModel>>{},
+      isClear: true,
+      isNotify: false,
+    );
     notifyListeners();
   }
-  
+
   void resetSearch() {
     searchState.set(value: SearchState.initial, isNotify: true);
   }
@@ -48,7 +52,9 @@ class ChatProvider extends CommonProvider {
 
   void addMessageFor(String userId, ChatMessageModel message) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
-    final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
+    final list = List<ChatMessageModel>.from(
+      current[userId] ?? <ChatMessageModel>[],
+    );
     final exists = list.any((m) => m.id == message.id);
     if (!exists) list.add(message);
     current[userId] = list;
@@ -64,10 +70,16 @@ class ChatProvider extends CommonProvider {
   }
 
   // ✨ FIX: This method now correctly handles both initial loads and pagination.
-  void addMessagesFor(String userId, List<ChatMessageModel> newMessages, {bool clear = false}) {
+  void addMessagesFor(
+    String userId,
+    List<ChatMessageModel> newMessages, {
+    bool clear = false,
+  }) {
     final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
-    final list = List<ChatMessageModel>.from(current[userId] ?? <ChatMessageModel>[]);
-    
+    final list = List<ChatMessageModel>.from(
+      current[userId] ?? <ChatMessageModel>[],
+    );
+
     if (clear) {
       // For an initial load, clear the list and add the new messages.
       list.clear();
@@ -76,7 +88,7 @@ class ChatProvider extends CommonProvider {
       // For pagination (loading older messages), insert them at the beginning.
       list.insertAll(0, newMessages);
     }
-    
+
     // De-duplicate messages to be safe
     final seen = <String>{};
     final uniqueList = <ChatMessageModel>[];
@@ -85,7 +97,10 @@ class ChatProvider extends CommonProvider {
         uniqueList.add(msg);
       }
     }
-    
+
+    // Sort the final list by timestamp to ensure correct order
+    uniqueList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
     current[userId] = uniqueList;
     messages.setMap(map: current, isClear: true, isNotify: true);
   }
