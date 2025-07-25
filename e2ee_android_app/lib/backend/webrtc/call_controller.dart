@@ -102,8 +102,6 @@ class CallController {
     final sdp = offer['sdp'];
     final type = offer['type'];
 
-    // This should already be handled by your decoding logic in _handleSignal,
-    // but it's good practice to keep the check.
     if (sdp == null || type == null) {
       print('❌ sendAnswer: Missing sdp or type in offer');
       return;

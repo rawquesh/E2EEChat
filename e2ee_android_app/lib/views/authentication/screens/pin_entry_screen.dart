@@ -2,7 +2,6 @@ import 'package:e2ee_android_app/backend/authentication/authentication_controlle
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
-import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -12,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
-enum PinScreenMode { set, confirm, verify }
+enum PinScreenMode { set, confirm, verify, changeOld, changeNew, changeConfirm }
 
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
@@ -34,9 +33,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   int failedAttempts = 0;
   bool isLoading = false;
   String? errorMessage;
-  String? firstPin; // Store the first PIN entry
+  String? firstPin;
   PinScreenMode currentMode = PinScreenMode.set;
   bool hasCheckedBiometric = false;
+  String? oldPin;
+  String? newPin;
 
   @override
   void initState() {
@@ -57,9 +58,11 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       // New: Try biometric first if in verify mode
       if (currentMode == PinScreenMode.verify && !hasCheckedBiometric) {
         hasCheckedBiometric = true;
-        bool biometricEnabled = await authenticationController.isBiometricEnabled();
+        bool biometricEnabled = await authenticationController
+            .isBiometricEnabled();
         if (biometricEnabled) {
-          final success = await authenticationController.authenticateWithBiometric();
+          final success = await authenticationController
+              .authenticateWithBiometric();
           if (success) {
             if (mounted) _goToHome();
           }
@@ -81,24 +84,95 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
       errorMessage = null;
     });
 
-    if (currentMode == PinScreenMode.set) {
-      // First entry: save it and prompt for confirmation
+    // ======== CHANGE PIN FLOW ========
+    if (currentMode == PinScreenMode.changeOld) {
+      final isCorrectPin = await authenticationController.verifyPin(pin);
+
+      if (isCorrectPin) {
+        // Old PIN verified, move to new PIN entry
+        oldPin = pin;
+        newPin = null; // Reset new pin just in case
+        setState(() {
+          currentMode = PinScreenMode.changeNew;
+          _pinController.clear();
+          isLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _focusNode.requestFocus(),
+        );
+      } else {
+        setState(() {
+          failedAttempts++;
+          isLoading = false;
+          if (failedAttempts >= 5) {
+            errorMessage = "Too many failed attempts. All data will be wiped.";
+            _wipeAppData();
+          } else {
+            errorMessage =
+                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+          }
+          _pinController.clear();
+        });
+      }
+      return;
+    } else if (currentMode == PinScreenMode.changeNew) {
+      // Enter new PIN
+      newPin = pin;
+      setState(() {
+        currentMode = PinScreenMode.changeConfirm;
+        _pinController.clear();
+        isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focusNode.requestFocus(),
+      );
+      return;
+    } else if (currentMode == PinScreenMode.changeConfirm) {
+      // Confirm new PIN
+      if (newPin == pin) {
+        final result = await authenticationController.setNewPin(newPin!, pin);
+        setState(() {
+          isLoading = false;
+        });
+        if (result) {
+          MyToast.showSuccess(
+            context: context,
+            msg: "PIN changed successfully!",
+          );
+          _goToHome();
+        } else {
+          setState(() {
+            errorMessage = "Failed to change PIN. Please try again.";
+            currentMode = PinScreenMode.changeOld;
+            oldPin = null;
+            newPin = null;
+            _pinController.clear();
+          });
+        }
+      } else {
+        setState(() {
+          errorMessage = "PINs do not match. Please try again.";
+          currentMode = PinScreenMode.changeNew;
+          newPin = null;
+          _pinController.clear();
+          isLoading = false;
+        });
+      }
+      return;
+    }
+    // ======== REGULAR PIN FLOWS ========
+    else if (currentMode == PinScreenMode.set) {
       firstPin = pin;
       setState(() {
         currentMode = PinScreenMode.confirm;
         _pinController.clear();
         isLoading = false;
       });
-
-      // Request focus again after clearing
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
-      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focusNode.requestFocus(),
+      );
       return;
-    }
-
-    if (currentMode == PinScreenMode.confirm) {
-      // User re-entered PIN to confirm
+    } else if (currentMode == PinScreenMode.confirm) {
       if (firstPin == null) {
         setState(() {
           errorMessage = "Something went wrong. Please start over.";
@@ -109,17 +183,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         });
         return;
       }
-
-      // Check if PINs match
       if (firstPin == pin) {
-        // PINs match, save the PIN
         final result = await authenticationController.setNewPin(firstPin!, pin);
-
+        setState(() {
+          isLoading = false;
+        });
         if (result) {
-          // PIN set successfully, prompt biometric
-          setState(() {
-            isLoading = false;
-          });
           _showBiometricPrompt();
         } else {
           setState(() {
@@ -127,11 +196,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
             currentMode = PinScreenMode.set;
             firstPin = null;
             _pinController.clear();
-            isLoading = false;
           });
         }
       } else {
-        // PINs don't match
         setState(() {
           errorMessage = "PINs do not match. Please try again.";
           currentMode = PinScreenMode.set;
@@ -141,9 +208,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         });
       }
       return;
-    }
-
-    if (currentMode == PinScreenMode.verify) {
+    } else if (currentMode == PinScreenMode.verify) {
       final isCorrect = await authenticationController.verifyPin(pin);
       if (isCorrect) {
         if (mounted) {
@@ -184,50 +249,48 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Enable Biometric Unlock?'),
-            content: const Text(
-              'Would you like to use fingerprint or Face ID to unlock the app faster?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _goToHome();
-                },
-                child: const Text('Not Now'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  final enabled = await authenticationController
-                      .enableBiometric(true);
-                  if (enabled) {
-                    final success =
-                        await authenticationController
-                            .authenticateWithBiometric();
-                    if (success) {
-                      // Optionally show a success toast/dialog
-                      MyToast.showSuccess(
-                        context: context,
-                        msg: "Biometric unlock enabled!",
-                      );
-                    } else {
-                      // Optionally show fail toast/dialog
-                      MyToast.showSuccess(
-                        context: context,
-                        msg:
-                            "Biometric setup can be enabled later in settings.",
-                      );
-                    }
-                  }
-                  _goToHome();
-                },
-                child: const Text('Enable'),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text('Enable Biometric Unlock?'),
+        content: const Text(
+          'Would you like to use fingerprint or Face ID to unlock the app faster?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _goToHome();
+            },
+            child: const Text('Not Now'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final enabled = await authenticationController.enableBiometric(
+                true,
+              );
+              if (enabled) {
+                final success = await authenticationController
+                    .authenticateWithBiometric();
+                if (success) {
+                  // Optionally show a success toast/dialog
+                  MyToast.showSuccess(
+                    context: context,
+                    msg: "Biometric unlock enabled!",
+                  );
+                } else {
+                  // Optionally show fail toast/dialog
+                  MyToast.showSuccess(
+                    context: context,
+                    msg: "Biometric setup can be enabled later in settings.",
+                  );
+                }
+              }
+              _goToHome();
+            },
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -251,30 +314,27 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Security Alert'),
-            content: const Text(
-              'All app data has been wiped for security purposes. You will need to register again.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // Navigate back to login/registration
-                  NavigationController.navigateToLoginScreen(
-                    navigationOperationParameters:
-                        NavigationOperationParameters(
-                          context: context,
-                          navigationType:
-                              NavigationType.pushNamedAndRemoveUntil,
-                        ),
-                  );
-                },
-                child: const Text('OK'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Security Alert'),
+        content: const Text(
+          'All app data has been wiped for security purposes. You will need to register again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navigate back to login/registration
+              NavigationController.navigateToLoginScreen(
+                navigationOperationParameters: NavigationOperationParameters(
+                  context: context,
+                  navigationType: NavigationType.pushNamedAndRemoveUntil,
+                ),
+              );
+            },
+            child: const Text('OK'),
           ),
+        ],
+      ),
     );
   }
 
@@ -286,6 +346,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Confirm Your PIN";
       case PinScreenMode.verify:
         return "Enter Your PIN";
+      case PinScreenMode.changeOld:
+        return "Enter Current PIN";
+      case PinScreenMode.changeNew:
+        return "Enter New PIN";
+      case PinScreenMode.changeConfirm:
+        return "Confirm New PIN";
     }
   }
 
@@ -297,6 +363,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Re-enter the PIN to confirm";
       case PinScreenMode.verify:
         return "Enter your PIN to access secure chat";
+      case PinScreenMode.changeOld:
+        return "Verify your current PIN";
+      case PinScreenMode.changeNew:
+        return "Enter your new PIN";
+      case PinScreenMode.changeConfirm:
+        return "Re-enter your new PIN to confirm";
     }
   }
 
@@ -343,13 +415,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading:
-            widget.arguments.mode == PinScreenMode.verify
-                ? IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.black54),
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-                : null, // Don't show back button during PIN setup
+        leading: widget.arguments.mode == PinScreenMode.verify
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black54),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null, // Don't show back button during PIN setup
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -508,27 +579,25 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                       onPressed: () {
                         showDialog(
                           context: context,
-                          builder:
-                              (context) => AlertDialog(
-                                title: const Text('Forgot PIN?'),
-                                content: const Text(
-                                  'Please contact support or reset your account to recover access.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.of(context).pop(),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                      // Navigate to account recovery
-                                    },
-                                    child: const Text('Reset Account'),
-                                  ),
-                                ],
+                          builder: (context) => AlertDialog(
+                            title: const Text('Forgot PIN?'),
+                            content: const Text(
+                              'Please contact support or reset your account to recover access.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Cancel'),
                               ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  // Navigate to account recovery
+                                },
+                                child: const Text('Reset Account'),
+                              ),
+                            ],
+                          ),
                         );
                       },
                       child: Text(
