@@ -36,4 +36,11 @@ class CallProvider extends CommonProvider {
   late CommonProviderPrimitiveParameter<bool> isMuted;
   late CommonProviderPrimitiveParameter<bool> isSpeakerOn;
   late CommonProviderPrimitiveParameter<String?> currentCallerId;
+
+  void reset() {
+    callState.set(value: CallState.idle, isNotify: true);
+    isMuted.set(value: false, isNotify: false);
+    isSpeakerOn.set(value: false, isNotify: false);
+    currentCallerId.set(value: null, isNotify: false);
+  }
 }

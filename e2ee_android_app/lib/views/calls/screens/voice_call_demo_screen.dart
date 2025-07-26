@@ -69,21 +69,25 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   }
 
   void _handleProviderChange() {
+    if (!mounted) return;
+
     final state = _callProvider.callState.get();
 
     if (state == CallState.connected && _callDurationTimer == null) {
       _startCallTimer();
     }
 
-    if (state == CallState.ended) {
+    if (state == CallState.idle) {
       _stopCallTimer();
       if (_isDialogShowing) {
         _dismissCallDialog();
       }
-      if (mounted) Navigator.pop(context);
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     }
 
-    if (mounted) setState(() {});
+    setState(() {}); // This will update the status text
   }
 
   void _startCallTimer() {
@@ -214,7 +218,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         statusText = 'Call Ended';
         break;
       default:
-        statusText = 'Connecting...';
+        statusText = 'Call Ended'; // Changed from 'Connecting...'
     }
 
     return Column(

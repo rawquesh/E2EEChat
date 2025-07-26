@@ -254,7 +254,7 @@ class CallController {
     }
 
     await webrtcService.dispose();
-    callProvider.callState.set(value: CallState.ended);
+    callProvider.reset(); // This will notify listeners
     onCallEnded?.call();
   }
 
