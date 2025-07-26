@@ -23,7 +23,7 @@ class CallRecord {
   final CallStatus callStatus;
   final DateTime timestamp;
   final String phoneNumber;
-  final int duration; // in seconds, 0 for missed calls
+  final int duration;
 
   CallRecord({
     required this.id,
@@ -81,6 +81,7 @@ class CallHistoryRepository {
 
   Future<List<CallRecord>> getAllCalls() async {
     final box = await _openBox();
+    if (box.isEmpty) return [];
     return box.values
         .map((e) => CallRecord.fromMap(Map<String, dynamic>.from(e)))
         .toList()
@@ -97,11 +98,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
   final CallHistoryRepository _callHistoryRepository = CallHistoryRepository();
   late final ChatController _chatsController;
   List<CallRecord> _calls = [];
-  bool _isLoading = false;
-
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-  bool _isSearching = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -110,17 +107,10 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
       chatProvider: context.read<ChatProvider>(),
     );
     _loadCallHistory();
-    _searchController.addListener(() {
-      if (_searchController.text.isEmpty) {
-        setState(() {
-          _isSearching = false;
-        });
-      }
-    });
   }
 
   Future<void> _loadCallHistory() async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     final calls = await _callHistoryRepository.getAllCalls();
     if (mounted) {
       setState(() {
@@ -144,7 +134,11 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
     final callProvider = context.read<CallProvider>();
     final callController = callProvider.callController;
 
-    await callController.startCall(user.id);
+    await callController.startCall(
+      user.id,
+      receiverName: user.name,
+      receiverAvatar: user.avatar,
+    );
 
     if (mounted) {
       NavigationController.navigateToVoiceCallScreen(
@@ -153,24 +147,16 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
           navigationType: NavigationType.pushNamed,
         ),
         arguments: VoiceCallScreenNavigationArguments(user: user),
-      );
-    }
-  }
-
-  void _onSearch() {
-    final query = _searchController.text.trim();
-    if (query.isNotEmpty) {
-      setState(() {
-        _isSearching = true;
+      ).then((_) {
+        // Refresh call history when call screen is popped
+        _loadCallHistory();
       });
-      _chatsController.searchUser(query);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
-
     return Scaffold(
       appBar: AppBar(
         scrolledUnderElevation: 0,
@@ -211,11 +197,11 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
                 final call = _calls[index];
                 return CallListItem(
                   call: call,
-                  onTap: () => _showCallDetails(call),
+                  onTap: () {},
                   onRedial: () {
                     _startCall(
                       ChatUserModel(
-                        id: call.id,
+                        id: call.phoneNumber,
                         name: call.contactName,
                         avatar: call.avatar,
                         lastMessage: '',
@@ -262,7 +248,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Start a new call using the button below',
+            'Tap search to start a call',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
@@ -280,12 +266,7 @@ class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-        },
-      ),
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
     ];
   }
 
@@ -293,17 +274,13 @@ class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
   Widget? buildLeading(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, null);
-      },
+      onPressed: () => close(context, null),
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    if (query.isEmpty) {
-      return Container();
-    }
+    if (query.trim().isEmpty) return Container();
     chatsController.searchUser(query);
     return Consumer<ChatProvider>(
       builder: (context, provider, child) {
@@ -311,20 +288,14 @@ class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
           return const Center(child: CircularProgressIndicator());
         }
         if (provider.searchState.get() == SearchState.empty) {
-          return const Center(child: Text("No user found"));
+          return const Center(child: Text("No user found."));
         }
         final users = provider.chatUsers.getList();
         return ListView.builder(
           itemCount: users.length,
           itemBuilder: (context, index) {
             final user = users[index];
-            return ListTile(
-              title: Text(user.name),
-              onTap: () {
-                close(context, user);
-                onCall(user);
-              },
-            );
+            return _buildSearchResultItem(context, user);
           },
         );
       },
@@ -334,5 +305,45 @@ class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return Container();
+  }
+
+  Widget _buildSearchResultItem(BuildContext context, ChatUserModel user) {
+    final theme = Theme.of(context);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      leading: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: theme.primaryColor,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Center(
+          child: Text(
+            user.avatar,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      title: Text(
+        user.name,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      trailing: IconButton(
+        icon: Icon(Icons.call, color: theme.primaryColor, size: 28),
+        onPressed: () {
+          close(context, user);
+          onCall(user);
+        },
+      ),
+      onTap: () {
+        close(context, user);
+        onCall(user);
+      },
+    );
   }
 }

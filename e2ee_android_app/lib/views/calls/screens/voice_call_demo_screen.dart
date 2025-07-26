@@ -58,6 +58,13 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     _callProvider.removeListener(_handleProviderChange);
     _remoteRenderer.dispose();
     _callDurationTimer?.cancel();
+
+    // If the screen is being disposed because the call has ended,
+    // reset the global call state back to idle for the next call.
+    if (_callProvider.callState.get() == CallState.ended) {
+      _callProvider.callState.set(value: CallState.idle);
+    }
+
     super.dispose();
   }
 
@@ -73,7 +80,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       if (_isDialogShowing) {
         _dismissCallDialog();
       }
-      // Close the call screen
       if (mounted) Navigator.pop(context);
     }
 
@@ -83,7 +89,9 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   void _startCallTimer() {
     _callDurationTimer?.cancel(); // Ensure no multiple timers
     _callDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _callDurationInSeconds++);
+      if (mounted) {
+        setState(() => _callDurationInSeconds++);
+      }
     });
   }
 
@@ -161,7 +169,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           // Blur Effect
           BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: Colors.black.withValues(alpha: 0.3)),
+            child: Container(color: Colors.black.withOpacity(0.3)),
           ),
           // Hidden video renderer for audio stream
           SizedBox(
@@ -217,14 +225,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.2),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.5),
-              width: 3,
-            ),
+            color: Colors.white.withOpacity(0.2),
+            border: Border.all(color: Colors.white.withOpacity(0.5), width: 3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -253,10 +258,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         const SizedBox(height: 8),
         Text(
           statusText,
-          style: TextStyle(
-            fontSize: 18,
-            color: Colors.white.withValues(alpha: 0.8),
-          ),
+          style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.8)),
         ),
       ],
     );
@@ -271,7 +273,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         _buildControlButton(
           icon: isMuted ? Icons.mic_off : Icons.mic,
           onTap: () => _controller.mute(!isMuted),
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
+          backgroundColor: Colors.white.withOpacity(0.2),
         ),
         _buildControlButton(
           icon: Icons.call_end,
@@ -283,7 +285,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           onTap: () {
             // Implement speaker toggle
           },
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
+          backgroundColor: Colors.white.withOpacity(0.2),
         ),
       ],
     );
@@ -304,10 +306,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           shape: BoxShape.circle,
           color: backgroundColor,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10),
           ],
         ),
         child: Icon(icon, color: Colors.white, size: 30),

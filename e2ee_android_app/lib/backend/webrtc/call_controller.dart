@@ -79,7 +79,7 @@ class CallController {
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'offer',
-        data: offerData, // Use the new encoded data
+        data: offerData,
         senderId: _selfId!,
         receiverId: receiverId,
       ),
@@ -93,7 +93,8 @@ class CallController {
         callType: CallType.voice,
         callStatus: CallStatus.outgoing,
         timestamp: DateTime.now(),
-        phoneNumber: '',
+        phoneNumber: _remoteId!,
+        // Store remoteId as phoneNumber for redial
         duration: 0,
       ),
     );
@@ -129,7 +130,8 @@ class CallController {
         callType: CallType.voice,
         callStatus: CallStatus.incoming,
         timestamp: DateTime.now(),
-        phoneNumber: '',
+        phoneNumber: _remoteId!,
+        // Store remoteId as phoneNumber for redial
         duration: 0,
       ),
     );
@@ -154,8 +156,6 @@ class CallController {
 
     final answer = await webrtcService.createAnswer();
 
-    // ✅ ENCODE THE ANSWER'S SDP
-    // This is the crucial fix on the receiver's side when answering.
     final answerData = {
       'sdp': base64Encode(utf8.encode(answer.sdp!)),
       'type': answer.type,
@@ -166,7 +166,7 @@ class CallController {
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'answer',
-        data: answerData, // Send the encoded data
+        data: answerData,
         senderId: _selfId!,
         receiverId: _remoteId!,
       ),
@@ -181,7 +181,6 @@ class CallController {
 
         if (_receivedOffer != null) {
           try {
-            // ✅ DECODE THE OFFER'S SDP
             final decodedSdp = utf8.decode(
               base64Decode(_receivedOffer!['sdp']),
             );
@@ -208,8 +207,6 @@ class CallController {
           return;
         }
         try {
-          // ✅ DECODE THE ANSWER'S SDP
-          // This is the crucial fix on the sender's side when receiving an answer.
           final sdp = utf8.decode(base64Decode(signal.data!['sdp']));
           final type = signal.data!['type'];
 
@@ -217,9 +214,7 @@ class CallController {
           await webrtcService.setRemoteDescription(sdp, type);
 
           callProvider.callState.set(value: CallState.connected);
-          Helper.setSpeakerphoneOn(
-            true,
-          ); // Enable speakerphone for audio output
+          Helper.setSpeakerphoneOn(true);
           onCallConnected?.call();
         } catch (e) {
           print('❌ Error decoding ANSWER SDP: $e');
@@ -258,7 +253,6 @@ class CallController {
       );
     }
 
-    // The rest of the function remains the same
     await webrtcService.dispose();
     callProvider.callState.set(value: CallState.ended);
     onCallEnded?.call();
