@@ -24,6 +24,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   late CallController _controller;
   late CallProvider _callProvider;
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  bool _isDialogShowing = false;
   Timer? _callDurationTimer;
   int _callDurationInSeconds = 0;
 
@@ -35,6 +36,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     _callProvider = context.read<CallProvider>();
     _controller = _callProvider.callController;
 
+    _controller.onIncomingCall = _showIncomingCallDialog;
     _callProvider.addListener(_handleProviderChange);
 
     _controller.onCallConnected = () {
@@ -52,6 +54,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
   @override
   void dispose() {
+    _controller.onIncomingCall = null;
     _callProvider.removeListener(_handleProviderChange);
     _remoteRenderer.dispose();
     _callDurationTimer?.cancel();
@@ -67,6 +70,10 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
     if (state == CallState.ended) {
       _stopCallTimer();
+      if (_isDialogShowing) {
+        _dismissCallDialog();
+      }
+      // Close the call screen
       if (mounted) Navigator.pop(context);
     }
 
@@ -91,6 +98,45 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
     return "$minutes:$seconds";
+  }
+
+  void _showIncomingCallDialog(String callerId) {
+    if (_isDialogShowing) return;
+    _isDialogShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Incoming Call 📞'),
+          content: Text('Call from: $callerId'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                _controller.endCall();
+                _dismissCallDialog();
+              },
+              child: const Text('Decline'),
+            ),
+            TextButton(
+              onPressed: () {
+                _controller.acceptCall();
+                _dismissCallDialog();
+              },
+              child: const Text('Accept'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _dismissCallDialog() {
+    if (_isDialogShowing) {
+      Navigator.of(context).pop();
+      _isDialogShowing = false;
+    }
   }
 
   @override
