@@ -4,6 +4,13 @@ import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 
 enum SearchState { initial, loading, success, empty, error }
 
+class DeletionEvent {
+  final String chatId;
+  final List<ChatMessageModel> deletedMessages;
+
+  DeletionEvent(this.chatId, this.deletedMessages);
+}
+
 class ChatProvider extends CommonProvider {
   ChatProvider() {
     chatUsers = CommonProviderListParameter<ChatUserModel>(
@@ -24,6 +31,10 @@ class ChatProvider extends CommonProvider {
       notify: notify,
     );
   }
+
+  DeletionEvent? _lastDeletedMessages;
+
+  DeletionEvent? get lastDeletedMessages => _lastDeletedMessages;
 
   late CommonProviderListParameter<ChatUserModel> chatUsers;
   late CommonProviderPrimitiveParameter<ChatUserModel?> currentOpponent;
@@ -103,5 +114,24 @@ class ChatProvider extends CommonProvider {
 
     current[userId] = uniqueList;
     messages.setMap(map: current, isClear: true, isNotify: true);
+  }
+
+  void clearLastDeletedEvent() {
+    _lastDeletedMessages = null;
+    // Do not notify listeners here, as it's just a cleanup
+  }
+
+  void removeMessages(String userId, List<ChatMessageModel> messagesToRemove) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    if (current.containsKey(userId)) {
+      final list = List<ChatMessageModel>.from(current[userId]!);
+      final idsToRemove = messagesToRemove.map((m) => m.id).toSet();
+      list.removeWhere((msg) => idsToRemove.contains(msg.id));
+      current[userId] = list;
+      messages.setMap(map: current, isClear: true, isNotify: false);
+
+      _lastDeletedMessages = DeletionEvent(userId, messagesToRemove);
+      notifyListeners();
+    }
   }
 }

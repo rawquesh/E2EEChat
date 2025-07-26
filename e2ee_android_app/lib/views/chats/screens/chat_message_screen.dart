@@ -74,6 +74,27 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _initializeAnimations();
     _messageController.addListener(_onTextChanged);
     _initializeChat();
+    _chatProvider.addListener(_onProviderChange);
+  }
+
+  void _onProviderChange() {
+    // This method listens for the specific self-destruct event
+    final lastDeleted = _chatProvider.lastDeletedMessages;
+    if (lastDeleted != null && lastDeleted.chatId == widget.user.id) {
+      MyPrint.printOnConsole(
+        "[Real-time] Detected self-destruct for this chat. Reloading messages.",
+      );
+
+      // Reset the pagination counter and reload messages from scratch
+      if (mounted) {
+        setState(() {
+          _loadedMessages = 0;
+        });
+        _loadInitialMessages();
+      }
+
+      _chatProvider.clearLastDeletedEvent();
+    }
   }
 
   void _scrollToBottom() {
@@ -209,8 +230,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       message: localMessage,
     );
 
-    // ✨ Issue 4 Fix: This is the correct place to add the user to the
-    // persistent chat list—only after the first message is sent.
     await _chatController.addUserToChatList(
       ChatUserModel(
         id: widget.user.id,
@@ -244,6 +263,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _widthAnimationController.dispose();
     // ✨ Issue 1 Fix: Removed Pusher disposal call.
     _appState.setCurrentChattingWithUserId(null);
+    _chatProvider.removeListener(_onProviderChange);
     super.dispose();
   }
 

@@ -24,6 +24,7 @@ import '../../backend/chats/chats_provider.dart';
 import '../../backend/common/app_state.dart';
 import '../../backend/common/dependency_injection.dart';
 import '../../backend/notification/notification_service.dart';
+import '../../backend/self_destruct/self_destruct_service.dart';
 import '../common/components/flashy_tab_bar.dart';
 import '../tab_state.dart';
 
@@ -45,6 +46,7 @@ class _MainScreenState extends State<MainScreen>
   late final AppState _appState;
   late CallController callController;
   late CallProvider callProvider;
+  final SelfDestructService _selfDestructService = SelfDestructService();
 
   String _currentUserId = '';
   String _currentUserToken = '';
@@ -216,18 +218,49 @@ class _MainScreenState extends State<MainScreen>
     _chatRepository = ChatRepository();
     _chatController = ChatController(chatProvider: _chatProvider);
     _initializeSocket();
+    _selfDestructService.start(
+      onMessagesDeletedCallback: (chatId, deletedMessages) {
+        if (mounted) {
+          context.read<ChatProvider>().removeMessages(chatId, deletedMessages);
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _chatRepository.disposePusher();
+    _selfDestructService.stop();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appState.setLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        MyPrint.printOnConsole("App Resumed");
+        _selfDestructService.start(
+          onMessagesDeletedCallback: (chatId, deletedMessages) {
+            if (mounted) {
+              context.read<ChatProvider>().removeMessages(
+                chatId,
+                deletedMessages,
+              );
+            }
+          },
+        );
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        MyPrint.printOnConsole("App is no longer active, stopping service.");
+        _selfDestructService.stop();
+        break;
+    }
   }
 
   @override
