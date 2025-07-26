@@ -1,9 +1,19 @@
+import 'package:e2ee_android_app/backend/chats/chats_controller.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
+import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 
+import '../../../backend/chats/chats_provider.dart';
+import '../../../backend/navigation/navigation_arguments.dart';
+import '../../../backend/navigation/navigation_controller.dart';
+import '../../../backend/webrtc/call_provider.dart';
 import '../components/call_details_bottom_sheet.dart';
 import '../components/call_list_item.dart';
-import '../components/contact_picket_bottom_sheet.dart';
 
 class CallRecord {
   final String id;
@@ -25,184 +35,136 @@ class CallRecord {
     required this.phoneNumber,
     required this.duration,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'contactName': contactName,
+      'avatar': avatar,
+      'callType': callType.index,
+      'callStatus': callStatus.index,
+      'timestamp': timestamp.toIso8601String(),
+      'phoneNumber': phoneNumber,
+      'duration': duration,
+    };
+  }
+
+  factory CallRecord.fromMap(Map<String, dynamic> map) {
+    return CallRecord(
+      id: map['id'],
+      contactName: map['contactName'],
+      avatar: map['avatar'],
+      callType: CallType.values[map['callType']],
+      callStatus: CallStatus.values[map['callStatus']],
+      timestamp: DateTime.parse(map['timestamp']),
+      phoneNumber: map['phoneNumber'],
+      duration: map['duration'],
+    );
+  }
 }
 
 enum CallType { voice }
+
 enum CallStatus { missed, incoming, outgoing }
 
-// Dummy Data
-class CallsData {
-  static List<CallRecord> recentCalls = [
-    CallRecord(
-      id: '1',
-      contactName: 'Sarah Johnson',
-      avatar: 'S',
-      callType: CallType.voice,
-      callStatus: CallStatus.missed,
-      timestamp: DateTime.now().subtract(Duration(minutes: 5)),
-      phoneNumber: '+1 234 567 8901',
-      duration: 0,
-    ),
-    CallRecord(
-      id: '2',
-      contactName: 'Mike Chen',
-      avatar: 'M',
-      callType: CallType.voice,
-      callStatus: CallStatus.outgoing,
-      timestamp: DateTime.now().subtract(Duration(minutes: 15)),
-      phoneNumber: '+1 234 567 8902',
-      duration: 180,
-    ),
-    CallRecord(
-      id: '3',
-      contactName: 'Emily Davis',
-      avatar: 'E',
-      callType: CallType.voice,
-      callStatus: CallStatus.incoming,
-      timestamp: DateTime.now().subtract(Duration(hours: 2)),
-      phoneNumber: '+1 234 567 8903',
-      duration: 300,
-    ),
-    CallRecord(
-      id: '4',
-      contactName: 'Alex Wilson',
-      avatar: 'A',
-      callType: CallType.voice,
-      callStatus: CallStatus.outgoing,
-      timestamp: DateTime.now().subtract(Duration(hours: 4)),
-      phoneNumber: '+1 234 567 8904',
-      duration: 120,
-    ),
-    CallRecord(
-      id: '5',
-      contactName: 'Lisa Zhang',
-      avatar: 'L',
-      callType: CallType.voice,
-      callStatus: CallStatus.missed,
-      timestamp: DateTime.now().subtract(Duration(days: 1)),
-      phoneNumber: '+1 234 567 8905',
-      duration: 0,
-    ),
-    CallRecord(
-      id: '6',
-      contactName: 'David Brown',
-      avatar: 'D',
-      callType: CallType.voice,
-      callStatus: CallStatus.incoming,
-      timestamp: DateTime.now().subtract(Duration(days: 1, hours: 3)),
-      phoneNumber: '+1 234 567 8906',
-      duration: 450,
-    ),
-    CallRecord(
-      id: '7',
-      contactName: 'Anna Smith',
-      avatar: 'A',
-      callType: CallType.voice,
-      callStatus: CallStatus.outgoing,
-      timestamp: DateTime.now().subtract(Duration(days: 2)),
-      phoneNumber: '+1 234 567 8907',
-      duration: 90,
-    ),
-    CallRecord(
-      id: '8',
-      contactName: 'John Taylor',
-      avatar: 'J',
-      callType: CallType.voice,
-      callStatus: CallStatus.missed,
-      timestamp: DateTime.now().subtract(Duration(days: 3)),
-      phoneNumber: '+1 234 567 8908',
-      duration: 0,
-    ),
-  ];
+class CallHistoryRepository {
+  static const String _boxName = 'call_history';
 
-  static List<String> contacts = [
-    'Sarah Johnson',
-    'Mike Chen',
-    'Emily Davis',
-    'Alex Wilson',
-    'Lisa Zhang',
-    'David Brown',
-    'Anna Smith',
-    'John Taylor',
-    'Robert Garcia',
-    'Maria Rodriguez',
-  ];
+  Future<Box<Map<dynamic, dynamic>>> _openBox() async {
+    return await Hive.openBox<Map<dynamic, dynamic>>(_boxName);
+  }
+
+  Future<void> addCall(CallRecord call) async {
+    final box = await _openBox();
+    await box.put(call.id, call.toMap());
+  }
+
+  Future<List<CallRecord>> getAllCalls() async {
+    final box = await _openBox();
+    return box.values
+        .map((e) => CallRecord.fromMap(Map<String, dynamic>.from(e)))
+        .toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  }
 }
 
-// Main Calls Screen
 class CallsScreen extends StatefulWidget {
   @override
   _CallsScreenState createState() => _CallsScreenState();
 }
 
 class _CallsScreenState extends State<CallsScreen> with MySafeState {
-  List<CallRecord> calls = CallsData.recentCalls;
+  final CallHistoryRepository _callHistoryRepository = CallHistoryRepository();
+  late final ChatController _chatsController;
+  List<CallRecord> _calls = [];
+  bool _isLoading = false;
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _chatsController = ChatController(
+      chatProvider: context.read<ChatProvider>(),
+    );
+    _loadCallHistory();
+    _searchController.addListener(() {
+      if (_searchController.text.isEmpty) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _loadCallHistory() async {
+    setState(() => _isLoading = true);
+    final calls = await _callHistoryRepository.getAllCalls();
+    if (mounted) {
+      setState(() {
+        _calls = calls;
+        _isLoading = false;
+      });
+    }
+  }
 
   void _showCallDetails(CallRecord call) {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => CallDetailsBottomSheet(call: call),
     );
   }
 
-  void _redialCall(CallRecord call) {
-    // Simulate adding a new outgoing call
-    setState(() {
-      calls.insert(0, CallRecord(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        contactName: call.contactName,
-        avatar: call.avatar,
-        callType: CallType.voice,
-        callStatus: CallStatus.outgoing,
-        timestamp: DateTime.now(),
-        phoneNumber: call.phoneNumber,
-        duration: 0,
-      ));
-    });
+  void _startCall(ChatUserModel user) async {
+    final callProvider = context.read<CallProvider>();
+    final callController = callProvider.callController;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Calling ${call.contactName}...'),
-        backgroundColor: Color(0xFFE6A532),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    await callController.startCall(user.id);
+
+    if (mounted) {
+      NavigationController.navigateToVoiceCallScreen(
+        navigationOperationParameters: NavigationOperationParameters(
+          context: context,
+          navigationType: NavigationType.pushNamed,
+        ),
+        arguments: VoiceCallScreenNavigationArguments(user: user),
+      );
+    }
   }
 
-  void _startNewCall() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => ContactPickerBottomSheet(
-        onContactSelected: (contactName) {
-          setState(() {
-            calls.insert(0, CallRecord(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              contactName: contactName,
-              avatar: contactName[0].toUpperCase(),
-              callType: CallType.voice,
-              callStatus: CallStatus.outgoing,
-              timestamp: DateTime.now(),
-              phoneNumber: '+1 234 567 ${(1000 + calls.length).toString().substring(1)}',
-              duration: 0,
-            ));
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Calling $contactName...'),
-              backgroundColor: Color(0xFFE6A532),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        },
-      ),
-    );
+  void _onSearch() {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      setState(() {
+        _isSearching = true;
+      });
+      _chatsController.searchUser(query);
+    }
   }
 
   @override
@@ -213,7 +175,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
       appBar: AppBar(
         scrolledUnderElevation: 0,
         elevation: 0,
-        title: Text(
+        title: const Text(
           'Recent Calls',
           style: TextStyle(
             color: Color(0xFFE6A532),
@@ -226,68 +188,151 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
         actions: [
           IconButton(
             icon: Icon(Icons.search, color: Colors.grey[600]),
-            onPressed: () {},
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: _CallSearchDelegate(
+                  chatsController: _chatsController,
+                  onCall: _startCall,
+                ),
+              );
+            },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: calls.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.phone_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No recent calls',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Start a new call using the button below',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : ListView.builder(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              itemCount: calls.length,
+      body: _isLoading
+          ? const Center(child: LoadingWidget())
+          : _calls.isEmpty
+          ? _buildEmptyState()
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: _calls.length,
               itemBuilder: (context, index) {
-                final call = calls[index];
+                final call = _calls[index];
                 return CallListItem(
                   call: call,
                   onTap: () => _showCallDetails(call),
-                  onRedial: () => _redialCall(call),
+                  onRedial: () {
+                    _startCall(
+                      ChatUserModel(
+                        id: call.id,
+                        name: call.contactName,
+                        avatar: call.avatar,
+                        lastMessage: '',
+                        lastMessageTime: '',
+                        isOnline: false,
+                        unreadCount: 0,
+                      ),
+                    );
+                  },
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showSearch(
+            context: context,
+            delegate: _CallSearchDelegate(
+              chatsController: _chatsController,
+              onCall: _startCall,
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFFE6A532),
+        elevation: 4,
+        child: const Icon(Icons.add_call, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.phone_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'No recent calls',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Start a new call using the button below',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _startNewCall,
-        backgroundColor: Color(0xFFE6A532),
-        elevation: 4,
-        child: Icon(
-          Icons.add_call,
-          color: Colors.white,
-          size: 28,
-        ),
-      ),
     );
+  }
+}
+
+class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
+  final ChatController chatsController;
+  final Function(ChatUserModel) onCall;
+
+  _CallSearchDelegate({required this.chatsController, required this.onCall});
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, null);
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    if (query.isEmpty) {
+      return Container();
+    }
+    chatsController.searchUser(query);
+    return Consumer<ChatProvider>(
+      builder: (context, provider, child) {
+        if (provider.searchState.get() == SearchState.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (provider.searchState.get() == SearchState.empty) {
+          return const Center(child: Text("No user found"));
+        }
+        final users = provider.chatUsers.getList();
+        return ListView.builder(
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return ListTile(
+              title: Text(user.name),
+              onTap: () {
+                close(context, user);
+                onCall(user);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return Container();
   }
 }

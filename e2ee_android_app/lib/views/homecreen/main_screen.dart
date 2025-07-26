@@ -7,6 +7,8 @@ import 'package:e2ee_android_app/configs/font_manager.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
 import 'package:e2ee_android_app/views/settings/settings_screen.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -23,6 +25,8 @@ import '../../backend/chats/chats_controller.dart';
 import '../../backend/chats/chats_provider.dart';
 import '../../backend/common/app_state.dart';
 import '../../backend/common/dependency_injection.dart';
+import '../../backend/navigation/navigation_arguments.dart';
+import '../../backend/navigation/navigation_controller.dart';
 import '../../backend/notification/notification_service.dart';
 import '../../backend/self_destruct/self_destruct_service.dart';
 import '../common/components/flashy_tab_bar.dart';
@@ -47,6 +51,7 @@ class _MainScreenState extends State<MainScreen>
   late CallController callController;
   late CallProvider callProvider;
   final SelfDestructService _selfDestructService = SelfDestructService();
+  bool _isCallDialogShowing = false;
 
   String _currentUserId = '';
   String _currentUserToken = '';
@@ -80,6 +85,69 @@ class _MainScreenState extends State<MainScreen>
       userId: _currentUserId,
       token: _currentUserToken,
     );
+    callProvider.callController.onIncomingCall = _showIncomingCallDialog;
+  }
+
+  void _showIncomingCallDialog(String callerId) async {
+    if (_isCallDialogShowing) return;
+    _isCallDialogShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Incoming Call \ud83d\udcf2'),
+          content: Text('Call from: $callerId'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                callProvider.callController.endCall();
+                _dismissCallDialog();
+              },
+              child: const Text('Decline'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await callProvider.callController.acceptCall();
+                _dismissCallDialog();
+
+                ChatUserModel? user = _chatProvider.chatUsers
+                    .getList()
+                    .firstWhere(
+                      (u) => u.id == callerId,
+                      orElse: () => ChatUserModel(id: callerId),
+                    );
+                if (user.name.isEmpty) {
+                  final fetched = await _chatRepository.fetchChatUser(
+                    userId: callerId,
+                    token: _currentUserToken,
+                  );
+                  if (fetched != null) user = fetched;
+                }
+
+                if (!mounted) return;
+                NavigationController.navigateToVoiceCallScreen(
+                  navigationOperationParameters: NavigationOperationParameters(
+                    context: context,
+                    navigationType: NavigationType.pushNamed,
+                  ),
+                  arguments: VoiceCallScreenNavigationArguments(user: user),
+                );
+              },
+              child: const Text('Accept'),
+            ),
+          ],
+        );
+      },
+    ).then((_) => _isCallDialogShowing = false);
+  }
+
+  void _dismissCallDialog() {
+    if (_isCallDialogShowing) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+    _isCallDialogShowing = false;
   }
 
   void _handleIncomingMessage(dynamic data) async {
@@ -242,6 +310,7 @@ class _MainScreenState extends State<MainScreen>
     WidgetsBinding.instance.removeObserver(this);
     _chatRepository.disposePusher();
     _selfDestructService.stop();
+    callProvider.callController.onIncomingCall = null;
     super.dispose();
   }
 

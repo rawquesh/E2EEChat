@@ -4,8 +4,10 @@ import 'dart:ui';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
 import 'package:e2ee_models_app/models/calling/WebRTCSignalModel.dart';
+import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../../views/calls/screens/calls_screen.dart';
 import 'call_provider.dart';
 
 class CallController {
@@ -14,10 +16,13 @@ class CallController {
   late CallProvider callProvider;
   late WebRTCSignalingRepository signalingRepository;
   late WebRTCService webrtcService;
+  final CallHistoryRepository _callHistoryRepository = CallHistoryRepository();
 
   String? _selfId;
   String? _token;
   String? _remoteId;
+  String? _remoteName;
+  String? _remoteAvatar;
 
   Function(String callerId)? onIncomingCall;
   VoidCallback? onCallConnected;
@@ -44,8 +49,14 @@ class CallController {
     );
   }
 
-  Future<void> startCall(String receiverId) async {
+  Future<void> startCall(
+    String receiverId, {
+    String? receiverName,
+    String? receiverAvatar,
+  }) async {
     _remoteId = receiverId;
+    _remoteName = receiverName;
+    _remoteAvatar = receiverAvatar;
     callProvider.callState.set(value: CallState.calling);
 
     await webrtcService.initPeerConnection(
@@ -74,6 +85,19 @@ class CallController {
       ),
     );
 
+    await _callHistoryRepository.addCall(
+      CallRecord(
+        id: MyUtils.getNewId(),
+        contactName: _remoteName ?? 'Unknown',
+        avatar: _remoteAvatar ?? 'U',
+        callType: CallType.voice,
+        callStatus: CallStatus.outgoing,
+        timestamp: DateTime.now(),
+        phoneNumber: '',
+        duration: 0,
+      ),
+    );
+
     print(
       '📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}',
     );
@@ -96,6 +120,19 @@ class CallController {
     await webrtcService.attachLocalAudio();
     await sendAnswer(_receivedOffer!);
     _receivedOffer = null;
+
+    await _callHistoryRepository.addCall(
+      CallRecord(
+        id: MyUtils.getNewId(),
+        contactName: _remoteName ?? 'Unknown',
+        avatar: _remoteAvatar ?? 'U',
+        callType: CallType.voice,
+        callStatus: CallStatus.incoming,
+        timestamp: DateTime.now(),
+        phoneNumber: '',
+        duration: 0,
+      ),
+    );
   }
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
