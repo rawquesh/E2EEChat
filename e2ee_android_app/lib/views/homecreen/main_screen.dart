@@ -92,13 +92,32 @@ class _MainScreenState extends State<MainScreen>
     if (_isCallDialogShowing) return;
     _isCallDialogShowing = true;
 
+    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
+      (u) => u.id == callerId,
+      orElse: () => ChatUserModel(id: callerId),
+    );
+    if (user.name.isEmpty) {
+      final fetched = await _chatRepository.fetchChatUser(
+        userId: callerId,
+        token: _currentUserToken,
+      );
+      if (fetched != null) user = fetched;
+    }
+
+    /* callProvider.callController.setRemoteUserDetails(
+      name: user.name,
+      avatar: user.avatar,
+    );*/
+
+    final callerName = user.name.isNotEmpty ? user.name : callerId;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Incoming Call \ud83d\udcf2'),
-          content: Text('Call from: $callerId'),
+          content: Text('Call from: $callerName'),
           actions: <Widget>[
             TextButton(
               onPressed: () {

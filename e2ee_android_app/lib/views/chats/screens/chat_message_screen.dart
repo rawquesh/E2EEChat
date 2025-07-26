@@ -982,10 +982,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                     print(
                                       "User selected: $selectedTimeForDestruct",
                                     );
+                                    setState(
+                                      () {},
+                                    ); // Add setState to rebuild the widget
                                   }
                                 },
                               ),
-
                               selectedTimeForDestruct == 0
                                   ? SizedBox()
                                   : InkWell(
@@ -998,11 +1000,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                           print(
                                             "User selected: $selectedTimeForDestruct",
                                           );
+                                          setState(
+                                            () {},
+                                          ); // Add setState to rebuild the widget
                                         }
                                       },
                                       child: Container(
-                                        height: 15,
-                                        width: 15,
+                                        height: 18,
+                                        // Increased size for better readability
+                                        width: 18,
+                                        // Increased size for better readability
                                         margin: EdgeInsets.only(top: 5),
                                         decoration: BoxDecoration(
                                           color: Colors.orange,
@@ -1010,8 +1017,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                         ),
                                         child: Center(
                                           child: Text(
-                                            "$selectedTimeForDestruct",
-                                            style: TextStyle(fontSize: 10),
+                                            _formatDestructTime(
+                                              selectedTimeForDestruct,
+                                            ),
+                                            // Use the new formatting function
+                                            style: TextStyle(
+                                              fontSize: 8, // Adjusted font size
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1080,7 +1094,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     );
   }
 
-  int selectedTimeForDestruct = 0;
+  int selectedTimeForDestruct = 1440; // Default to 24 hours
+
+  String _formatDestructTime(int minutes) {
+    if (minutes == 0) {
+      return "";
+    } else if (minutes < 60) {
+      return "${minutes}m";
+    } else if (minutes < 1440) {
+      return "${(minutes / 60).round()}h";
+    } else {
+      return "${(minutes / 1440).round()}d";
+    }
+  }
 
   Future<int?> showTimeSelectionDialog(BuildContext context) async {
     return showDialog<int>(
@@ -1098,42 +1124,49 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [0, 5, 10, 15].map((time) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                child: InkWell(
-                  onTap: () {
-                    selectedTimeForDestruct = time;
-                    Navigator.pop(context, time);
-                    setState(() {});
-                  },
-                  child: Row(
-                    children: [
-                      Container(
-                        height: 15,
-                        width: 15,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black, width: 2),
-                          borderRadius: BorderRadius.circular(3),
-                          color: selectedTimeForDestruct == time
-                              ? Colors.black
-                              : Colors.transparent,
-                        ),
+            children:
+                [
+                  {'label': 'None', 'value': 0},
+                  {'label': '1 minute', 'value': 1},
+                  {'label': '5 minutes', 'value': 5},
+                  {'label': '10 minutes', 'value': 10},
+                  {'label': '15 minutes', 'value': 15},
+                  {'label': '24 hours', 'value': 1440},
+                  {'label': '7 days', 'value': 10080},
+                ].map((time) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: InkWell(
+                      onTap: () {
+                        selectedTimeForDestruct = time['value'] as int;
+                        Navigator.pop(context, selectedTimeForDestruct);
+                        setState(() {});
+                      },
+                      child: Row(
+                        children: [
+                          Container(
+                            height: 15,
+                            width: 15,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black, width: 2),
+                              borderRadius: BorderRadius.circular(3),
+                              color:
+                                  selectedTimeForDestruct ==
+                                      (time['value'] as int)
+                                  ? Colors.black
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          SizedBox(width: 7),
+                          Text(
+                            '${time['label']}',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 7),
-                      Text(
-                        time == 0 ? "None" : 'Destroy message after $time min',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-                /*child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, time),
-                  child: Text('After $time min, msg will be destroy'),
-                ),*/
-              );
-            }).toList(),
+                    ),
+                  );
+                }).toList(),
           ),
         );
       },

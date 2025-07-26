@@ -1,16 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
-import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
-import 'dart:typed_data';
-import '../../../configs/constants.dart';
-import '../screens/chat_list_screen.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:mime/mime.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../../../configs/constants.dart';
 
 class MessageBubble extends StatefulWidget {
   final ChatMessageModel message;
@@ -22,6 +23,9 @@ class MessageBubble extends StatefulWidget {
 }
 
 class _MessageBubbleState extends State<MessageBubble> with MySafeState {
+  Timer? _timer;
+  Duration? _remainingTime;
+
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
@@ -47,6 +51,24 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   void initState() {
     super.initState();
 
+    if (widget.message.destructTimestamp.isAfter(DateTime.now())) {
+      _remainingTime = widget.message.destructTimestamp.difference(
+        DateTime.now(),
+      );
+      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            _remainingTime = widget.message.destructTimestamp.difference(
+              DateTime.now(),
+            );
+            if (_remainingTime!.isNegative) {
+              _timer?.cancel();
+            }
+          });
+        }
+      });
+    }
+
     if (widget.message.message.startsWith(imageTypeChat)) {
       String base64String = widget.message.message.split(",").last;
       imageBytes = base64Decode(base64String);
@@ -69,158 +91,301 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   }
 
   @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatRemainingTime(Duration duration) {
+    if (duration.inDays > 0) {
+      return '${duration.inDays}d';
+    } else if (duration.inHours > 0) {
+      return '${duration.inHours}h';
+    } else if (duration.inMinutes > 0) {
+      return '${duration.inMinutes}m';
+    } else {
+      return '${duration.inSeconds}s';
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.pageBuild();
 
-    return DateTime.now().isBefore(widget.message.destructTimestamp) ? Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: widget.message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!widget.message.isMe) ...[
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Color(0xFFE6A532),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  'S',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: widget.message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+    return DateTime.now().isBefore(widget.message.destructTimestamp)
+        ? Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: widget.message.isMe
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: widget.message.isMe ? Color(0xFFE6A532) : themeData.colorScheme.onPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                      bottomLeft: Radius.circular(widget.message.isMe ? 16 : 4),
-                      bottomRight: Radius.circular(widget.message.isMe ? 4 : 16),
+                if (!widget.message.isMe) ...[
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE6A532),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
+                    child: Center(
+                      child: Text(
+                        'S',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: widget.message.isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.message.isMe
+                              ? Color(0xFFE6A532)
+                              : themeData.colorScheme.onPrimary.withValues(
+                                  alpha: 0.1,
+                                ),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            topRight: Radius.circular(16),
+                            bottomLeft: Radius.circular(
+                              widget.message.isMe ? 16 : 4,
+                            ),
+                            bottomRight: Radius.circular(
+                              widget.message.isMe ? 4 : 16,
+                            ),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: widget.message.message.startsWith(imageTypeChat)
+                            ? imageBytes == null
+                                  ? SizedBox()
+                                  : InkWell(
+                                      onTap: () {
+                                        openBase64File(
+                                          widget.message.message
+                                              .split(",")
+                                              .last,
+                                          "tempFile",
+                                        );
+                                      },
+                                      child: Image.memory(
+                                        imageBytes!,
+                                        height: 120,
+                                        width: 120,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                            : widget.message.message.startsWith(audioTypeChat)
+                            ? audioBytes == null
+                                  ? SizedBox()
+                                  : InkWell(
+                                      onTap: () async {
+                                        if (isPlaying) {
+                                          await _audioPlayer.stop();
+                                          setState(() => isPlaying = false);
+                                        } else {
+                                          await _playAudioFromBase64();
+                                        }
+                                      },
+                                      child: Container(
+                                        width: 120,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isPlaying
+                                                  ? Icons.pause
+                                                  : Icons.play_arrow_rounded,
+                                              color: Colors.white,
+                                              size: 30,
+                                            ),
+                                            Text(
+                                              "Audio",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                            : widget.message.message.startsWith(videoTypeChat)
+                            ? videoBytes == null
+                                  ? SizedBox()
+                                  : InkWell(
+                                      onTap: () async {
+                                        openBase64File(
+                                          widget.message.message
+                                              .split(",")
+                                              .last,
+                                          "tempFile",
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 120,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isPlaying
+                                                  ? Icons.pause
+                                                  : Icons.play_arrow_rounded,
+                                              color: Colors.white,
+                                              size: 30,
+                                            ),
+                                            Text(
+                                              "Video",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                            : widget.message.message.startsWith(docTypeChat)
+                            ? docBytes == null
+                                  ? SizedBox()
+                                  : InkWell(
+                                      onTap: () async {
+                                        openBase64File(
+                                          widget.message.message
+                                              .split(",")
+                                              .last,
+                                          "tempFile",
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 120,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.folder_rounded,
+                                              color: Colors.white,
+                                              size: 25,
+                                            ),
+                                            SizedBox(width: 2),
+                                            Text(
+                                              "Document",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                            : Text(
+                                widget.message.message,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: widget.message.isMe
+                                      ? Colors.white
+                                      : themeData.colorScheme.onSurface,
+                                ),
+                              ),
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_remainingTime != null &&
+                              !_remainingTime!.isNegative &&
+                              widget.message.destructTimestamp
+                                      .difference(DateTime.now())
+                                      .inDays <
+                                  365)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.whatshot,
+                                  color: Colors.red,
+                                  size: 12,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  _formatRemainingTime(_remainingTime!),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '•',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                              ],
+                            ),
+                          Text(
+                            _formatTime(widget.message.timestamp),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  child: widget.message.message.startsWith(imageTypeChat) ? imageBytes == null ? SizedBox():InkWell(
-                    onTap: () {
-                      openBase64File(widget.message.message.split(",").last, "tempFile");
-                    },
-                      child: Image.memory(imageBytes!,height: 120,width: 120,fit: BoxFit.cover))
-                      : widget.message.message.startsWith(audioTypeChat) ? audioBytes == null ? SizedBox(): InkWell(
-                        onTap: () async {
-                          if (isPlaying) {
-                            await _audioPlayer.stop();
-                            setState(() => isPlaying = false);
-                          } else {
-                            await _playAudioFromBase64();
-                          }
-                        },
-                    child: Container(width: 120,
-                    child: Row(
-                      children: [
-                        Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded,color: Colors.white,size: 30,),
-                        Text("Audio",style: TextStyle(color: Colors.white,fontSize: 15),),
-                      ],
-                    ),
-                    ),
-                  ):widget.message.message.startsWith(videoTypeChat) ? videoBytes == null ? SizedBox(): InkWell(
-                        onTap: () async {
-                          openBase64File(widget.message.message.split(",").last, "tempFile");
-                        },
-                    child: Container(width: 120,
-                    child: Row(
-                      children: [
-                        Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded,color: Colors.white,size: 30,),
-                        Text("Video",style: TextStyle(color: Colors.white,fontSize: 15),),
-                      ],
-                    ),
-                    ),
-                  ): widget.message.message.startsWith(docTypeChat) ? docBytes == null ? SizedBox(): InkWell(
-                        onTap: () async {
-                          openBase64File(widget.message.message.split(",").last, "tempFile");
-                        },
-                    child: Container(width: 120,
-                    child: Row(
-                      children: [
-                        Icon(Icons.folder_rounded,color: Colors.white,size: 25,),
-                        SizedBox(width: 2,),
-                        Text("Document",style: TextStyle(color: Colors.white,fontSize: 15),),
-                      ],
-                    ),
-                    ),
-                  ):
-
-                  Text(
-                    widget.message.message,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: widget.message.isMe ? Colors.white : themeData.colorScheme.onSurface,
-                    ),
-                  ),
                 ),
-                SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _formatTime(widget.message.timestamp),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey[500],
+                if (widget.message.isMe) ...[
+                  SizedBox(width: 8),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: themeData.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'M',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
-          ),
-          if (widget.message.isMe) ...[
-            SizedBox(width: 8),
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: themeData.colorScheme.primary,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Center(
-                child: Text(
-                  'M',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    ) : SizedBox();
+          )
+        : SizedBox();
   }
 
-  Future<void> openBase64File(String base64String, String fileNameWithoutExt) async {
+  Future<void> openBase64File(
+    String base64String,
+    String fileNameWithoutExt,
+  ) async {
     String cleanedBase64 = base64String.contains(",")
         ? base64String.split(',').last
         : base64String;
@@ -249,9 +414,11 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       'audio/mpeg': 'mp3',
       'text/plain': 'txt',
       'application/msword': 'doc',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+          'docx',
       'application/vnd.ms-excel': 'xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+          'xlsx',
     };
 
     return map[mime] ?? 'bin'; // default unknown extension
@@ -268,12 +435,16 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
 
     try {
       // Decode base64
-      String base64String = widget.message.message.replaceFirst(audioTypeChat, "");
+      String base64String = widget.message.message.replaceFirst(
+        audioTypeChat,
+        "",
+      );
       Uint8List audioBytes = base64Decode(base64String);
 
       // Write to temp file
       final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final filePath =
+          '${tempDir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final file = File(filePath);
       await file.writeAsBytes(audioBytes);
 
@@ -290,5 +461,4 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       setState(() => isLoading = false);
     }
   }
-
 }
