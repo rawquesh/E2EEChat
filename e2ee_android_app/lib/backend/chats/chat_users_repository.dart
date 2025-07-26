@@ -65,7 +65,7 @@ class ChatUsersRepository {
       for (final entry in box.toMap().entries) {
         try {
           final user = ChatUserModel.fromMap(
-              Map<String, dynamic>.from(entry.value)
+            Map<String, dynamic>.from(entry.value),
           );
           users.add(user);
         } catch (e) {
@@ -76,7 +76,9 @@ class ChatUsersRepository {
       // Sort by most recent interaction or by name
       users.sort((a, b) => a.name.compareTo(b.name));
 
-      MyPrint.printOnConsole('Retrieved ${users.length} chat users from storage');
+      MyPrint.printOnConsole(
+        'Retrieved ${users.length} chat users from storage',
+      );
       return users;
     } catch (e) {
       MyPrint.printOnConsole('Error getting chat users: $e');
@@ -139,18 +141,21 @@ class ChatUsersRepository {
     try {
       final user = await getChatUser(userId);
       if (user == null) return false;
+      user.lastMessage = lastMessage;
+      user.lastMessageTime = lastMessageTime.toIso8601String();
 
-      // Assuming ChatUserModel has lastMessage and lastMessageTime fields
-      // If not, you'll need to add them to your model
-      ChatUserModel updatedUser = ChatUserModel(
-        id: user.id,
-        name: user.name,
-        avatar: user.avatar,
-        isOnline: user.isOnline,
-        unreadCount: user.unreadCount,
-      );
-
-      return await saveChatUser(updatedUser);
+      return await saveChatUser(user);
+      // // Assuming ChatUserModel has lastMessage and lastMessageTime fields
+      // // If not, you'll need to add them to your model
+      // ChatUserModel updatedUser = ChatUserModel(
+      //   id: user.id,
+      //   name: user.name,
+      //   avatar: user.avatar,
+      //   isOnline: user.isOnline,
+      //   unreadCount: user.unreadCount,
+      // );
+      //
+      // return await saveChatUser(updatedUser);
     } catch (e) {
       MyPrint.printOnConsole('Error updating user last message: $e');
       return false;

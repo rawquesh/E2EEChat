@@ -213,6 +213,14 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     //_messageController.clear();
 
     // Optimistically update the UI
+
+    DateTime destructTimestamp = DateTime.now().add(
+      Duration(minutes: selectedTimeForDestruct),
+    );
+    if (selectedTimeForDestruct == 0) {
+      destructTimestamp = DateTime.now().add(Duration(days: 365 * 100));
+    }
+
     final localMessage = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: currentUserId,
@@ -220,6 +228,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       timestamp: DateTime.now(),
       isMe: true,
       status: 'sent',
+      destructTimestamp: destructTimestamp,
     );
 
     _chatProvider.addMessageFor(widget.user.id, localMessage);

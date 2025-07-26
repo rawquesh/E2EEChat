@@ -219,9 +219,19 @@ class _MainScreenState extends State<MainScreen>
     _chatController = ChatController(chatProvider: _chatProvider);
     _initializeSocket();
     _selfDestructService.start(
-      onMessagesDeletedCallback: (chatId, deletedMessages) {
+      onMessagesDeletedCallback: (chatId, deletedMessages) async {
         if (mounted) {
-          context.read<ChatProvider>().removeMessages(chatId, deletedMessages);
+          final provider = context.read<ChatProvider>();
+          provider.removeMessages(chatId, deletedMessages);
+
+          final remaining = provider.getMessagesFor(chatId);
+          final lastMsg = remaining.isNotEmpty ? remaining.last : null;
+
+          await _chatController.updateUserLastMessage(
+            userId: chatId,
+            lastMessage: lastMsg?.message ?? '',
+            lastMessageTime: lastMsg?.timestamp ?? DateTime.now(),
+          );
         }
       },
     );
@@ -243,11 +253,18 @@ class _MainScreenState extends State<MainScreen>
       case AppLifecycleState.resumed:
         MyPrint.printOnConsole("App Resumed");
         _selfDestructService.start(
-          onMessagesDeletedCallback: (chatId, deletedMessages) {
+          onMessagesDeletedCallback: (chatId, deletedMessages) async {
             if (mounted) {
-              context.read<ChatProvider>().removeMessages(
-                chatId,
-                deletedMessages,
+              final provider = context.read<ChatProvider>();
+              provider.removeMessages(chatId, deletedMessages);
+
+              final remaining = provider.getMessagesFor(chatId);
+              final lastMsg = remaining.isNotEmpty ? remaining.last : null;
+
+              await _chatController.updateUserLastMessage(
+                userId: chatId,
+                lastMessage: lastMsg?.message ?? '',
+                lastMessageTime: lastMsg?.timestamp ?? DateTime.now(),
               );
             }
           },
