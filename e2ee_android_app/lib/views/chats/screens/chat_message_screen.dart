@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
+import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -21,6 +23,9 @@ import 'package:record/record.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/common/app_state.dart';
+import '../../../backend/navigation/navigation_arguments.dart';
+import '../../../backend/navigation/navigation_controller.dart';
+import '../../../backend/webrtc/call_provider.dart';
 import '../../../configs/constants.dart';
 import '../components/message_bubble.dart';
 
@@ -828,6 +833,34 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           ],
         ),
         actions: [
+          // New Call Button
+          IconButton(
+            icon: Icon(
+              Icons.call_outlined,
+              color: themeData.colorScheme.onSurface,
+            ),
+            onPressed: () async {
+              // Get the CallController from the provider
+              final callProvider = context.read<CallProvider>();
+              final callController = callProvider.callController;
+
+              // Start the call with the current chat user's ID
+              await callController.startCall(widget.user.id);
+
+              // Navigate to the new call screen
+              if (mounted) {
+                NavigationController.navigateToVoiceCallScreen(
+                  navigationOperationParameters: NavigationOperationParameters(
+                    context: context,
+                    navigationType: NavigationType.pushNamed,
+                  ),
+                  arguments: VoiceCallScreenNavigationArguments(
+                    user: widget.user,
+                  ),
+                );
+              }
+            },
+          ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
             onSelected: (value) {

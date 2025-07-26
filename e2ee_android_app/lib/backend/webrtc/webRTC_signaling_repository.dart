@@ -68,6 +68,8 @@ class WebRTCSignalingRepository {
     final url = Uri.parse('$baseUrl/webrtc-signal');
     final body = jsonEncode(signal.toMap());
 
+    MyPrint.printOnConsole('[WEBRTC REPO] Sending signal: ${signal.type}');
+
     try {
       final response = await http.post(
         url,
@@ -77,6 +79,9 @@ class WebRTCSignalingRepository {
         },
         body: body,
       );
+      MyPrint.printOnConsole(
+        '[WEBRTC REPO] Signal sent with status: ${response.statusCode}',
+      ); // And this one
       return response.statusCode == 200;
     } catch (e) {
       MyPrint.printOnConsole('[WEBRTC REPO] Error sending signal: $e');

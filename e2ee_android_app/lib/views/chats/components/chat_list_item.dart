@@ -1,11 +1,7 @@
 import 'package:e2ee_android_app/configs/constants.dart';
-import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
-import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
-
-import '../../../backend/navigation/navigation_controller.dart';
 
 class ChatListItem extends StatefulWidget {
   final ChatUserModel user;
@@ -233,19 +229,6 @@ class _ChatListItemState extends State<ChatListItem>
                               ),
                             ),
                             _buildTimeAndUnreadBadge(),
-                            IconButton(
-                              icon: Icon(Icons.phone, color: Colors.grey[600]),
-                              onPressed: () {
-                                NavigationController.navigateToVoiceCallDemoScreen(
-                                  navigationOperationParameters:
-                                      NavigationOperationParameters(
-                                        context: context,
-                                        navigationType:
-                                            NavigationType.pushNamed,
-                                      ),
-                                );
-                              },
-                            ),
                           ],
                         ),
                         SizedBox(height: 6),

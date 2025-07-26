@@ -216,10 +216,12 @@ class CallController {
           type: 'hangup',
           senderId: _selfId!,
           receiverId: _remoteId!,
+          data: {'sdp': '', 'type': ''},
         ),
       );
     }
 
+    // The rest of the function remains the same
     await webrtcService.dispose();
     callProvider.callState.set(value: CallState.ended);
     onCallEnded?.call();

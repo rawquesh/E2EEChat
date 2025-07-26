@@ -95,9 +95,9 @@ class NavigationController {
           page = parsePinEntryScreen(settings: settings);
           break;
         }
-      case VoiceCallDemoScreen.routeName:
+      case VoiceCallScreen.routeName:
         {
-          page = parseVoiceCallDemoScreen(settings: settings);
+          page = parseVoiceCallScreen(settings: settings);
           break;
         }
       // case MainScreen.routeName:
@@ -146,8 +146,12 @@ class NavigationController {
     }
   }
 
-  static Widget? parseVoiceCallDemoScreen({required RouteSettings settings}) {
-    return const VoiceCallDemoScreen();
+  static Widget? parseVoiceCallScreen({required RouteSettings settings}) {
+    dynamic argument = settings.arguments;
+    if (argument is VoiceCallScreenNavigationArguments) {
+      return VoiceCallScreen(arguments: argument);
+    }
+    return null; // Or return an error screen
   }
 
   //endregion
@@ -201,12 +205,14 @@ class NavigationController {
     );
   }
 
-  static Future<dynamic> navigateToVoiceCallDemoScreen({
+  static Future<dynamic> navigateToVoiceCallScreen({
     required NavigationOperationParameters navigationOperationParameters,
+    required VoiceCallScreenNavigationArguments arguments,
   }) {
     return NavigationOperation.navigate(
       navigationOperationParameters: navigationOperationParameters.copyWith(
-        routeName: VoiceCallDemoScreen.routeName,
+        routeName: VoiceCallScreen.routeName,
+        arguments: arguments,
       ),
     );
   }
