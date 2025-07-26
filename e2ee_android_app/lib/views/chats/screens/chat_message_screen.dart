@@ -845,7 +845,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               final callController = callProvider.callController;
 
               // Start the call with the current chat user's ID
-              await callController.startCall(widget.user.id);
+              await callController.startCall(
+                widget.user.id,
+                receiverName: widget.user.name,
+                receiverAvatar: widget.user.avatar,
+              );
 
               // Navigate to the new call screen
               if (mounted) {
