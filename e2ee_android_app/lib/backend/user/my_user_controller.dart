@@ -8,30 +8,18 @@ class MyUserController {
   late UserRepository _userRepository;
   late AuthenticationProvider _authenticationProvider;
 
-  MyUserController({
-    UserRepository? repository,
-    AuthenticationProvider? authenticationProvider,
-  }) {
+  MyUserController({UserRepository? repository, AuthenticationProvider? authenticationProvider}) {
     _userRepository = repository ?? UserRepository();
-    _authenticationProvider =
-        authenticationProvider ?? AuthenticationProvider();
+    _authenticationProvider = authenticationProvider ?? AuthenticationProvider();
   }
 
   Future<bool> updateDisplayName(String name) async {
-    final token = await SharedPrefManager().getString(
-      MySharedPreferenceVariables.authToken,
-    );
+    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
     if (token == null || token.isEmpty) return false;
 
-    final success = await _userRepository.updateDisplayName(
-      token: token,
-      name: name,
-    );
+    final success = await _userRepository.updateDisplayName(token: token, name: name);
     if (success) {
-      await SharedPrefManager().setString(
-        MySharedPreferenceVariables.username,
-        name,
-      );
+      await SharedPrefManager().setString(MySharedPreferenceVariables.nickname, name);
 
       final user = _authenticationProvider.userModel.get();
       if (user != null) {

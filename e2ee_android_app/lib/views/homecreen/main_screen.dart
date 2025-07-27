@@ -59,7 +59,7 @@ class _MainScreenState extends State<MainScreen>
   final List<Widget> _screens = [
     ChatListScreen(),
     CallsScreen(),
-    SettingsScreen(username: "rishi234"),
+    SettingsScreen(),
   ];
 
   Future<void> _initializeSocket() async {

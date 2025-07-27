@@ -17,9 +17,7 @@ import '../../backend/user/user_repository.dart';
 import '../authentication/screens/pin_entry_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  final String username;
-
-  const SettingsScreen({Key? key, required this.username}) : super(key: key);
+  const SettingsScreen({Key? key}) : super(key: key);
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -27,15 +25,14 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   var username = '';
+  var nickname = '';
   bool _biometricEnabled = false;
   late AuthenticationController authenticationController;
   late AuthenticationProvider authenticationProvider;
   late MyUserController userController;
 
   Future<void> _showEditNameDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: username,
-    );
+    final TextEditingController controller = TextEditingController(text: nickname);
     final String? result = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -46,15 +43,8 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
             decoration: const InputDecoration(hintText: 'Enter your nickname'),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Save'),
-            ),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Save')),
           ],
         );
       },
@@ -73,16 +63,17 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     }
   }
 
-  Future<void> getUsername() async {
-    var _u =
-        await SharedPrefManager().getString(
-          MySharedPreferenceVariables.username,
-        ) ??
-        "null";
+  Future<void> _getNames() async {
+    var _u = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? "";
+    var _n = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? "";
 
     username = _u;
+    nickname = _n;
+
     setState(() {});
   }
+
+
 
   Future<void> _logoutAndWipeData() async {
     await authenticationController.logout();
@@ -91,10 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     if (!mounted) return;
 
     NavigationController.navigateToLoginScreen(
-      navigationOperationParameters: NavigationOperationParameters(
-        context: context,
-        navigationType: NavigationType.pushNamedAndRemoveUntil,
-      ),
+      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
     );
   }
 
@@ -102,14 +90,9 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   void initState() {
     super.initState();
     authenticationProvider = context.read<AuthenticationProvider>();
-    authenticationController = AuthenticationController(
-      authenticationProvider: authenticationProvider,
-    );
-    userController = MyUserController(
-      repository: UserRepository(),
-      authenticationProvider: authenticationProvider,
-    );
-    getUsername();
+    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
+    userController = MyUserController(repository: UserRepository(), authenticationProvider: authenticationProvider);
+    _getNames();
   }
 
   @override
@@ -131,20 +114,13 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: accentColor,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
+                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
                 ),
                 alignment: Alignment.topLeft,
                 padding: EdgeInsets.only(top: 40, left: 24),
                 child: Text(
                   "Profile",
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               Positioned(
@@ -161,36 +137,24 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                         decoration: BoxDecoration(
                           color: isDark ? Colors.grey[800] : Colors.amber[700],
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 10,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
+                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 6))],
                         ),
                         child: Center(
                           child: Text(
-                            username.isNotEmpty
-                                ? username[0].toUpperCase()
-                                : "?",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            username.isNotEmpty ? username[0].toUpperCase() : "?",
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                         ),
                       ),
                       SizedBox(height: 10),
                       // Username
                       Text(
-                        username,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
+                        nickname.isNotEmpty ? nickname : "No Nickname",
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: isDark ? Colors.white : Colors.black87),
+                      ),
+                      Text(
+                        "@"+ username,
+                        style: TextStyle(fontWeight: FontWeight.normal, fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                       ),
                     ],
                   ),
@@ -214,37 +178,20 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                   title: "Change PIN",
                   onTap: () async {
                     await NavigationController.navigateToPinEntryScreen(
-                      navigationOperationParameters:
-                          NavigationOperationParameters(
-                            context: context,
-                            navigationType: NavigationType.pushNamed,
-                          ),
-                      arguments: PinEntryScreenNavigationArguments(
-                        mode: PinScreenMode.changeOld,
-                      ),
+                      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                      arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.changeOld),
                     );
                   },
                 ),
                 _biometricTile(),
-                _settingTile(
-                  icon: CupertinoIcons.doc_text,
-                  title: "Terms of Service",
-                  onTap: () {},
-                ),
-                _settingTile(
-                  icon: CupertinoIcons.lock_shield,
-                  title: "Privacy Policy",
-                  onTap: () {},
-                ),
+                _settingTile(icon: CupertinoIcons.doc_text, title: "Terms of Service", onTap: () {}),
+                _settingTile(icon: CupertinoIcons.lock_shield, title: "Privacy Policy", onTap: () {}),
                 SizedBox(height: 20),
                 ListTile(
                   leading: Icon(Icons.logout, color: Colors.red),
                   title: Text(
                     "Log out",
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                   ),
                   onTap: () {
                     showDialog(
@@ -252,9 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                       builder: (BuildContext context) {
                         return AlertDialog(
                           title: const Text('Confirm Logout'),
-                          content: const Text(
-                            'Are you sure you want to log out? All your local data will be wiped.',
-                          ),
+                          content: const Text('Are you sure you want to log out? All your local data will be wiped.'),
                           actions: <Widget>[
                             TextButton(
                               onPressed: () {
@@ -284,11 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     );
   }
 
-  Widget _settingTile({
-    required IconData icon,
-    required String title,
-    VoidCallback? onTap,
-  }) {
+  Widget _settingTile({required IconData icon, required String title, VoidCallback? onTap}) {
     return Column(
       children: [
         ListTile(
@@ -320,20 +261,11 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                   children: [
                     Text(
                       "Biometric Login",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     Text(
                       _biometricEnabled ? "Enabled" : "Disabled",
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: _biometricEnabled
-                            ? Colors.green[700]
-                            : Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11.5, color: _biometricEnabled ? Colors.green[700] : Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -345,34 +277,22 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                   value: _biometricEnabled,
                   onChanged: (bool value) async {
                     if (value) {
-                      final canBiometric = await authenticationController
-                          .canCheckBiometrics();
+                      final canBiometric = await authenticationController.canCheckBiometrics();
                       if (!canBiometric) {
-                        MyToast.showError(
-                          context: context,
-                          msg: "Biometric not supported on this device.",
-                        );
+                        MyToast.showError(context: context, msg: "Biometric not supported on this device.");
                         return;
                       }
-                      final enabled = await authenticationController
-                          .enableBiometric(true);
+                      final enabled = await authenticationController.enableBiometric(true);
                       if (enabled) {
-                        final success = await authenticationController
-                            .authenticateWithBiometric();
+                        final success = await authenticationController.authenticateWithBiometric();
                         if (success) {
                           setState(() {
                             _biometricEnabled = true;
                           });
-                          MyToast.showSuccess(
-                            context: context,
-                            msg: "Biometric login enabled!",
-                          );
+                          MyToast.showSuccess(context: context, msg: "Biometric login enabled!");
                         } else {
                           await authenticationController.enableBiometric(false);
-                          MyToast.showError(
-                            context: context,
-                            msg: "Biometric setup failed or cancelled.",
-                          );
+                          MyToast.showError(context: context, msg: "Biometric setup failed or cancelled.");
                         }
                       }
                     } else {
@@ -380,10 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                       setState(() {
                         _biometricEnabled = false;
                       });
-                      MyToast.showSuccess(
-                        context: context,
-                        msg: "Biometric login disabled.",
-                      );
+                      MyToast.showSuccess(context: context, msg: "Biometric login disabled.");
                     }
                   },
                   activeColor: Colors.amber[700],
@@ -394,10 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 54, right: 8),
-          child: Divider(height: 0, thickness: 0.3),
-        ),
+        Padding(padding: const EdgeInsets.only(left: 54, right: 8), child: Divider(height: 0, thickness: 0.3)),
       ],
     );
   }
