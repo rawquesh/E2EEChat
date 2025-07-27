@@ -1,6 +1,7 @@
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
+import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
@@ -11,19 +12,17 @@ import 'package:e2ee_models_app/utils/extensions.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
-import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../navigation/navigation_arguments.dart';
 import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
 import 'authentication_repository.dart';
 import 'package:hive/hive.dart';
 import 'package:e2ee_models_app/utils/hive_manager.dart';
-
 
 class AuthenticationController {
   late AuthenticationProvider _authenticationProvider;
@@ -43,6 +42,8 @@ class AuthenticationController {
   static const _pinKey = "user_app_pin";
   static const _duressPinKey = "duress_pin";
   static const _biometricKey = "biometric_enabled";
+  // static const String _authToken = "authToken";
+
 
   final LocalAuthentication _auth = LocalAuthentication();
 
@@ -79,7 +80,7 @@ class AuthenticationController {
       MyPrint.printOnConsole("Payload: $payload");
 
       MyPrint.printOnConsole("Sending registration request...");
-      final result = await _authenticationRepository. registerNewUserFromPayload(payload);
+      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
 
       final accessToken = result?['data']?['access_token'];
 
@@ -112,74 +113,70 @@ class AuthenticationController {
     }
   }
 
+  Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
+    try {
+      // 1. Show the dialog and wait for the user to enter a nickname.
+      final String? nickname = await _promptForNickname(context);
 
-Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
-  try {
-    // 1. Show the dialog and wait for the user to enter a nickname.
-    final String? nickname = await _promptForNickname(context);
+      // 2. If a nickname was provided, proceed to update it.
+      if (nickname != null && nickname.isNotEmpty) {
+        // 3. Initialize the controller.
+        final userController = MyUserController(repository: UserRepository(), authenticationProvider: authenticationProvider);
 
-    // 2. If a nickname was provided, proceed to update it.
-    if (nickname != null && nickname.isNotEmpty) {
-      // 3. Initialize the controller.
-      final userController = MyUserController(
-        repository: UserRepository(),
-        authenticationProvider: authenticationProvider,
-      );
+        // 4. Call the update method.
+        final success = await userController.updateDisplayName(nickname);
 
-      // 4. Call the update method.
-      final success = await userController.updateDisplayName(nickname);
-
-      // 5. Show feedback to the user.
-      if (success) {
-        MyToast.showSuccess(context: context, msg: 'Nickname saved!');
-      } else {
-        MyToast.showError(context: context, msg: 'Could not save nickname. You can set it later in settings.');
+        // 5. Show feedback to the user.
+        if (success) {
+          MyToast.showSuccess(context: context, msg: 'Nickname saved!');
+        } else {
+          MyToast.showError(context: context, msg: 'Could not save nickname. You can set it later in settings.');
+        }
       }
+    } catch (e) {
+      // Handle any potential errors during the nickname update process.
+      MyPrint.printOnConsole('Error during nickname update: $e');
+      MyToast.showError(context: context, msg: 'An error occurred while saving your nickname.');
     }
-  } catch (e) {
-    // Handle any potential errors during the nickname update process.
-    MyPrint.printOnConsole('Error during nickname update: $e');
-    MyToast.showError(context: context, msg: 'An error occurred while saving your nickname.');
   }
-}
 
-Future<String?> _promptForNickname(BuildContext context) async {
-  final TextEditingController nicknameController = TextEditingController();
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  Future<String?> _promptForNickname(BuildContext context) async {
+    final TextEditingController nicknameController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  return showDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        title: const Text('Set Your Nickname'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: nicknameController,
-            decoration: const InputDecoration(hintText: "Enter a nickname"),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Nickname cannot be empty.';
-              }
-              return null;
-            },
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Set Your Nickname'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: nicknameController,
+              decoration: const InputDecoration(hintText: "Enter a nickname"),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Nickname cannot be empty.';
+                }
+                return null;
+              },
+            ),
           ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Continue'),
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(dialogContext).pop(nicknameController.text.trim());
-              }
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Continue'),
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.of(dialogContext).pop(nicknameController.text.trim());
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
@@ -206,8 +203,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
         // Save current user id here!
         await saveCurrentUserId(username: username, accessToken: accessToken);
 
-      await _handleNicknameUpdate(context, authenticationProvider);
-
+        await _handleNicknameUpdate(context, authenticationProvider);
 
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
@@ -259,11 +255,16 @@ Future<String?> _promptForNickname(BuildContext context) async {
     }
   }
 
-  Future<bool> verifyPin(String pin) async {
+  Future<bool> verifyPin(String pin,{bool duress = false}) async {
+
     final storedPin = await _storage.read(key: _pinKey);
     final storedDuressPin = await _storage.read(key: _duressPinKey);
 
-    if (pin == storedDuressPin) {
+    MyPrint.printOnConsole("XX Verifying current PIN: $pin");
+    MyPrint.printOnConsole("XX Stored PIN: $storedPin");
+    MyPrint.printOnConsole("XX Stored Duress PIN: $storedDuressPin");
+
+    if (pin == storedDuressPin && !duress) {
       await wipeAllAuthData();
       return false; // Indicate duress mode
     }
@@ -271,11 +272,11 @@ Future<String?> _promptForNickname(BuildContext context) async {
     return pin == storedPin;
   }
 
-  Future<bool> setNewDuressPin(String pin, String confirmPin) async {
+  Future<bool> setNewDuressPin(String pin, String confirmPin, BuildContext context) async {
     try {
       final storedPin = await _storage.read(key: _pinKey);
       if (pin == storedPin) {
-        // Optionally, provide feedback to the user that the duress PIN cannot be the same as the main PIN.
+        MyToast.showError(context: context, msg: "Duress PIN cannot be the same as the main PIN.");
         return false;
       }
       if (pin.length != 4 || pin != confirmPin) {
@@ -291,7 +292,6 @@ Future<String?> _promptForNickname(BuildContext context) async {
   }
 
   Future<bool> verifyDuressPin(String pin) async {
-    final storedDuressPin = await _storage.read(key: _duressPinKey);
     final storedDuressPin = await _storage.read(key: _duressPinKey);
 
     if (storedDuressPin != null && pin == storedDuressPin) {
@@ -318,7 +318,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
 
     //start code for delete all chat data
     Box? box = await HiveManager().openBox(boxName: "chat_users");
-    if(box != null){
+    if (box != null) {
       for (final entry in box.toMap().entries) {
         try {
           final user = ChatUserModel.fromMap(Map<String, dynamic>.from(entry.value));

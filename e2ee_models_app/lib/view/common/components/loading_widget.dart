@@ -8,14 +8,14 @@ class LoadingWidget extends StatelessWidget {
   final bool isCenter;
 
   const LoadingWidget({
-    Key? key,
+    super.key,
     this.boxSize = 90,
     this.loaderSize = 50,
     this.backgroundColor,
     this.loaderColor,
     this.borderRadius = 20,
     this.isCenter = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

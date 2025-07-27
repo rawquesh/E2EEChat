@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class MyPrint {
   static String _logData = "";
@@ -9,7 +10,9 @@ class MyPrint {
   static bool? get isRecordLog => _isRecordLog;
 
   static void printOnConsole(Object s, {String? tag}) {
-    print("${(tag?.isNotEmpty ?? false) ? "$tag " : ""}${s.toString()}");
+    if (kDebugMode) {
+      print("${(tag?.isNotEmpty ?? false) ? "$tag " : ""}${s.toString()}");
+    }
   }
 
   static void logOnConsole(Object s, {String? tag}) {

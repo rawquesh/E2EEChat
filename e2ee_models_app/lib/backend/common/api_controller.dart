@@ -8,7 +8,7 @@ import '../../utils/my_utils.dart';
 import 'package:http/http.dart' as http;
 
 import '../../utils/parsing_helper.dart';
-import '../../utils/shared_pref_manager.dart';
+import '../../utils/storage_manager.dart';
 
 class APIController {
   static Future<Map<String, dynamic>> getAPIData({

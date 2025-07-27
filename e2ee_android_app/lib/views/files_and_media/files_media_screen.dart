@@ -1,9 +1,9 @@
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// import 'package:provider/provider.dart';
 
-import '../../backend/common/app_theme/app_theme_controller.dart';
-import '../../backend/common/app_theme/app_theme_provider.dart';
+// import '../../backend/common/app_theme/app_theme_controller.dart';
+// import '../../backend/common/app_theme/app_theme_provider.dart';
 
 enum FileType { image, video, document, audio }
 
@@ -89,9 +89,7 @@ class _FilesMediaScreenState extends State<FilesMediaScreen> with MySafeState {
         return Icons.picture_as_pdf;
       case FileType.audio:
         return Icons.audiotrack;
-      default:
-        return Icons.insert_drive_file;
-    }
+      }
   }
 
 

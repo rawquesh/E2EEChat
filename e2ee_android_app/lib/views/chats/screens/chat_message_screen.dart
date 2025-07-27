@@ -9,7 +9,7 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -419,13 +419,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       final filePath = result.files.first.path;
       Uint8List? fileBytes = await File(filePath!).readAsBytes();
 
-      if (fileBytes != null) {
-        print("File bytes: ${fileBytes}");
-        _sendMessage("$docTypeChat${base64Encode(fileBytes)}");
-      } else {
-        print("File bytes are null (possibly picked from path, not memory)");
-      }
-    }
+      print("File bytes: ${fileBytes}");
+      _sendMessage("$docTypeChat${base64Encode(fileBytes)}");
+        }
   }
 
   void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {

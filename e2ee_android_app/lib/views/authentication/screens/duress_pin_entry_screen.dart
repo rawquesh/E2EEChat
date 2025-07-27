@@ -2,7 +2,7 @@ import 'package:e2ee_android_app/backend/authentication/authentication_controlle
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
-import 'package:e2ee_android_app/views/authentication/screens/pin_screen_mode.dart';
+import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -85,7 +85,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
 
     // ======== CHANGE PIN FLOW ========
     if (currentMode == PinScreenMode.verifyCurrentPin) {
-      final isCorrectPin = await authenticationController.verifyPin(pin);
+      final isCorrectPin = await authenticationController.verifyPin(pin,duress: true);
 
       if (isCorrectPin) {
         setState(() {
@@ -150,7 +150,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       // Confirm new PIN
       if (newPin == pin) {
         final result =
-            await authenticationController.setNewDuressPin(newPin!, pin);
+            await authenticationController.setNewDuressPin(newPin!, pin, context);
         setState(() {
           isLoading = false;
         });
@@ -205,7 +205,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       }
       if (firstPin == pin) {
         final result =
-            await authenticationController.setNewDuressPin(firstPin!, pin);
+            await authenticationController.setNewDuressPin(firstPin!, pin,context);
         setState(() {
           isLoading = false;
         });
@@ -318,6 +318,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         return "Confirm New Duress PIN";
       case PinScreenMode.verifyCurrentPin:
         return "Enter Your PIN";
+      case PinScreenMode.changeDuress:
+        throw UnimplementedError();
     }
   }
 
@@ -337,6 +339,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         return "Re-enter your new duress PIN to confirm";
       case PinScreenMode.verifyCurrentPin:
         return "Enter your main PIN to change your duress PIN";
+      case PinScreenMode.changeDuress:
+        throw UnimplementedError();
     }
   }
 
