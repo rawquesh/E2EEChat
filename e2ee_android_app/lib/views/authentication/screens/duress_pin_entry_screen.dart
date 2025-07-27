@@ -11,7 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
-enum PinScreenMode { set, confirm, verify, changeOld, changeNew, changeConfirm }
+enum PinScreenMode {
+  set,
+  confirm,
+  verify,
+  changeOld,
+  changeNew,
+  changeConfirm,
+  verifyCurrentPin
+}
 
 class DuressPinEntryScreen extends StatefulWidget {
   static const String routeName = "/DuressPinEntryScreen";
@@ -85,7 +93,27 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
     });
 
     // ======== CHANGE PIN FLOW ========
-    if (currentMode == PinScreenMode.changeOld) {
+    if (currentMode == PinScreenMode.verifyCurrentPin) {
+      final isCorrectPin = await authenticationController.verifyPin(pin);
+
+      if (isCorrectPin) {
+        setState(() {
+          currentMode = PinScreenMode.changeNew;
+          _pinController.clear();
+          isLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _focusNode.requestFocus(),
+        );
+      } else {
+        setState(() {
+          errorMessage = "Incorrect PIN.";
+          _pinController.clear();
+          isLoading = false;
+        });
+      }
+      return;
+    } else if (currentMode == PinScreenMode.changeOld) {
       final isCorrectPin = await authenticationController.verifyDuressPin(pin);
 
       if (isCorrectPin) {
@@ -297,6 +325,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         return "Enter New Duress PIN";
       case PinScreenMode.changeConfirm:
         return "Confirm New Duress PIN";
+      case PinScreenMode.verifyCurrentPin:
+        return "Enter Your PIN";
     }
   }
 
@@ -314,6 +344,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         return "Enter your new duress PIN";
       case PinScreenMode.changeConfirm:
         return "Re-enter your new duress PIN to confirm";
+      case PinScreenMode.verifyCurrentPin:
+        return "Enter your main PIN to change your duress PIN";
     }
   }
 

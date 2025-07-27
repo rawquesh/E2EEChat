@@ -292,6 +292,13 @@ Future<String?> _promptForNickname(BuildContext context) async {
 
   Future<bool> verifyDuressPin(String pin) async {
     final storedDuressPin = await _storage.read(key: _duressPinKey);
+    final storedDuressPin = await _storage.read(key: _duressPinKey);
+
+    if (storedDuressPin != null && pin == storedDuressPin) {
+      await wipeAllAuthData();
+      return false; // Indicate duress mode
+    }
+
     return pin == storedDuressPin;
   }
 

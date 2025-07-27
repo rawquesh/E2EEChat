@@ -11,15 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
-enum PinScreenMode {
-  set,
-  confirm,
-  verify,
-  changeOld,
-  changeNew,
-  changeConfirm,
-  changeDuress
-}
+enum PinScreenMode { set, confirm, verify, changeOld, changeNew, changeConfirm }
 
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
@@ -216,29 +208,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         });
       }
       return;
-    } else if (currentMode == PinScreenMode.changeDuress) {
-      final isCorrect = await authenticationController.verifyPin(pin);
-      if (isCorrect) {
-        if (mounted) {
-          await NavigationController.navigateToDuressPinEntryScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamed,
-            ),
-            arguments: PinEntryScreenNavigationArguments(
-              mode: PinScreenMode.changeOld,
-            ),
-          );
-        }
-      } else {
-        setState(() {
-          failedAttempts++;
-          isLoading = false;
-          errorMessage = "Incorrect PIN.";
-          _pinController.clear();
-        });
-      }
-      return;
     } else if (currentMode == PinScreenMode.verify) {
       final isCorrect = await authenticationController.verifyPin(pin);
       if (isCorrect) {
@@ -251,7 +220,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           );
         }
       } else {
-        // Check if it was a duress PIN
         final isDuress = await authenticationController.verifyDuressPin(pin);
         if (isDuress) {
           if (mounted) {
@@ -285,7 +253,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   void _showBiometricPrompt() async {
     final canBiometric = await authenticationController.canCheckBiometrics();
     if (!canBiometric) {
-      _showDuressPinPrompt();
+      _goToHome();
       return;
     }
 
@@ -303,7 +271,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _showDuressPinPrompt();
+              _goToHome();
             },
             child: const Text('Not Now'),
           ),
@@ -330,48 +298,9 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                   );
                 }
               }
-              _showDuressPinPrompt();
-            },
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDuressPinPrompt() {
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Set Up Duress PIN?'),
-        content: const Text(
-          'A duress PIN is a secret PIN that, when entered, will wipe all app data for security. Would you like to set one up?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
               _goToHome();
             },
-            child: const Text('No'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              NavigationController.navigateToDuressPinEntryScreen(
-                navigationOperationParameters: NavigationOperationParameters(
-                  context: context,
-                  navigationType: NavigationType.pushNamed,
-                ),
-                arguments: PinEntryScreenNavigationArguments(
-                  mode: PinScreenMode.set,
-                ),
-              );
-            },
-            child: const Text('Yes'),
+            child: const Text('Enable'),
           ),
         ],
       ),
@@ -436,8 +365,6 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Enter New PIN";
       case PinScreenMode.changeConfirm:
         return "Confirm New PIN";
-      case PinScreenMode.changeDuress:
-        return "Enter Your PIN";
     }
   }
 
@@ -453,8 +380,10 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Verify your current PIN";
       case PinScreenMode.changeNew:
         return "Enter your new PIN";
-      case PinScreenM…
-[924 lines not shown]
+      case PinScreenMode.changeConfirm:
+        return "Re-enter your new PIN to confirm";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

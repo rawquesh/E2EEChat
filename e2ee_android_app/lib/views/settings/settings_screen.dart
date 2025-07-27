@@ -187,9 +187,9 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                   icon: Icons.security_update_warning,
                   title: "Change Duress PIN",
                   onTap: () async {
-                    await NavigationController.navigateToPinEntryScreen(
+                    await NavigationController.navigateToDuressPinEntryScreen(
                       navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
-                      arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.changeDuress),
+                      arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.verifyCurrentPin),
                     );
                   },
                 ),
