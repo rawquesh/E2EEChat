@@ -44,7 +44,7 @@ class AppInitController {
     return isNavigateToObBoardingScreen;
   }
 
-  Future<void> initApp({required String appFlavor}) async {
+Future<void> initApp({required String appFlavor}) async {
     String tag = MyUtils.getNewId();
     MyPrint.printOnConsole("AppInitController().initApp() called", tag: tag);
 
@@ -53,7 +53,8 @@ class AppInitController {
 
     List<Future> futures = [];
 
-    // Simplified to only set orientation
+    futures.add(SharedPrefManager().init());
+
     futures.add(
       SystemChrome.setPreferredOrientations(<DeviceOrientation>[
         DeviceOrientation.portraitUp,

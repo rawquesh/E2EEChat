@@ -134,6 +134,8 @@ class AuthenticationController {
         // Save current user id here!
         await saveCurrentUserId(username: username, accessToken: accessToken);
 
+        //  Edit Nickname logic
+
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
           arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),

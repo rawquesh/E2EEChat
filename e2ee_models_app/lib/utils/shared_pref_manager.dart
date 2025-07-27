@@ -1,5 +1,3 @@
-
-
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefManager {
@@ -15,6 +13,10 @@ class SharedPrefManager {
 
   Future<SharedPreferences?> _getInstance() async {
     return _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  Future<void> init() async {
+    _prefs ??= await SharedPreferences.getInstance();
   }
 
   Future<bool> setString(String key, String value) async {
