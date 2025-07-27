@@ -215,7 +215,7 @@ class _ChatListItemState extends State<ChatListItem>
                           children: [
                             Expanded(
                               child: Text(
-                                widget.user.name,
+                                widget.user.nickname,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,

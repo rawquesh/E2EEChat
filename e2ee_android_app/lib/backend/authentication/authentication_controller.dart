@@ -1,4 +1,6 @@
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
+import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
+import 'package:e2ee_android_app/backend/user/user_repository.dart';
 import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
@@ -109,6 +111,75 @@ class AuthenticationController {
     }
   }
 
+
+Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
+  try {
+    // 1. Show the dialog and wait for the user to enter a nickname.
+    final String? nickname = await _promptForNickname(context);
+
+    // 2. If a nickname was provided, proceed to update it.
+    if (nickname != null && nickname.isNotEmpty) {
+      // 3. Initialize the controller.
+      final userController = MyUserController(
+        repository: UserRepository(),
+        authenticationProvider: authenticationProvider,
+      );
+
+      // 4. Call the update method.
+      final success = await userController.updateDisplayName(nickname);
+
+      // 5. Show feedback to the user.
+      if (success) {
+        MyToast.showSuccess(context: context, msg: 'Nickname saved!');
+      } else {
+        MyToast.showError(context: context, msg: 'Could not save nickname. You can set it later in settings.');
+      }
+    }
+  } catch (e) {
+    // Handle any potential errors during the nickname update process.
+    MyPrint.printOnConsole('Error during nickname update: $e');
+    MyToast.showError(context: context, msg: 'An error occurred while saving your nickname.');
+  }
+}
+
+Future<String?> _promptForNickname(BuildContext context) async {
+  final TextEditingController nicknameController = TextEditingController();
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+
+  return showDialog<String>(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: const Text('Set Your Nickname'),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: nicknameController,
+            decoration: const InputDecoration(hintText: "Enter a nickname"),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Nickname cannot be empty.';
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Continue'),
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(dialogContext).pop(nicknameController.text.trim());
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
   Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
       MyPrint.printOnConsole("Generating keys for login...");
@@ -134,7 +205,8 @@ class AuthenticationController {
         // Save current user id here!
         await saveCurrentUserId(username: username, accessToken: accessToken);
 
-        //  Edit Nickname logic here
+      await _handleNicknameUpdate(context, authenticationProvider);
+
 
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
@@ -166,7 +238,7 @@ class AuthenticationController {
   Future<bool> setNewPin(String pin, String confirmPin) async {
     try {
       // Validate PIN length
-      if (pin.length < 6 || pin.length > 8) {
+      if (pin.length != 4) {
         return false;
       }
 

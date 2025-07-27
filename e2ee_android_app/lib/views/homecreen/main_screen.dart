@@ -96,7 +96,7 @@ class _MainScreenState extends State<MainScreen>
       (u) => u.id == callerId,
       orElse: () => ChatUserModel(id: callerId),
     );
-    if (user.name.isEmpty) {
+    if (user.nickname.isEmpty) {
       final fetched = await _chatRepository.fetchChatUser(
         userId: callerId,
         token: _currentUserToken,
@@ -109,7 +109,7 @@ class _MainScreenState extends State<MainScreen>
       avatar: user.avatar,
     );*/
 
-    final callerName = user.name.isNotEmpty ? user.name : callerId;
+    final callerName = user.nickname.isNotEmpty ? user.nickname : callerId;
 
     showDialog(
       context: context,
@@ -137,7 +137,7 @@ class _MainScreenState extends State<MainScreen>
                       (u) => u.id == callerId,
                       orElse: () => ChatUserModel(id: callerId),
                     );
-                if (user.name.isEmpty) {
+                if (user.nickname.isEmpty) {
                   final fetched = await _chatRepository.fetchChatUser(
                     userId: callerId,
                     token: _currentUserToken,
@@ -179,18 +179,16 @@ class _MainScreenState extends State<MainScreen>
       final senderId = messageData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
 
-      // ✨ FIX: Fetch sender name if it's missing from the payload
-      var senderName = messageData['message']['senderName']?.toString() ?? '';
-      if (senderName.isEmpty) {
-        MyPrint.printOnConsole(
-          "Sender name not in payload, fetching from API for ID: $senderId",
-        );
-        final fetchedUser = await _chatRepository.fetchChatUser(
-          userId: senderId,
-          token: _currentUserToken,
-        );
-        senderName = fetchedUser?.name ?? 'Unknown User';
-      }
+      // if (username.isEmpty) {
+      //   MyPrint.printOnConsole(
+      //     "Username not in payload, fetching from API for ID: $senderId",
+      //   );
+      //   final fetchedUser = await _chatRepository.fetchChatUser(
+      //     userId: senderId,
+      //     token: _currentUserToken,
+      //   );
+      //   username = fetchedUser?.nickname ?? 'Unknown User';
+      // }
 
       final receiverId = messageData['receiver_id']?.toString() ?? '';
       //final message = messageData['message']?.toString() ?? '';
@@ -235,13 +233,19 @@ class _MainScreenState extends State<MainScreen>
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
 
+      var username = messageData['message']['username']?.toString() ?? '';
+
+      var nickname = messageData['message']['nickname']?.toString() ?? '';
+
+
       if (index == -1) {
-        String avatar = senderName.isNotEmpty
-            ? senderName[0].toUpperCase()
+        String avatar = username.isNotEmpty
+            ? username[0].toUpperCase()
             : '?';
         user = ChatUserModel(
           id: otherUserId,
-          name: senderName,
+          nickname: nickname,
+          username: username,
           avatar: avatar,
           lastMessage: message,
           lastMessageTime: time.toIso8601String(),
@@ -249,7 +253,8 @@ class _MainScreenState extends State<MainScreen>
         );
       } else {
         user = users[index];
-        user.name = senderName; // Ensure name is up-to-date
+        user.nickname = nickname; // Ensure name is up-to-date
+        user.username = username; 
         user.lastMessage = message;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
@@ -262,7 +267,7 @@ class _MainScreenState extends State<MainScreen>
       if (_appState.lifecycleState == AppLifecycleState.resumed) {
         if (_appState.currentChattingWithUserId != otherUserId) {
           _appState.showCustomNotification(
-            'New message from $senderName',
+            'New message from $nickname',
             //message
             message.startsWith(imageTypeChat)
                 ? "Image"
@@ -278,7 +283,7 @@ class _MainScreenState extends State<MainScreen>
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
         NotificationService().showSystemNotification(
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          'New message from $senderName',
+          'New message from $nickname',
           //message,
           message.startsWith(imageTypeChat)
               ? "Image"

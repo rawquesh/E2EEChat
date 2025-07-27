@@ -1,6 +1,7 @@
 class ChatUserModel {
   String id;
-  String name;
+  String nickname;
+  String username;
   String avatar;
   String lastMessage;
   String lastMessageTime;
@@ -9,7 +10,8 @@ class ChatUserModel {
 
   ChatUserModel({
     this.id = '',
-    this.name = '',
+    this.nickname = '',
+    this.username = '',
     this.avatar = '',
     this.lastMessage = '',
     this.lastMessageTime = '',
@@ -20,12 +22,9 @@ class ChatUserModel {
   factory ChatUserModel.fromMap(Map<String, dynamic> map) {
     return ChatUserModel(
       id: map['id']?.toString() ?? '',
-      name: map['name'] ?? map['username'] ?? '',
-      avatar: (map['username'] ?? map['name'] ?? '')
-          .toString()
-          .isNotEmpty
-          ? (map['username'] ?? map['name'])[0].toUpperCase()
-          : '',
+      nickname: map['name'] ?? map['username'] ?? '',
+      username: map['username'] ?? '',
+      avatar: (map['username'] ?? map['name'] ?? '').toString().isNotEmpty ? (map['username'] ?? map['name'])[0].toUpperCase() : '',
       lastMessage: map['last_message'] ?? '',
       lastMessageTime: map['last_message_time'] ?? '',
       isOnline: map['is_online'] ?? false,
@@ -36,7 +35,8 @@ class ChatUserModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'name': name,
+      'name': nickname,
+      'username': username,
       'avatar': avatar,
       'last_message': lastMessage,
       'last_message_time': lastMessageTime,

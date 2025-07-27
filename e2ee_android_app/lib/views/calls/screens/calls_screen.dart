@@ -136,7 +136,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
 
     await callController.startCall(
       user.id,
-      receiverName: user.name,
+      receiverName: user.nickname,
       receiverAvatar: user.avatar,
     );
 
@@ -202,7 +202,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
                     _startCall(
                       ChatUserModel(
                         id: call.phoneNumber,
-                        name: call.contactName,
+                        nickname: call.contactName,
                         avatar: call.avatar,
                         lastMessage: '',
                         lastMessageTime: '',
@@ -330,7 +330,7 @@ class _CallSearchDelegate extends SearchDelegate<ChatUserModel?> {
         ),
       ),
       title: Text(
-        user.name,
+        user.nickname,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       trailing: IconButton(

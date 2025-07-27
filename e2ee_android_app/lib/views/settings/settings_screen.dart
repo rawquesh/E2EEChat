@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
       final success = await userController.updateDisplayName(result);
       if (success) {
         setState(() {
-          username = result;
+          nickname = result;
         });
         MyToast.showSuccess(context: context, msg: 'Profile updated');
       } else {

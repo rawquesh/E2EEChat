@@ -35,89 +35,48 @@ class ChatController {
 
   ChatUsersRepository get chatUsersRepository => _chatUsersRepository;
 
-  Future<bool> sendMessage({
-    required String message,
-    required int destructTimer,
-  }) async {
+  Future<bool> sendMessage({required String message, required int destructTimer}) async {
     final opponent = _chatProvider.currentOpponent.get();
     if (opponent == null) return false;
-    final token = await SharedPrefManager().getString(
-      MySharedPreferenceVariables.authToken,
-    );
+    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
     final senderId = await SharedPrefManager().getString('current_user_id');
-    final username =
-        await SharedPrefManager().getString(
-          MySharedPreferenceVariables.username,
-        ) ??
-        'Unknown';
+    final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
+    final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
     final receiverId = opponent.id;
-    if (token == null || token.isEmpty || senderId == null || senderId.isEmpty)
-      return false;
+    if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
     return _chatRepository.sendMessage(
       token: token,
       senderId: senderId,
       receiverId: receiverId,
       message: message,
-      senderName: username,
-      // ✨ 3. Use stored sender name
+      username: username,
+      nickname: nickname, 
       destructTimer: destructTimer,
     );
   }
 
-  Future<void> saveMessageToHive({
-    required String chatId,
-    required ChatMessageModel message,
-  }) async {
+  Future<void> saveMessageToHive({required String chatId, required ChatMessageModel message}) async {
     await _messageRepository.addMessage(chatId: chatId, message: message);
   }
 
-  Future<List<ChatMessageModel>> fetchMessagesPage({
-    required String chatId,
-    required int limit,
-    required int offset,
-    required String currentUserId,
-  }) {
-    return _messageRepository.getMessagesPage(
-      chatId: chatId,
-      limit: limit,
-      offset: offset,
-      currentUserId: currentUserId,
-    );
+  Future<List<ChatMessageModel>> fetchMessagesPage({required String chatId, required int limit, required int offset, required String currentUserId}) {
+    return _messageRepository.getMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
   }
 
-  Stream<ChatMessageModel?> watchMessages({
-    required String chatId,
-    required String currentUserId,
-  }) {
-    return _messageRepository.watchMessages(
-      chatId: chatId,
-      currentUserId: currentUserId,
-    );
+  Stream<ChatMessageModel?> watchMessages({required String chatId, required String currentUserId}) {
+    return _messageRepository.watchMessages(chatId: chatId, currentUserId: currentUserId);
   }
 
   Future<bool> loadStoredChatUsers() async {
     try {
       final storedUsers = await _chatUsersRepository.getAllChatUsers();
       // Sort users by last message time, newest first
-      storedUsers.sort(
-        (a, b) => DateTime.parse(
-          b.lastMessageTime,
-        ).compareTo(DateTime.parse(a.lastMessageTime)),
-      );
+      storedUsers.sort((a, b) => DateTime.parse(b.lastMessageTime).compareTo(DateTime.parse(a.lastMessageTime)));
 
       if (storedUsers.isNotEmpty) {
-        _chatProvider.chatUsers.setList(
-          list: storedUsers,
-          isClear: true,
-          isNotify: true,
-        );
-        _chatProvider.searchState.set(
-          value: SearchState.success,
-          isNotify: true,
-        );
-        MyPrint.printOnConsole(
-          'Loaded ${storedUsers.length} stored chat users',
-        );
+        _chatProvider.chatUsers.setList(list: storedUsers, isClear: true, isNotify: true);
+        _chatProvider.searchState.set(value: SearchState.success, isNotify: true);
+        MyPrint.printOnConsole('Loaded ${storedUsers.length} stored chat users');
         return true;
       }
       return false;
@@ -133,36 +92,22 @@ class ChatController {
     _chatProvider.searchState.set(value: SearchState.loading, isNotify: true);
 
     try {
-      final token = await SharedPrefManager().getString(
-        MySharedPreferenceVariables.authToken,
-      );
+      final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
       MyPrint.printOnConsole("Token retrieved: $token");
       if (token == null || token.isEmpty) return false;
 
-      final chatUser = await _chatRepository.fetchChatUser(
-        username: username,
-        token: token,
-      );
+      final chatUser = await _chatRepository.fetchChatUser(username: username, token: token);
 
       if (chatUser != null) {
         // ✨ Issue 4 Fix: DO NOT save the user to Hive here.
         // Just update the provider to show the temporary search result.
         // await _chatUsersRepository.saveChatUser(chatUser);
 
-        _chatProvider.chatUsers.setList(
-          list: [chatUser],
-          isClear: true,
-          isNotify: true,
-        );
+        _chatProvider.chatUsers.setList(list: [chatUser], isClear: true, isNotify: true);
         _chatProvider.currentOpponent.set(value: chatUser, isNotify: true);
-        _chatProvider.searchState.set(
-          value: SearchState.success,
-          isNotify: true,
-        );
+        _chatProvider.searchState.set(value: SearchState.success, isNotify: true);
 
-        MyPrint.printOnConsole(
-          'User found and displayed (not saved yet): ${chatUser.name}',
-        );
+        MyPrint.printOnConsole('User found and displayed (not saved yet): ${chatUser.nickname}');
         return true;
       }
 
@@ -179,22 +124,14 @@ class ChatController {
   Future<bool> addUserToChatList(ChatUserModel user) async {
     try {
       final saved = await _chatUsersRepository.saveChatUser(user);
-      MyPrint.printOnConsole('User saved to Hive: ${user.name} - $saved');
+      MyPrint.printOnConsole('User saved to Hive: ${user.nickname} - $saved');
       if (saved) {
         final currentUsers = await _chatUsersRepository.getAllChatUsers();
-        currentUsers.sort(
-          (a, b) => DateTime.parse(
-            b.lastMessageTime,
-          ).compareTo(DateTime.parse(a.lastMessageTime)),
-        );
+        currentUsers.sort((a, b) => DateTime.parse(b.lastMessageTime).compareTo(DateTime.parse(a.lastMessageTime)));
 
-        _chatProvider.chatUsers.setList(
-          list: currentUsers,
-          isClear: true,
-          isNotify: true,
-        );
+        _chatProvider.chatUsers.setList(list: currentUsers, isClear: true, isNotify: true);
 
-        MyPrint.printOnConsole('User added/updated in chat list: ${user.name}');
+        MyPrint.printOnConsole('User added/updated in chat list: ${user.nickname}');
         return true;
       }
       return false;
@@ -213,17 +150,11 @@ class ChatController {
         await _chatUsersRepository.saveChatUser(user);
 
         // Also update the user in the provider's list for instant UI feedback
-        final List<ChatUserModel> currentUsers = List.from(
-          _chatProvider.chatUsers.getList(),
-        );
+        final List<ChatUserModel> currentUsers = List.from(_chatProvider.chatUsers.getList());
         final int userIndex = currentUsers.indexWhere((u) => u.id == userId);
         if (userIndex != -1) {
           currentUsers[userIndex] = user;
-          _chatProvider.chatUsers.setList(
-            list: currentUsers,
-            isClear: true,
-            isNotify: true,
-          );
+          _chatProvider.chatUsers.setList(list: currentUsers, isClear: true, isNotify: true);
         }
       }
     } catch (e) {
@@ -231,25 +162,16 @@ class ChatController {
     }
   }
 
-  Future<void> updateUserLastMessage({
-    required String userId,
-    required String lastMessage,
-    required DateTime lastMessageTime,
-  }) async {
-    await _chatUsersRepository.updateUserLastMessage(
-      userId: userId,
-      lastMessage: lastMessage,
-      lastMessageTime: lastMessageTime,
-    );
-    final List<ChatUserModel> currentUsers = List.from(
-      _chatProvider.chatUsers.getList(),
-    );
+  Future<void> updateUserLastMessage({required String userId, required String lastMessage, required DateTime lastMessageTime}) async {
+    await _chatUsersRepository.updateUserLastMessage(userId: userId, lastMessage: lastMessage, lastMessageTime: lastMessageTime);
+    final List<ChatUserModel> currentUsers = List.from(_chatProvider.chatUsers.getList());
     final int userIndex = currentUsers.indexWhere((u) => u.id == userId);
 
     if (userIndex != -1) {
       final updatedUser = ChatUserModel(
         id: currentUsers[userIndex].id,
-        name: currentUsers[userIndex].name,
+        nickname: currentUsers[userIndex].nickname,
+        username: currentUsers[userIndex].username,
         avatar: currentUsers[userIndex].avatar,
         lastMessage: lastMessage,
         lastMessageTime: lastMessageTime.toIso8601String(),
@@ -257,17 +179,9 @@ class ChatController {
         unreadCount: currentUsers[userIndex].unreadCount,
       );
       currentUsers[userIndex] = updatedUser;
-      currentUsers.sort(
-        (a, b) => DateTime.parse(
-          b.lastMessageTime,
-        ).compareTo(DateTime.parse(a.lastMessageTime)),
-      );
+      currentUsers.sort((a, b) => DateTime.parse(b.lastMessageTime).compareTo(DateTime.parse(a.lastMessageTime)));
 
-      _chatProvider.chatUsers.setList(
-        list: currentUsers,
-        isClear: true,
-        isNotify: true,
-      );
+      _chatProvider.chatUsers.setList(list: currentUsers, isClear: true, isNotify: true);
     }
   }
 
@@ -277,11 +191,7 @@ class ChatController {
       if (removed) {
         final currentUsers = _chatProvider.chatUsers.getList();
         currentUsers.removeWhere((u) => u.id == userId);
-        _chatProvider.chatUsers.setList(
-          list: currentUsers,
-          isClear: true,
-          isNotify: true,
-        );
+        _chatProvider.chatUsers.setList(list: currentUsers, isClear: true, isNotify: true);
         return true;
       }
       return false;
@@ -310,12 +220,7 @@ class ChatController {
     bool clear = false,
   }) async {
     try {
-      final fetched = await fetchMessagesPage(
-        chatId: chatId,
-        limit: limit,
-        offset: offset,
-        currentUserId: currentUserId,
-      );
+      final fetched = await fetchMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
       final ordered = fetched.reversed.toList();
       _chatProvider.addMessagesFor(chatId, ordered, clear: clear);
     } catch (e) {
@@ -327,11 +232,7 @@ class ChatController {
     try {
       await _messageRepository.clearMessages(chatId);
       _chatProvider.clearMessagesFor(chatId);
-      await updateUserLastMessage(
-        userId: chatId,
-        lastMessage: '',
-        lastMessageTime: DateTime.now(),
-      );
+      await updateUserLastMessage(userId: chatId, lastMessage: '', lastMessageTime: DateTime.now());
       return true;
     } catch (e) {
       MyPrint.printOnConsole('Error clearing chat $chatId: $e');
@@ -346,11 +247,7 @@ class ChatController {
       _chatProvider.clearMessagesFor(chatId);
       final currentUsers = _chatProvider.chatUsers.getList();
       currentUsers.removeWhere((u) => u.id == chatId);
-      _chatProvider.chatUsers.setList(
-        list: currentUsers,
-        isClear: true,
-        isNotify: true,
-      );
+      _chatProvider.chatUsers.setList(list: currentUsers, isClear: true, isNotify: true);
       return true;
     } catch (e) {
       MyPrint.printOnConsole('Error deleting chat $chatId: $e');

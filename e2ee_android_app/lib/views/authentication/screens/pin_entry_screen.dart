@@ -423,195 +423,197 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
             : null, // Don't show back button during PIN setup
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight:
-                  MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).viewInsets.bottom -
-                  MediaQuery.of(context).padding.top -
-                  kToolbarHeight,
-            ),
-            child: IntrinsicHeight(
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
-
-                  // Security Icon
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: themeData.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      currentMode == PinScreenMode.verify
-                          ? Icons.lock
-                          : Icons.security,
-                      size: 40,
-                      color: themeData.primaryColor,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Title
-                  Text(
-                    _getTitle(),
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: themeData.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getSubtitle(),
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // PIN Input
-                  Pinput(
-                    controller: _pinController,
-                    focusNode: _focusNode,
-                    length: 8,
-                    obscureText: true,
-                    obscuringCharacter: '●',
-                    defaultPinTheme: defaultPinTheme,
-                    focusedPinTheme: focusedPinTheme,
-                    submittedPinTheme: submittedPinTheme,
-                    errorPinTheme: errorMessage != null ? errorPinTheme : null,
-                    pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
-                    showCursor: true,
-                    onCompleted: _onPinCompleted,
-                    enabled: !isLoading,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Error Message
-                  if (errorMessage != null)
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).viewInsets.bottom -
+                    MediaQuery.of(context).padding.top -
+                    kToolbarHeight,
+              ),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+          
+                    // Security Icon
                     Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: themeData.colorScheme.error.withValues(
-                          alpha: 0.1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.shade700),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.warning,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              errorMessage!,
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
-
-                  // Loading Indicator
-                  if (isLoading)
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        themeData.primaryColor,
-                      ),
-                    ),
-
-                  const Spacer(),
-
-                  // Security Warning (only show during verify mode)
-                  if (currentMode == PinScreenMode.verify)
-                    Container(
-                      padding: const EdgeInsets.all(6),
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         color: themeData.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.shade200),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.orange,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Security: 5 failed attempts will trigger data wipe',
-                              style: TextStyle(
-                                color: Colors.orange.shade800,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        currentMode == PinScreenMode.verify
+                            ? Icons.lock
+                            : Icons.security,
+                        size: 40,
+                        color: themeData.primaryColor,
                       ),
                     ),
-
-                  if (currentMode == PinScreenMode.verify)
+          
+                    const SizedBox(height: 24),
+          
+                    // Title
+                    Text(
+                      _getTitle(),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: themeData.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _getSubtitle(),
+                      style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+          
+                    const SizedBox(height: 40),
+          
+                    // PIN Input
+                    Pinput(
+                      controller: _pinController,
+                      focusNode: _focusNode,
+                      length: 4,
+                      obscureText: true,
+                      obscuringCharacter: '●',
+                      defaultPinTheme: defaultPinTheme,
+                      focusedPinTheme: focusedPinTheme,
+                      submittedPinTheme: submittedPinTheme,
+                      errorPinTheme: errorMessage != null ? errorPinTheme : null,
+                      pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
+                      showCursor: true,
+                      onCompleted: _onPinCompleted,
+                      enabled: !isLoading,
+                    ),
+          
                     const SizedBox(height: 20),
-
-                  // Forgot PIN button (only show during verify mode)
-                  if (currentMode == PinScreenMode.verify)
-                    TextButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Forgot PIN?'),
-                            content: const Text(
-                              'Please contact support or reset your account to recover access.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  // Navigate to account recovery
-                                },
-                                child: const Text('Reset Account'),
-                              ),
-                            ],
+          
+                    // Error Message
+                    if (errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: themeData.colorScheme.error.withValues(
+                            alpha: 0.1,
                           ),
-                        );
-                      },
-                      child: Text(
-                        'Forgot PIN?',
-                        style: TextStyle(
-                          color: themeData.primaryColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.red.shade700),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning,
+                              color: Colors.red,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-
-                  const SizedBox(height: 24),
-                ],
+          
+                    const SizedBox(height: 20),
+          
+                    // Loading Indicator
+                    if (isLoading)
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          themeData.primaryColor,
+                        ),
+                      ),
+          
+                    const Spacer(),
+          
+                    // Security Warning (only show during verify mode)
+                    if (currentMode == PinScreenMode.verify)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: themeData.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Security: 5 failed attempts will trigger data wipe',
+                                style: TextStyle(
+                                  color: Colors.orange.shade800,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+          
+                    if (currentMode == PinScreenMode.verify)
+                      const SizedBox(height: 20),
+          
+                    // Forgot PIN button (only show during verify mode)
+                    if (currentMode == PinScreenMode.verify)
+                      TextButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Forgot PIN?'),
+                              content: const Text(
+                                'Please contact support or reset your account to recover access.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    // Navigate to account recovery
+                                  },
+                                  child: const Text('Reset Account'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Forgot PIN?',
+                          style: TextStyle(
+                            color: themeData.primaryColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+          
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           ),

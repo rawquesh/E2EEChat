@@ -66,7 +66,8 @@ class ChatRepository {
   Future<bool> sendMessage({
     required String token,
     required String senderId,
-    required String senderName, // ✨ 1. Add senderName parameter
+    required String username,
+    required String nickname,
     required String receiverId,
     required String message,
     required int destructTimer,
@@ -77,7 +78,7 @@ class ChatRepository {
       "sender_id": senderId,
       "receiver_id": receiverId,
       //"message": message,
-      "message": {"message":message, "destructTimer": timeInSecond, "senderName": senderName},
+      "message": {"message":message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
     });
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
 

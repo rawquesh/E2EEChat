@@ -38,8 +38,7 @@ class ChatMessageScreen extends StatefulWidget {
   _ChatMessageScreenState createState() => _ChatMessageScreenState();
 }
 
-class _ChatMessageScreenState extends State<ChatMessageScreen>
-    with TickerProviderStateMixin, MySafeState {
+class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProviderStateMixin, MySafeState {
   // --- State & Controllers ---
   final TextEditingController _messageController = TextEditingController();
   late final ChatController _chatController;
@@ -66,6 +65,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
   @override
   void initState() {
+    MyPrint.printOnConsole(widget.user.toMap()..putIfAbsent("UserX", () => "UserX"));
+
     super.initState();
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
@@ -74,7 +75,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _appState.setCurrentChattingWithUserId(widget.user.id);
 
     opponentUserId = widget.user.id;
-    opponentUsername = widget.user.name;
+    opponentUsername = widget.user.nickname;
 
     _initializeAnimations();
     _messageController.addListener(_onTextChanged);
@@ -86,9 +87,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     // This method listens for the specific self-destruct event
     final lastDeleted = _chatProvider.lastDeletedMessages;
     if (lastDeleted != null && lastDeleted.chatId == widget.user.id) {
-      MyPrint.printOnConsole(
-        "[Real-time] Detected self-destruct for this chat. Reloading messages.",
-      );
+      MyPrint.printOnConsole("[Real-time] Detected self-destruct for this chat. Reloading messages.");
 
       // Reset the pagination counter and reload messages from scratch
       if (mounted) {
@@ -107,46 +106,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     // before we try to scroll.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
 
   void _initializeAnimations() {
-    _iconAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _widthAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _iconAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _widthAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _iconAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
+    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
+    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
   }
 
   Future<void> _initializeChat() async {
-    currentUserId =
-        await SharedPrefManager().getString('current_user_id') ?? '';
-    currentUserToken =
-        await SharedPrefManager().getString(
-          MySharedPreferenceVariables.authToken,
-        ) ??
-        '';
+    currentUserId = await SharedPrefManager().getString('current_user_id') ?? '';
+    currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
@@ -156,9 +130,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     await _loadInitialMessages();
 
     _scrollController.addListener(() {
-      if (_scrollController.offset <=
-              _scrollController.position.minScrollExtent + 10 &&
-          !_isLoadingMore) {
+      if (_scrollController.offset <= _scrollController.position.minScrollExtent + 10 && !_isLoadingMore) {
         _loadMoreMessages();
       }
     });
@@ -201,12 +173,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     if (hasText != _hasText) {
       if (!mounted) return;
       setState(() => _hasText = hasText);
-      hasText
-          ? _iconAnimationController.forward()
-          : _iconAnimationController.reverse();
-      hasText
-          ? _widthAnimationController.forward()
-          : _widthAnimationController.reverse();
+      hasText ? _iconAnimationController.forward() : _iconAnimationController.reverse();
+      hasText ? _widthAnimationController.forward() : _widthAnimationController.reverse();
     }
   }
 
@@ -219,9 +187,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
     // Optimistically update the UI
 
-    DateTime destructTimestamp = DateTime.now().add(
-      Duration(minutes: selectedTimeForDestruct),
-    );
+    DateTime destructTimestamp = DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
     if (selectedTimeForDestruct == 0) {
       destructTimestamp = DateTime.now().add(Duration(days: 365 * 100));
     }
@@ -239,15 +205,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _chatProvider.addMessageFor(widget.user.id, localMessage);
     _loadedMessages += 1;
 
-    await _chatController.saveMessageToHive(
-      chatId: widget.user.id,
-      message: localMessage,
-    );
+    await _chatController.saveMessageToHive(chatId: widget.user.id, message: localMessage);
 
     await _chatController.addUserToChatList(
       ChatUserModel(
         id: widget.user.id,
-        name: widget.user.name,
+        nickname: widget.user.nickname,
+        username: widget.user.username,
         avatar: widget.user.avatar,
         lastMessage: localMessage.message,
         lastMessageTime: localMessage.timestamp.toIso8601String(),
@@ -259,10 +223,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     _scrollToBottom();
 
     // The controller already correctly calls the repository
-    final success = await _chatController.sendMessage(
-      message: messageText,
-      destructTimer: selectedTimeForDestruct,
-    );
+    final success = await _chatController.sendMessage(message: messageText, destructTimer: selectedTimeForDestruct);
     if (!success) {
       MyPrint.printOnConsole('Send failed');
       // Here you might want to update the message status to 'failed'
@@ -304,10 +265,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         title: const Text('Clear chat'),
         content: const Text('Remove all messages in this chat?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -327,10 +285,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         title: const Text('Delete chat'),
         content: const Text('Delete this chat room and all messages?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -352,10 +307,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -364,10 +316,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 width: 40,
                 height: 4,
                 margin: EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
               ),
               Padding(
                 padding: EdgeInsets.all(20),
@@ -422,19 +371,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(12),
-        ),
+        decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
               child: Icon(icon, color: color, size: 24),
             ),
             SizedBox(width: 16),
@@ -444,17 +387,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
                   ),
                   SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
+                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -492,10 +428,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
     }
   }
 
-  void showAudioDialog(
-    BuildContext context,
-    Function(String base64Audio) onSend,
-  ) {
+  void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {
     final record = AudioRecorder();
     String? audioPath;
     bool isRecording = false;
@@ -508,8 +441,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
             Future<void> startRecording() async {
               if (await record.hasPermission()) {
                 final dir = await getTemporaryDirectory();
-                audioPath =
-                    '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                audioPath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
                 await record.start(const RecordConfig(), path: audioPath!);
                 setState(() {
                   isRecording = true;
@@ -538,23 +470,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text(
-                "Record Audio",
-                style: TextStyle(color: Colors.black),
-              ),
+              title: const Text("Record Audio", style: TextStyle(color: Colors.black)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    isRecording ? Icons.mic : Icons.mic_none,
-                    color: isRecording ? Colors.red : Colors.black,
-                    size: 48,
-                  ),
+                  Icon(isRecording ? Icons.mic : Icons.mic_none, color: isRecording ? Colors.red : Colors.black, size: 48),
                   const SizedBox(height: 10),
-                  Text(
-                    isRecording ? 'Recording...' : 'Tap "Record" to start',
-                    style: TextStyle(color: Colors.black),
-                  ),
+                  Text(isRecording ? 'Recording...' : 'Tap "Record" to start', style: TextStyle(color: Colors.black)),
                 ],
               ),
               actions: [
@@ -579,9 +501,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                         height: 40,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(100),
-                          color: !isRecording && audioPath != null
-                              ? Colors.orange
-                              : Colors.black.withOpacity(0.2),
+                          color: !isRecording && audioPath != null ? Colors.orange : Colors.black.withOpacity(0.2),
                         ),
                         child: Center(child: Text("Send")),
                       ),
@@ -608,11 +528,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
   Future<void> requestStoragePermission(bool isCamera, bool isImage) async {
     if (Platform.isAndroid) {
       if (Platform.isAndroid && Platform.version.compareTo('13') >= 0) {
-        await [
-          Permission.photos,
-          Permission.audio,
-          Permission.camera,
-        ].request();
+        await [Permission.photos, Permission.audio, Permission.camera].request();
       } else {
         await [Permission.storage, Permission.camera].request();
       }
@@ -662,15 +578,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               isCamera
                   ? ListTile(
                       leading: Icon(Icons.photo_camera, color: Colors.white),
-                      title: Text(
-                        "Capture Image",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      title: Text("Capture Image", style: TextStyle(color: Colors.white)),
                       onTap: () async {
                         Navigator.pop(context);
-                        final images = await _picker.pickImage(
-                          source: ImageSource.camera,
-                        );
+                        final images = await _picker.pickImage(source: ImageSource.camera);
                         setState(() {
                           image = images;
                           prepareForSendMessage(true);
@@ -681,15 +592,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               isCamera
                   ? ListTile(
                       leading: Icon(Icons.videocam, color: Colors.white),
-                      title: Text(
-                        "Capture Video",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      title: Text("Capture Video", style: TextStyle(color: Colors.white)),
                       onTap: () async {
                         Navigator.pop(context);
-                        final video = await _picker.pickVideo(
-                          source: ImageSource.camera,
-                        );
+                        final video = await _picker.pickVideo(source: ImageSource.camera);
                         setState(() {
                           image = video;
                           prepareForSendMessage(false);
@@ -700,15 +606,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               !isCamera
                   ? ListTile(
                       leading: Icon(Icons.image, color: Colors.white),
-                      title: Text(
-                        "Choose Image",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      title: Text("Choose Image", style: TextStyle(color: Colors.white)),
                       onTap: () async {
                         Navigator.pop(context);
-                        final images = await _picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
+                        final images = await _picker.pickImage(source: ImageSource.gallery);
                         setState(() {
                           image = images;
                           prepareForSendMessage(true);
@@ -719,15 +620,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
               !isCamera
                   ? ListTile(
                       leading: Icon(Icons.video_library, color: Colors.white),
-                      title: Text(
-                        "Choose Video",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      title: Text("Choose Video", style: TextStyle(color: Colors.white)),
                       onTap: () async {
                         Navigator.pop(context);
-                        final video = await _picker.pickVideo(
-                          source: ImageSource.gallery,
-                        );
+                        final video = await _picker.pickVideo(source: ImageSource.gallery);
                         setState(() {
                           image = video;
                           prepareForSendMessage(false);
@@ -765,11 +661,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         backgroundColor: themeData.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.chevron_left,
-            color: themeData.colorScheme.onSurface,
-            size: 32,
-          ),
+          icon: Icon(Icons.chevron_left, color: themeData.colorScheme.onSurface, size: 32),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -779,18 +671,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE6A532),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  decoration: BoxDecoration(color: Color(0xFFE6A532), borderRadius: BorderRadius.circular(20)),
                   child: Center(
                     child: Text(
                       widget.user.avatar,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -816,17 +701,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.user.name,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: themeData.colorScheme.onSurface,
-                    ),
+                    widget.user.nickname,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
                   ),
-                  Text(
-                    widget.user.isOnline ? 'Online' : 'Last seen recently',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                  ),
+                  Text(widget.user.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -835,32 +713,20 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
         actions: [
           // New Call Button
           IconButton(
-            icon: Icon(
-              Icons.call_outlined,
-              color: themeData.colorScheme.onSurface,
-            ),
+            icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
             onPressed: () async {
               // Get the CallController from the provider
               final callProvider = context.read<CallProvider>();
               final callController = callProvider.callController;
 
               // Start the call with the current chat user's ID
-              await callController.startCall(
-                widget.user.id,
-                receiverName: widget.user.name,
-                receiverAvatar: widget.user.avatar,
-              );
+              await callController.startCall(widget.user.id, receiverName: widget.user.nickname, receiverAvatar: widget.user.avatar);
 
               // Navigate to the new call screen
               if (mounted) {
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(
-                    context: context,
-                    navigationType: NavigationType.pushNamed,
-                  ),
-                  arguments: VoiceCallScreenNavigationArguments(
-                    user: widget.user,
-                  ),
+                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                  arguments: VoiceCallScreenNavigationArguments(user: widget.user),
                 );
               }
             },
@@ -891,10 +757,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   reverse: false,
                   // latest message at bottom
                   itemCount: msgList.length + (isLoadingMore ? 1 : 0),
@@ -928,15 +791,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 AnimatedBuilder(
                   animation: _widthAnimation,
                   builder: (context, child) {
-                    final baseWidth =
-                        MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
+                    final baseWidth = MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
                     final compactWidth = baseWidth * 1;
                     final expandedWidth = baseWidth;
 
-                    final currentWidth =
-                        compactWidth +
-                        (_widthAnimation.value *
-                            (expandedWidth - compactWidth));
+                    final currentWidth = compactWidth + (_widthAnimation.value * (expandedWidth - compactWidth));
 
                     return SizedBox(
                       height: 50,
@@ -946,49 +805,29 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                         style: TextStyle(fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Type a message...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 14,
-                          ),
+                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(
-                              color: Colors.grey[300]!,
-                              width: 1,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(
-                              color: themeData.colorScheme.primary,
-                              width: 1,
-                            ),
+                            borderSide: BorderSide(color: themeData.colorScheme.primary, width: 1),
                           ),
                           suffixIcon: Stack(
                             alignment: Alignment.center,
                             children: [
                               IconButton(
-                                icon: Icon(
-                                  CupertinoIcons.flame_fill,
-                                  color: themeData.primaryColor,
-                                ),
+                                icon: Icon(CupertinoIcons.flame_fill, color: themeData.primaryColor),
                                 onPressed: () async {
-                                  final selectedTime =
-                                      await showTimeSelectionDialog(context);
+                                  final selectedTime = await showTimeSelectionDialog(context);
                                   if (selectedTime != null) {
-                                    print(
-                                      "User selected: $selectedTimeForDestruct",
-                                    );
-                                    setState(
-                                      () {},
-                                    ); // Add setState to rebuild the widget
+                                    print("User selected: $selectedTimeForDestruct");
+                                    setState(() {}); // Add setState to rebuild the widget
                                   }
                                 },
                               ),
@@ -996,17 +835,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                   ? SizedBox()
                                   : InkWell(
                                       onTap: () async {
-                                        final selectedTime =
-                                            await showTimeSelectionDialog(
-                                              context,
-                                            );
+                                        final selectedTime = await showTimeSelectionDialog(context);
                                         if (selectedTime != null) {
-                                          print(
-                                            "User selected: $selectedTimeForDestruct",
-                                          );
-                                          setState(
-                                            () {},
-                                          ); // Add setState to rebuild the widget
+                                          print("User selected: $selectedTimeForDestruct");
+                                          setState(() {}); // Add setState to rebuild the widget
                                         }
                                       },
                                       child: Container(
@@ -1015,15 +847,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                         width: 18,
                                         // Increased size for better readability
                                         margin: EdgeInsets.only(top: 5),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange,
-                                          shape: BoxShape.circle,
-                                        ),
+                                        decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
                                         child: Center(
                                           child: Text(
-                                            _formatDestructTime(
-                                              selectedTimeForDestruct,
-                                            ),
+                                            _formatDestructTime(selectedTimeForDestruct),
                                             // Use the new formatting function
                                             style: TextStyle(
                                               fontSize: 8, // Adjusted font size
@@ -1038,9 +865,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                           ),
                         ),
                         onSubmitted: (_) {
-                          _hasText
-                              ? _sendMessage(_messageController.text.trim())
-                              : null;
+                          _hasText ? _sendMessage(_messageController.text.trim()) : null;
                           _messageController.clear();
                         },
                       ),
@@ -1051,39 +876,22 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFE6A532),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
+                  decoration: BoxDecoration(color: Color(0xFFE6A532), borderRadius: BorderRadius.circular(22)),
                   child: AnimatedBuilder(
                     animation: _iconAnimation,
                     builder: (context, child) {
                       return IconButton(
                         icon: AnimatedSwitcher(
                           duration: Duration(milliseconds: 200),
-                          transitionBuilder:
-                              (Widget child, Animation<double> animation) {
-                                return ScaleTransition(
-                                  scale: animation,
-                                  child: FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  ),
-                                );
-                              },
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return ScaleTransition(
+                              scale: animation,
+                              child: FadeTransition(opacity: animation, child: child),
+                            );
+                          },
                           child: _hasText
-                              ? Icon(
-                                  Icons.send,
-                                  key: ValueKey('send'),
-                                  color: Colors.white,
-                                  size: 20,
-                                )
-                              : Icon(
-                                  Icons.mic,
-                                  key: ValueKey('mic'),
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
+                              ? Icon(Icons.send, key: ValueKey('send'), color: Colors.white, size: 20)
+                              : Icon(Icons.mic, key: ValueKey('mic'), color: Colors.white, size: 20),
                         ),
                         onPressed: _onButtonPressed,
                       );
@@ -1120,11 +928,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
           backgroundColor: Colors.white,
           title: const Text(
             'Select time for destroy message',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w600),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1154,18 +958,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.black, width: 2),
                               borderRadius: BorderRadius.circular(3),
-                              color:
-                                  selectedTimeForDestruct ==
-                                      (time['value'] as int)
-                                  ? Colors.black
-                                  : Colors.transparent,
+                              color: selectedTimeForDestruct == (time['value'] as int) ? Colors.black : Colors.transparent,
                             ),
                           ),
                           SizedBox(width: 7),
-                          Text(
-                            '${time['label']}',
-                            style: TextStyle(color: Colors.black),
-                          ),
+                          Text('${time['label']}', style: TextStyle(color: Colors.black)),
                         ],
                       ),
                     ),

@@ -252,7 +252,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          user.name,
+          user.nickname,
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

@@ -27,7 +27,7 @@ class ChatUsersRepository {
       if (box == null) return false;
 
       await box.put(user.id, user.toMap());
-      MyPrint.printOnConsole('Chat user saved: ${user.id} - ${user.name}');
+      MyPrint.printOnConsole('Chat user saved: ${user.id} - ${user.nickname}');
       return true;
     } catch (e) {
       MyPrint.printOnConsole('Error saving chat user ${user.id}: $e');
@@ -74,7 +74,7 @@ class ChatUsersRepository {
       }
 
       // Sort by most recent interaction or by name
-      users.sort((a, b) => a.name.compareTo(b.name));
+      users.sort((a, b) => a.nickname.compareTo(b.nickname));
 
       MyPrint.printOnConsole(
         'Retrieved ${users.length} chat users from storage',

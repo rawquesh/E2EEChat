@@ -85,7 +85,7 @@ class MySharedPreferenceVariables {
   static String lastSharePromptShownKey = "lastSharePromptKey";
   static String authToken = "authToken";
   static String username = "username";
-  static String nickname = "username";
+  static String nickname = "nickname";
   static String userId = "user_id";
   static String isCreatorMode = "is_creator_mode";
 }

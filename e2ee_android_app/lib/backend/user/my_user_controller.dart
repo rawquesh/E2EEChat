@@ -1,5 +1,6 @@
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
 
 import '../authentication/authentication_provider.dart';
@@ -20,6 +21,7 @@ class MyUserController {
     final success = await _userRepository.updateDisplayName(token: token, name: name);
     if (success) {
       await SharedPrefManager().setString(MySharedPreferenceVariables.nickname, name);
+      MyPrint.printOnConsole('New nickname saved: $name');
 
       final user = _authenticationProvider.userModel.get();
       if (user != null) {
