@@ -84,7 +84,7 @@ class SecureStorageManager {
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
-  Future<void> write({required String key, required String value}) async {
+  Future<void> setString(String key, String value) async {
     try {
       await _secureStorage.write(key: key, value: value);
     } catch (e) {
@@ -92,7 +92,7 @@ class SecureStorageManager {
     }
   }
 
-  Future<String?> read({required String key}) async {
+  Future<String?> getString( String key) async {
     try {
       return await _secureStorage.read(key: key);
     } catch (e) {

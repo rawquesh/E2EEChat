@@ -15,7 +15,7 @@ class MyUserController {
   }
 
   Future<bool> updateDisplayName(String name) async {
-    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
     if (token == null || token.isEmpty) return false;
 
     final success = await _userRepository.updateDisplayName(token: token, name: name);

@@ -14,7 +14,6 @@ import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../navigation/navigation_arguments.dart';
@@ -38,24 +37,17 @@ class AuthenticationController {
 
   AuthenticationRepository get authenticationRepository => _authenticationRepository;
 
-  static final _storage = FlutterSecureStorage();
-  static const _pinKey = "user_app_pin";
-  static const _duressPinKey = "duress_pin";
-  static const _biometricKey = "biometric_enabled";
-  // static const String _authToken = "authToken";
-
-
   final LocalAuthentication _auth = LocalAuthentication();
 
   Future<bool> canCheckBiometrics() async => await _auth.canCheckBiometrics;
 
   Future<bool> enableBiometric(bool enable) async {
-    await _storage.write(key: _biometricKey, value: enable ? "true" : "false");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.biometricKey, enable ? "true" : "false");
     return enable;
   }
 
   Future<bool> isBiometricEnabled() async {
-    final val = await _storage.read(key: _biometricKey);
+    final val = await SecureStorageManager().getString(MySharedPreferenceVariables.biometricKey);
     return val == "true";
   }
 
@@ -64,54 +56,54 @@ class AuthenticationController {
     return await _auth.authenticate(localizedReason: "Unlock with fingerprint or Face ID", options: const AuthenticationOptions(biometricOnly: true));
   }
 
-  Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
-    try {
-      MyPrint.printOnConsole("Generating keys...");
-      final keyBundle = await KeyManager.generateAndStoreKeys();
+  // Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
+  //   try {
+  //     MyPrint.printOnConsole("Generating keys...");
+  //     final keyBundle = await KeyManager.generateAndStoreKeys();
 
-      MyPrint.printOnConsole("Building registration payload...");
-      Map<String, dynamic> payload = {
-        "username": username,
-        "password": password,
-        "publicKey": keyBundle['publicKey'],
-        "identityKey": keyBundle['identityKey'],
-      };
+  //     MyPrint.printOnConsole("Building registration payload...");
+  //     Map<String, dynamic> payload = {
+  //       "username": username,
+  //       "password": password,
+  //       "publicKey": keyBundle['publicKey'],
+  //       "identityKey": keyBundle['identityKey'],
+  //     };
 
-      MyPrint.printOnConsole("Payload: $payload");
+  //     MyPrint.printOnConsole("Payload: $payload");
 
-      MyPrint.printOnConsole("Sending registration request...");
-      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+  //     MyPrint.printOnConsole("Sending registration request...");
+  //     final result = await _authenticationRepository.registerNewUserFromPayload(payload);
 
-      final accessToken = result?['data']?['access_token'];
+  //     final accessToken = result?['data']?['access_token'];
 
-      if (result != null && accessToken != null && accessToken.isNotEmpty) {
-        MyPrint.printOnConsole("Saving auth token: $accessToken");
-        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+  //     if (result != null && accessToken != null && accessToken.isNotEmpty) {
+  //       MyPrint.printOnConsole("Saving auth token: $accessToken");
+  //       await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
-        await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
+  //       await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
-        // Save current user id here!
-        await saveCurrentUserId(username: username, accessToken: accessToken);
+  //       // Save current user id here!
+  //       await saveCurrentUserId(username: username, accessToken: accessToken);
 
-        MyPrint.printOnConsole("Registration successful");
-        MyToast.showSuccess(context: context, msg: "Registration successful!");
-        NavigationController.navigateToPinEntryScreen(
-          navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
-          arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
-        );
-        return true;
-      } else {
-        MyPrint.printOnConsole("Registration failed");
-        String errorMsg = result?['message'] ?? "Registration failed. Please try again.";
-        MyToast.showError(context: context, msg: errorMsg);
-        return false;
-      }
-    } catch (e) {
-      MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
-      MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
-      return false;
-    }
-  }
+  //       MyPrint.printOnConsole("Registration successful");
+  //       MyToast.showSuccess(context: context, msg: "Registration successful!");
+  //       NavigationController.navigateToPinEntryScreen(
+  //         navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+  //         arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
+  //       );
+  //       return true;
+  //     } else {
+  //       MyPrint.printOnConsole("Registration failed");
+  //       String errorMsg = result?['message'] ?? "Registration failed. Please try again.";
+  //       MyToast.showError(context: context, msg: errorMsg);
+  //       return false;
+  //     }
+  //   } catch (e) {
+  //     MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
+  //     MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
+  //     return false;
+  //   }
+  // }
 
   Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
     try {
@@ -178,6 +170,27 @@ class AuthenticationController {
     );
   }
 
+  Future<bool> _isNickNameAvailable(String accessToken, String username) async {
+    final userInfo = await ChatRepository().fetchChatUser(username: username, token: accessToken);
+    if (userInfo != null) {
+      MyPrint.printOnConsole("User model retrieved: ${userInfo.toMap()}");
+
+      if (userInfo.nickname.isNotEmpty) {
+        SharedPrefManager().setString(MySharedPreferenceVariables.nickname, userInfo.nickname);
+        SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, userInfo.id);
+
+        return true;
+      } else {
+        MyPrint.printOnConsole("Nickname is not set.");
+        return false;
+      }
+    } else {
+      MyPrint.printOnConsole("Failed to retrieve user model from token.");
+    }
+
+    return false;
+  }
+
   Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
       MyPrint.printOnConsole("Generating keys for login...");
@@ -196,14 +209,16 @@ class AuthenticationController {
       final accessToken = result?['data']?['access_token'];
 
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
-        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+        await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
         await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
         // Save current user id here!
-        await saveCurrentUserId(username: username, accessToken: accessToken);
+        // await saveCurrentUserId(username: username, accessToken: accessToken);
 
-        await _handleNicknameUpdate(context, authenticationProvider);
+        if (!await _isNickNameAvailable(accessToken, username)) {
+          await _handleNicknameUpdate(context, authenticationProvider);
+        }
 
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
@@ -228,7 +243,7 @@ class AuthenticationController {
   }
 
   Future<bool> hasPin() async {
-    final storedPin = await _storage.read(key: _pinKey);
+    final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
     return storedPin != null && storedPin.isNotEmpty;
   }
 
@@ -245,7 +260,7 @@ class AuthenticationController {
       }
 
       // Save the PIN securely
-      await _storage.write(key: _pinKey, value: pin);
+      await SecureStorageManager().setString(MySharedPreferenceVariables.pinKey, pin);
 
       MyPrint.printOnConsole("PIN saved successfully");
       return true;
@@ -255,26 +270,20 @@ class AuthenticationController {
     }
   }
 
-  Future<bool> verifyPin(String pin,{bool duress = false}) async {
-
-    final storedPin = await _storage.read(key: _pinKey);
-    final storedDuressPin = await _storage.read(key: _duressPinKey);
+  Future<bool> verifyPin(String pin) async {
+    final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
+    final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
 
     MyPrint.printOnConsole("XX Verifying current PIN: $pin");
     MyPrint.printOnConsole("XX Stored PIN: $storedPin");
     MyPrint.printOnConsole("XX Stored Duress PIN: $storedDuressPin");
-
-    if (pin == storedDuressPin && !duress) {
-      await wipeAllAuthData();
-      return false; // Indicate duress mode
-    }
 
     return pin == storedPin;
   }
 
   Future<bool> setNewDuressPin(String pin, String confirmPin, BuildContext context) async {
     try {
-      final storedPin = await _storage.read(key: _pinKey);
+      final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
       if (pin == storedPin) {
         MyToast.showError(context: context, msg: "Duress PIN cannot be the same as the main PIN.");
         return false;
@@ -282,7 +291,7 @@ class AuthenticationController {
       if (pin.length != 4 || pin != confirmPin) {
         return false;
       }
-      await _storage.write(key: _duressPinKey, value: pin);
+      await SecureStorageManager().setString(MySharedPreferenceVariables.duressPinKey, pin);
       MyPrint.printOnConsole("Duress PIN saved successfully");
       return true;
     } catch (e) {
@@ -292,7 +301,7 @@ class AuthenticationController {
   }
 
   Future<bool> verifyDuressPin(String pin) async {
-    final storedDuressPin = await _storage.read(key: _duressPinKey);
+    final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
 
     if (storedDuressPin != null && pin == storedDuressPin) {
       await wipeAllAuthData();
@@ -302,19 +311,20 @@ class AuthenticationController {
     return pin == storedDuressPin;
   }
 
-  Future<void> saveCurrentUserId({required String username, required String accessToken}) async {
-    final chatUser = await ChatRepository().fetchChatUser(username: username, token: accessToken);
-    if (chatUser != null && chatUser.id.isNotEmpty) {
-      await SharedPrefManager().setString('current_user_id', chatUser.id);
-      print('[DEBUG] Saved current user id: ${chatUser.id}');
-    } else {
-      print('[ERROR] Could not fetch or save user id!');
-    }
-  }
+  // Future<void> saveCurrentUserId({required String username, required String accessToken}) async {
+  //   final chatUser = await ChatRepository().fetchChatUser(username: username, token: accessToken);
+
+  //   if (chatUser != null && chatUser.id.isNotEmpty) {
+  //     await SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, chatUser.id);
+  //     print('[DEBUG] Saved current user id: ${chatUser.id}');
+  //   } else {
+  //     print('[ERROR] Could not fetch or save user id!');
+  //   }
+  // }
 
   Future<void> wipeAllAuthData() async {
-    await _storage.delete(key: _pinKey);
-    await _storage.delete(key: _biometricKey);
+    await SecureStorageManager().delete(key: MySharedPreferenceVariables.pinKey);
+    await SecureStorageManager().delete(key: MySharedPreferenceVariables.biometricKey);
 
     //start code for delete all chat data
     Box? box = await HiveManager().openBox(boxName: "chat_users");
@@ -333,51 +343,51 @@ class AuthenticationController {
       }
       await box.clear();
     }
-    //end code for delete all chat data
-    // TODO: user data, tokens, etc.
+    await SecureStorageManager().deleteAll();
+    await SharedPrefManager().clearAll();
   }
 
-  Future<bool> isUserLoggedIn() async {
-    String? token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
-    String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
+  // Future<bool> isUserLoggedIn() async {
+  //   String? token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+  //   String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
 
-    MyPrint.printOnConsole("Retrieved authToken: $token");
-    MyPrint.printOnConsole("Retrieved userId: $userId");
+  //   MyPrint.printOnConsole("Retrieved authToken: $token");
+  //   MyPrint.printOnConsole("Retrieved userId: $userId");
 
-    MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
+  //   MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
 
-    if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
-      MyPrint.printOnConsole('No saved credentials found');
-      return false;
-    }
+  //   if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
+  //     MyPrint.printOnConsole('No saved credentials found');
+  //     return false;
+  //   }
 
-    try {
-      UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
+  //   try {
+  //     UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
 
-      if (userModel != null) {
-        MyPrint.printOnConsole('Retrieved user model from token');
+  //     if (userModel != null) {
+  //       MyPrint.printOnConsole('Retrieved user model from token');
 
-        MyPrint.logOnConsole("userModel: ${userModel}");
-        _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
-        _authenticationProvider.email.set(value: userModel.email, isNotify: false);
-        _authenticationProvider.userModel.set(value: userModel, isNotify: true);
-        _authToken = token;
+  //       MyPrint.logOnConsole("userModel: ${userModel}");
+  //       _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
+  //       _authenticationProvider.email.set(value: userModel.email, isNotify: false);
+  //       _authenticationProvider.userModel.set(value: userModel, isNotify: true);
+  //       _authToken = token;
 
-        String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
-        await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
-        _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
+  //       String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
+  //       await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
+  //       _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
 
-        return true;
-      }
+  //       return true;
+  //     }
 
-      MyPrint.printOnConsole('User model not found from token, logging out');
-      await logout(isNavigateToLogin: false);
-      return false;
-    } catch (e) {
-      MyPrint.printOnConsole('Error retrieving user from token: $e');
-      return false;
-    }
-  }
+  //     MyPrint.printOnConsole('User model not found from token, logging out');
+  //     await logout(isNavigateToLogin: false);
+  //     return false;
+  //   } catch (e) {
+  //     MyPrint.printOnConsole('Error retrieving user from token: $e');
+  //     return false;
+  //   }
+  // }
 
   Future<void> onLoginSuccess({required BuildContext context, required UserModel userModel, String authenticationMode = ""}) async {
     MyPrint.printOnConsole("called onLoginSuccess");
@@ -393,7 +403,7 @@ class AuthenticationController {
     authenticationProvider.email.set(value: userModel.email, isNotify: false);
 
     String notificationToken = MyUtils.getNewId();
-    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, userModel.userId);
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
     authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
@@ -484,7 +494,7 @@ class AuthenticationController {
     _authToken = null;
 
     // Clears stored credentials from SharedPreferences
-    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, "");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, "");
     await SharedPrefManager().setBool(MySharedPreferenceVariables.isCreatorMode, false);

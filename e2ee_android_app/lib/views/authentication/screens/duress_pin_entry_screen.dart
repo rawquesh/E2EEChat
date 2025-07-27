@@ -42,14 +42,10 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
   void initState() {
     super.initState();
     authenticationProvider = context.read<AuthenticationProvider>();
-    authenticationController = AuthenticationController(
-      authenticationProvider: authenticationProvider,
-    );
+    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
 
     currentMode = widget.arguments.mode;
-    MyPrint.printOnConsole(
-      "PinEntryScreen initialized with mode: $currentMode",
-    );
+    MyPrint.printOnConsole("PinEntryScreen initialized with mode: $currentMode");
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _focusNode.requestFocus();
@@ -57,11 +53,9 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       // New: Try biometric first if in verify mode
       if (currentMode == PinScreenMode.verify && !hasCheckedBiometric) {
         hasCheckedBiometric = true;
-        bool biometricEnabled = await authenticationController
-            .isBiometricEnabled();
+        bool biometricEnabled = await authenticationController.isBiometricEnabled();
         if (biometricEnabled) {
-          final success = await authenticationController
-              .authenticateWithBiometric();
+          final success = await authenticationController.authenticateWithBiometric();
           if (success) {
             if (mounted) _goToHome();
           }
@@ -78,6 +72,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
   }
 
   void _onPinCompleted(String pin) async {
+    MyPrint.printOnConsole("xxmode: $currentMode");
+
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -85,7 +81,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
 
     // ======== CHANGE PIN FLOW ========
     if (currentMode == PinScreenMode.verifyCurrentPin) {
-      final isCorrectPin = await authenticationController.verifyPin(pin,duress: true);
+      final isCorrectPin = await authenticationController.verifyPin(pin);
 
       if (isCorrectPin) {
         setState(() {
@@ -93,14 +89,18 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
           _pinController.clear();
           isLoading = false;
         });
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _focusNode.requestFocus(),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
       } else {
         setState(() {
-          errorMessage = "Incorrect PIN.";
-          _pinController.clear();
           isLoading = false;
+          failedAttempts++;
+          if (failedAttempts >= 5) {
+            errorMessage = "Too many failed attempts. All data will be wiped.";
+            _wipeAppData();
+          } else {
+            errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+          }
+          _pinController.clear();
         });
       }
       return;
@@ -116,9 +116,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
           _pinController.clear();
           isLoading = false;
         });
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => _focusNode.requestFocus(),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
       } else {
         setState(() {
           failedAttempts++;
@@ -127,8 +125,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
             errorMessage = "Too many failed attempts. All data will be wiped.";
             _wipeAppData();
           } else {
-            errorMessage =
-                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+            errorMessage = "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
           }
           _pinController.clear();
         });
@@ -142,28 +139,22 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         _pinController.clear();
         isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _focusNode.requestFocus(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
       return;
     } else if (currentMode == PinScreenMode.changeConfirm) {
       // Confirm new PIN
       if (newPin == pin) {
-        final result =
-            await authenticationController.setNewDuressPin(newPin!, pin, context);
+        final result = await authenticationController.setNewDuressPin(newPin!, pin, context);
         setState(() {
           isLoading = false;
         });
         if (result) {
-          MyToast.showSuccess(
-            context: context,
-            msg: "Duress PIN changed successfully!",
-          );
+          MyToast.showSuccess(context: context, msg: "Duress PIN changed successfully!");
           _goToHome();
         } else {
           setState(() {
             errorMessage = "Failed to change Duress PIN. Please try again.";
-            currentMode = PinScreenMode.changeOld;
+            currentMode = PinScreenMode.changeNew;
             oldPin = null;
             newPin = null;
             _pinController.clear();
@@ -172,10 +163,10 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       } else {
         setState(() {
           errorMessage = "PINs do not match. Please try again.";
-          currentMode = PinScreenMode.changeNew;
           newPin = null;
           _pinController.clear();
           isLoading = false;
+          currentMode = PinScreenMode.changeNew;
         });
       }
       return;
@@ -188,9 +179,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         _pinController.clear();
         isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _focusNode.requestFocus(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
       return;
     } else if (currentMode == PinScreenMode.confirm) {
       if (firstPin == null) {
@@ -204,8 +193,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
         return;
       }
       if (firstPin == pin) {
-        final result =
-            await authenticationController.setNewDuressPin(firstPin!, pin,context);
+        final result = await authenticationController.setNewDuressPin(firstPin!, pin, context);
         setState(() {
           isLoading = false;
         });
@@ -234,25 +222,22 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       if (isCorrect) {
         if (mounted) {
           await NavigationController.navigateToMainScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamedAndRemoveUntil,
-            ),
+            navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
           );
         }
       } else {
-        setState(() {
-          failedAttempts++;
-          isLoading = false;
-          if (failedAttempts >= 5) {
-            errorMessage = "Too many failed attempts. All data will be wiped.";
-            _wipeAppData();
-          } else {
-            errorMessage =
-                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
-          }
-          _pinController.clear();
-        });
+        // setState(() {
+        //   isLoading = false;
+        //   failedAttempts++;
+        //   if (failedAttempts >= 5) {
+        //     errorMessage = "Too many failed attempts. All data will be wiped.";
+        //     _wipeAppData();
+        //   } else {
+        //     errorMessage =
+        //         "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+        //   }
+        //   _pinController.clear();
+        // });
       }
       return;
     }
@@ -262,10 +247,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
     if (!mounted) return;
 
     await NavigationController.navigateToMainScreen(
-      navigationOperationParameters: NavigationOperationParameters(
-        context: context,
-        navigationType: NavigationType.pushNamedAndRemoveUntil,
-      ),
+      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
     );
   }
 
@@ -280,9 +262,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('Security Alert'),
-        content: const Text(
-          'All app data has been wiped for security purposes. You will need to register again.',
-        ),
+        content: const Text('All app data has been wiped for security purposes. You will need to register again.'),
         actions: [
           TextButton(
             onPressed: () {
@@ -352,11 +332,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
     final defaultPinTheme = PinTheme(
       width: 45,
       height: 45,
-      textStyle: TextStyle(
-        fontSize: 16,
-        color: themeData.colorScheme.onSurface,
-        fontWeight: FontWeight.w600,
-      ),
+      textStyle: TextStyle(fontSize: 16, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.w600),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300, width: 1.5),
@@ -415,17 +391,8 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                     Container(
                       width: 80,
                       height: 80,
-                      decoration: BoxDecoration(
-                        color: themeData.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        currentMode == PinScreenMode.verify
-                            ? Icons.lock
-                            : Icons.security,
-                        size: 40,
-                        color: themeData.primaryColor,
-                      ),
+                      decoration: BoxDecoration(color: themeData.primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                      child: Icon(currentMode == PinScreenMode.verify ? Icons.lock : Icons.security, size: 40, color: themeData.primaryColor),
                     ),
 
                     const SizedBox(height: 24),
@@ -433,11 +400,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                     // Title
                     Text(
                       _getTitle(),
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: themeData.primaryColor,
-                      ),
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: themeData.primaryColor),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -472,28 +435,18 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: themeData.colorScheme.error.withValues(
-                            alpha: 0.1,
-                          ),
+                          color: themeData.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.red.shade700),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.warning,
-                              color: Colors.red,
-                              size: 20,
-                            ),
+                            const Icon(Icons.warning, color: Colors.red, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 errorMessage!,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],
@@ -503,12 +456,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                     const SizedBox(height: 20),
 
                     // Loading Indicator
-                    if (isLoading)
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          themeData.primaryColor,
-                        ),
-                      ),
+                    if (isLoading) CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(themeData.primaryColor)),
 
                     const Spacer(),
 
@@ -523,28 +471,19 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Colors.orange,
-                              size: 20,
-                            ),
+                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Security: 5 failed attempts will trigger data wipe',
-                                style: TextStyle(
-                                  color: Colors.orange.shade800,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                style: TextStyle(color: Colors.orange.shade800, fontSize: 12, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                    if (currentMode == PinScreenMode.verify)
-                      const SizedBox(height: 20),
+                    if (currentMode == PinScreenMode.verify) const SizedBox(height: 20),
 
                     // Forgot PIN button (only show during verify mode)
                     if (currentMode == PinScreenMode.verify)
@@ -554,14 +493,9 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                             context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Forgot PIN?'),
-                              content: const Text(
-                                'Please contact support or reset your account to recover access.',
-                              ),
+                              content: const Text('Please contact support or reset your account to recover access.'),
                               actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
+                                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
                                 TextButton(
                                   onPressed: () {
                                     Navigator.of(context).pop();
@@ -575,11 +509,7 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                         },
                         child: Text(
                           'Forgot PIN?',
-                          style: TextStyle(
-                            color: themeData.primaryColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: TextStyle(color: themeData.primaryColor, fontSize: 16, fontWeight: FontWeight.w500),
                         ),
                       ),
 

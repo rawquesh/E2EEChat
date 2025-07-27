@@ -88,7 +88,7 @@ class AuthenticationRepository {
 
       MyPrint.printOnConsole("Token received: $token");
 
-      await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, token);
+      await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
       MyPrint.printOnConsole("Token stored in shared preferences");
 
       final userData = responseData['user'];
@@ -185,7 +185,7 @@ class AuthenticationRepository {
         if (token != null) {
           // Log the actual token value
           MyPrint.printOnConsole("Received authToken: $token");
-          await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, token);
+          await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
           MyPrint.printOnConsole("Stored authToken: $token");
           return {
             'token': token,

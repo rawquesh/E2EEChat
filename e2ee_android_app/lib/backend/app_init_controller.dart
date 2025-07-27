@@ -100,7 +100,7 @@ Future<void> initApp({required String appFlavor}) async {
     );
 
     // 1. Check for stored auth token
-    String? authToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    String? authToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
     MyPrint.printOnConsole("Stored authToken: ${authToken != null && authToken.isNotEmpty}", tag: tag);
 
     // 2. If no token, go to login/signup

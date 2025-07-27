@@ -5,9 +5,11 @@ import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
+import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
@@ -200,6 +202,15 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           );
         }
       } else {
+        final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
+
+        if (storedDuressPin != null && storedDuressPin == pin) {
+          // Duress PIN entered, wipe app data
+          _wipeAppData();
+          setState(() => errorMessage = "Duress PIN entered. All data will be wiped.");
+          return;
+        }
+
         setState(() {
           failedAttempts++;
           isLoading = false;
@@ -309,7 +320,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
 
   void _wipeAppData() async {
     // Wipe all authentication data
-    await authenticationController.wipeAllAuthData();
+    authenticationController.wipeAllAuthData();
 
     if (!mounted) return;
 

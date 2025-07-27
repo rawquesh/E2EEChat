@@ -119,8 +119,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   Future<void> _initializeChat() async {
-    currentUserId = await SharedPrefManager().getString('current_user_id') ?? '';
-    currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
+    currentUserToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 

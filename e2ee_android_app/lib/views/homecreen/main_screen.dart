@@ -66,7 +66,7 @@ class _MainScreenState extends State<MainScreen>
     callController = CallController();
     callProvider = context.read<CallProvider>();
     _currentUserId =
-        await SharedPrefManager().getString('current_user_id') ?? '';
+        await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     MyPrint.printOnConsole('userId: $_currentUserId');
     _currentUserToken =
         await SharedPrefManager().getString(
