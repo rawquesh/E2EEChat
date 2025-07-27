@@ -2,11 +2,12 @@ import 'package:e2ee_models_app/backend/navigation/navigation_operation.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../views/authentication/screens/duress_pin_entry_screen.dart';
 import '../../views/authentication/screens/login_screen.dart';
 import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../../views/authentication/screens/sign_up_screen.dart';
@@ -95,6 +96,11 @@ class NavigationController {
           page = parsePinEntryScreen(settings: settings);
           break;
         }
+      case DuressPinEntryScreen.routeName:
+        {
+          page = parseDuressPinEntryScreen(settings: settings);
+          break;
+        }
       case VoiceCallScreen.routeName:
         {
           page = parseVoiceCallScreen(settings: settings);
@@ -146,6 +152,15 @@ class NavigationController {
     }
   }
 
+  static Widget? parseDuressPinEntryScreen({required RouteSettings settings}) {
+    dynamic argument = settings.arguments;
+    if (argument is PinEntryScreenNavigationArguments) {
+      return DuressPinEntryScreen(arguments: argument);
+    } else {
+      return null;
+    }
+  }
+
   static Widget? parseVoiceCallScreen({required RouteSettings settings}) {
     dynamic argument = settings.arguments;
     if (argument is VoiceCallScreenNavigationArguments) {
@@ -164,6 +179,18 @@ class NavigationController {
     return NavigationOperation.navigate(
       navigationOperationParameters: navigationOperationParameters.copyWith(
         routeName: SignUpScreen.routeName,
+        arguments: arguments,
+      ),
+    );
+  }
+
+  static Future<dynamic> navigateToDuressPinEntryScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+    required PinEntryScreenNavigationArguments arguments,
+  }) {
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: DuressPinEntryScreen.routeName,
         arguments: arguments,
       ),
     );

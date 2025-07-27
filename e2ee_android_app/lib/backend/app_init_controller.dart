@@ -1,15 +1,14 @@
+import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
-import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../configs/constants.dart';
-import '../views/authentication/screens/pin_entry_screen.dart';
 import 'authentication/authentication_controller.dart';
 import 'authentication/authentication_provider.dart';
 import 'common/app_controller.dart';
@@ -101,7 +100,7 @@ Future<void> initApp({required String appFlavor}) async {
     );
 
     // 1. Check for stored auth token
-    String? authToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    String? authToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
     MyPrint.printOnConsole("Stored authToken: ${authToken != null && authToken.isNotEmpty}", tag: tag);
 
     // 2. If no token, go to login/signup

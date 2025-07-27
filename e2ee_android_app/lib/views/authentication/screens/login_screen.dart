@@ -1,17 +1,11 @@
-import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
-import 'package:e2ee_android_app/views/authentication/screens/pin_entry_screen.dart';
-import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
-import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
-import 'package:e2ee_models_app/utils/my_print.dart';
+// import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../backend/authentication/authentication_controller.dart';
 import '../../../backend/authentication/authentication_provider.dart';
-import 'package:hive/hive.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = "/LoginScreen";
@@ -193,36 +187,36 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     }
   }
 
-  Future<void> _authenticateWithBiometrics() async {
-    try {
-      bool didAuthenticate = true;
+  // Future<void> _authenticateWithBiometrics() async {
+  //   try {
+  //     bool didAuthenticate = true;
 
-      if (didAuthenticate) {
-        failedAttempts = 0;
-        await _saveFailedAttempts();
-        MyToast.showSuccess(
-          context: context,
-          msg: "Biometric authentication successful!",
-        );
-      }
-    } catch (e) {
-      MyToast.showError(
-        context: context,
-        msg: "Biometric authentication failed.",
-      );
-    }
-  }
+  //     if (didAuthenticate) {
+  //       failedAttempts = 0;
+  //       await _saveFailedAttempts();
+  //       MyToast.showSuccess(
+  //         context: context,
+  //         msg: "Biometric authentication successful!",
+  //       );
+  //     }
+  //   } catch (e) {
+  //     MyToast.showError(
+  //       context: context,
+  //       msg: "Biometric authentication failed.",
+  //     );
+  //   }
+  // }
 
-  void _navigateToSignup() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
-    );
-  }
+  // void _navigateToSignup() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(builder: (context) => const SignUpScreen()),
+  //   );
+  // }
 
-  void _navigateToForgotPassword() {
-    Navigator.pushNamed(context, "/ForgotPasswordScreen");
-  }
+  // void _navigateToForgotPassword() {
+  //   Navigator.pushNamed(context, "/ForgotPasswordScreen");
+  // }
 
   @override
   Widget build(BuildContext context) {

@@ -12,11 +12,11 @@ import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
-import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
+// import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -24,7 +24,7 @@ import '../../backend/chats/chat_repository.dart';
 import '../../backend/chats/chats_controller.dart';
 import '../../backend/chats/chats_provider.dart';
 import '../../backend/common/app_state.dart';
-import '../../backend/common/dependency_injection.dart';
+// import '../../backend/common/dependency_injection.dart';
 import '../../backend/navigation/navigation_arguments.dart';
 import '../../backend/navigation/navigation_controller.dart';
 import '../../backend/notification/notification_service.dart';
@@ -66,7 +66,7 @@ class _MainScreenState extends State<MainScreen>
     callController = CallController();
     callProvider = context.read<CallProvider>();
     _currentUserId =
-        await SharedPrefManager().getString('current_user_id') ?? '';
+        await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     MyPrint.printOnConsole('userId: $_currentUserId');
     _currentUserToken =
         await SharedPrefManager().getString(
@@ -375,9 +375,9 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    UserModel userModel =
-        DependencyInjection.authenticationProvider.userModel.get() ??
-        UserModel();
+    // UserModel userModel =
+    //     DependencyInjection.authenticationProvider.userModel.get() ??
+    //     UserModel();
     super.pageBuild();
     return ChangeNotifierProvider(
       create: (_) => TabState(),

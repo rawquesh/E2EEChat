@@ -12,7 +12,7 @@ import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/navigation/navigation_arguments.dart';
 import '../../../backend/navigation/navigation_controller.dart';
 import '../../../backend/webrtc/call_provider.dart';
-import '../components/call_details_bottom_sheet.dart';
+// import '../components/call_details_bottom_sheet.dart';
 import '../components/call_list_item.dart';
 
 class CallRecord {
@@ -120,15 +120,15 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
     }
   }
 
-  void _showCallDetails(CallRecord call) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => CallDetailsBottomSheet(call: call),
-    );
-  }
+  // void _showCallDetails(CallRecord call) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     shape: const RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //     ),
+  //     builder: (context) => CallDetailsBottomSheet(call: call),
+  //   );
+  // }
 
   void _startCall(ChatUserModel user) async {
     final callProvider = context.read<CallProvider>();

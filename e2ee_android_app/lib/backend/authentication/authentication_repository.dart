@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -88,7 +88,7 @@ class AuthenticationRepository {
 
       MyPrint.printOnConsole("Token received: $token");
 
-      await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, token);
+      await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
       MyPrint.printOnConsole("Token stored in shared preferences");
 
       final userData = responseData['user'];
@@ -185,7 +185,7 @@ class AuthenticationRepository {
         if (token != null) {
           // Log the actual token value
           MyPrint.printOnConsole("Received authToken: $token");
-          await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, token);
+          await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
           MyPrint.printOnConsole("Stored authToken: $token");
           return {
             'token': token,

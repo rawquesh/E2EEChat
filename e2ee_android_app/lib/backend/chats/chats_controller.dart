@@ -2,7 +2,7 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 
 import 'chat_repository.dart';
 import 'chat_users_repository.dart';
@@ -38,8 +38,8 @@ class ChatController {
   Future<bool> sendMessage({required String message, required int destructTimer}) async {
     final opponent = _chatProvider.currentOpponent.get();
     if (opponent == null) return false;
-    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
-    final senderId = await SharedPrefManager().getString('current_user_id');
+    final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+    final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
     final receiverId = opponent.id;
@@ -92,7 +92,7 @@ class ChatController {
     _chatProvider.searchState.set(value: SearchState.loading, isNotify: true);
 
     try {
-      final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+      final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
       MyPrint.printOnConsole("Token retrieved: $token");
       if (token == null || token.isEmpty) return false;
 

@@ -1,7 +1,7 @@
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 
 import '../authentication/authentication_provider.dart';
 
@@ -15,7 +15,7 @@ class MyUserController {
   }
 
   Future<bool> updateDisplayName(String name) async {
-    final token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
+    final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
     if (token == null || token.isEmpty) return false;
 
     final success = await _userRepository.updateDisplayName(token: token, name: name);

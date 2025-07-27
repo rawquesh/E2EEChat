@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:e2ee_models_app/models/calling/WebRTCSignalModel.dart';
+import 'package:e2ee_models_app/models/calling/web_rtc_signal_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';

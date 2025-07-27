@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
-import 'package:e2ee_models_app/models/calling/WebRTCSignalModel.dart';
+import 'package:e2ee_models_app/models/calling/web_rtc_signal_model.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 

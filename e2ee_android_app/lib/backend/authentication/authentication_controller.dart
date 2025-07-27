@@ -1,6 +1,7 @@
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
+import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
@@ -11,19 +12,16 @@ import 'package:e2ee_models_app/utils/extensions.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
-import 'package:e2ee_models_app/utils/shared_pref_manager.dart';
+import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 
-import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../navigation/navigation_arguments.dart';
 import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
 import 'authentication_repository.dart';
 import 'package:hive/hive.dart';
 import 'package:e2ee_models_app/utils/hive_manager.dart';
-
 
 class AuthenticationController {
   late AuthenticationProvider _authenticationProvider;
@@ -39,21 +37,17 @@ class AuthenticationController {
 
   AuthenticationRepository get authenticationRepository => _authenticationRepository;
 
-  static final _storage = FlutterSecureStorage();
-  static const _pinKey = "user_app_pin";
-  static const _biometricKey = "biometric_enabled";
-
   final LocalAuthentication _auth = LocalAuthentication();
 
   Future<bool> canCheckBiometrics() async => await _auth.canCheckBiometrics;
 
   Future<bool> enableBiometric(bool enable) async {
-    await _storage.write(key: _biometricKey, value: enable ? "true" : "false");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.biometricKey, enable ? "true" : "false");
     return enable;
   }
 
   Future<bool> isBiometricEnabled() async {
-    final val = await _storage.read(key: _biometricKey);
+    final val = await SecureStorageManager().getString(MySharedPreferenceVariables.biometricKey);
     return val == "true";
   }
 
@@ -62,123 +56,140 @@ class AuthenticationController {
     return await _auth.authenticate(localizedReason: "Unlock with fingerprint or Face ID", options: const AuthenticationOptions(biometricOnly: true));
   }
 
-  Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
+  // Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
+  //   try {
+  //     MyPrint.printOnConsole("Generating keys...");
+  //     final keyBundle = await KeyManager.generateAndStoreKeys();
+
+  //     MyPrint.printOnConsole("Building registration payload...");
+  //     Map<String, dynamic> payload = {
+  //       "username": username,
+  //       "password": password,
+  //       "publicKey": keyBundle['publicKey'],
+  //       "identityKey": keyBundle['identityKey'],
+  //     };
+
+  //     MyPrint.printOnConsole("Payload: $payload");
+
+  //     MyPrint.printOnConsole("Sending registration request...");
+  //     final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+
+  //     final accessToken = result?['data']?['access_token'];
+
+  //     if (result != null && accessToken != null && accessToken.isNotEmpty) {
+  //       MyPrint.printOnConsole("Saving auth token: $accessToken");
+  //       await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+
+  //       await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
+
+  //       // Save current user id here!
+  //       await saveCurrentUserId(username: username, accessToken: accessToken);
+
+  //       MyPrint.printOnConsole("Registration successful");
+  //       MyToast.showSuccess(context: context, msg: "Registration successful!");
+  //       NavigationController.navigateToPinEntryScreen(
+  //         navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+  //         arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
+  //       );
+  //       return true;
+  //     } else {
+  //       MyPrint.printOnConsole("Registration failed");
+  //       String errorMsg = result?['message'] ?? "Registration failed. Please try again.";
+  //       MyToast.showError(context: context, msg: errorMsg);
+  //       return false;
+  //     }
+  //   } catch (e) {
+  //     MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
+  //     MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
+  //     return false;
+  //   }
+  // }
+
+  Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
     try {
-      MyPrint.printOnConsole("Generating keys...");
-      final keyBundle = await KeyManager.generateAndStoreKeys();
+      // 1. Show the dialog and wait for the user to enter a nickname.
+      final String? nickname = await _promptForNickname(context);
 
-      MyPrint.printOnConsole("Building registration payload...");
-      Map<String, dynamic> payload = {
-        "username": username,
-        "password": password,
-        "publicKey": keyBundle['publicKey'],
-        "identityKey": keyBundle['identityKey'],
-      };
+      // 2. If a nickname was provided, proceed to update it.
+      if (nickname != null && nickname.isNotEmpty) {
+        // 3. Initialize the controller.
+        final userController = MyUserController(repository: UserRepository(), authenticationProvider: authenticationProvider);
 
-      MyPrint.printOnConsole("Payload: $payload");
+        // 4. Call the update method.
+        final success = await userController.updateDisplayName(nickname);
 
-      MyPrint.printOnConsole("Sending registration request...");
-      final result = await _authenticationRepository. registerNewUserFromPayload(payload);
-
-      final accessToken = result?['data']?['access_token'];
-
-      if (result != null && accessToken != null && accessToken.isNotEmpty) {
-        MyPrint.printOnConsole("Saving auth token: $accessToken");
-        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
-
-        await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
-
-        // Save current user id here!
-        await saveCurrentUserId(username: username, accessToken: accessToken);
-
-        MyPrint.printOnConsole("Registration successful");
-        MyToast.showSuccess(context: context, msg: "Registration successful!");
-        NavigationController.navigateToPinEntryScreen(
-          navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
-          arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
-        );
-        return true;
-      } else {
-        MyPrint.printOnConsole("Registration failed");
-        String errorMsg = result?['message'] ?? "Registration failed. Please try again.";
-        MyToast.showError(context: context, msg: errorMsg);
-        return false;
+        // 5. Show feedback to the user.
+        if (success) {
+          MyToast.showSuccess(context: context, msg: 'Nickname saved!');
+        } else {
+          MyToast.showError(context: context, msg: 'Could not save nickname. You can set it later in settings.');
+        }
       }
     } catch (e) {
-      MyPrint.printOnConsole('Error in signUpWithUsernamePassword: $e');
-      MyToast.showError(context: context, msg: "An error occurred during registration. Please try again.");
-      return false;
+      // Handle any potential errors during the nickname update process.
+      MyPrint.printOnConsole('Error during nickname update: $e');
+      MyToast.showError(context: context, msg: 'An error occurred while saving your nickname.');
     }
   }
 
+  Future<String?> _promptForNickname(BuildContext context) async {
+    final TextEditingController nicknameController = TextEditingController();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-Future<void> _handleNicknameUpdate(BuildContext context, AuthenticationProvider authenticationProvider) async {
-  try {
-    // 1. Show the dialog and wait for the user to enter a nickname.
-    final String? nickname = await _promptForNickname(context);
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Set Your Nickname'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: nicknameController,
+              decoration: const InputDecoration(hintText: "Enter a nickname"),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Nickname cannot be empty.';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Continue'),
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.of(dialogContext).pop(nicknameController.text.trim());
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-    // 2. If a nickname was provided, proceed to update it.
-    if (nickname != null && nickname.isNotEmpty) {
-      // 3. Initialize the controller.
-      final userController = MyUserController(
-        repository: UserRepository(),
-        authenticationProvider: authenticationProvider,
-      );
+  Future<bool> _isNickNameAvailable(String accessToken, String username) async {
+    final userInfo = await ChatRepository().fetchChatUser(username: username, token: accessToken);
+    if (userInfo != null) {
+      MyPrint.printOnConsole("User model retrieved: ${userInfo.toMap()}");
 
-      // 4. Call the update method.
-      final success = await userController.updateDisplayName(nickname);
+      if (userInfo.nickname.isNotEmpty) {
+        SharedPrefManager().setString(MySharedPreferenceVariables.nickname, userInfo.nickname);
+        SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, userInfo.id);
 
-      // 5. Show feedback to the user.
-      if (success) {
-        MyToast.showSuccess(context: context, msg: 'Nickname saved!');
+        return true;
       } else {
-        MyToast.showError(context: context, msg: 'Could not save nickname. You can set it later in settings.');
+        MyPrint.printOnConsole("Nickname is not set.");
+        return false;
       }
+    } else {
+      MyPrint.printOnConsole("Failed to retrieve user model from token.");
     }
-  } catch (e) {
-    // Handle any potential errors during the nickname update process.
-    MyPrint.printOnConsole('Error during nickname update: $e');
-    MyToast.showError(context: context, msg: 'An error occurred while saving your nickname.');
+
+    return false;
   }
-}
-
-Future<String?> _promptForNickname(BuildContext context) async {
-  final TextEditingController nicknameController = TextEditingController();
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-  return showDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        title: const Text('Set Your Nickname'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: nicknameController,
-            decoration: const InputDecoration(hintText: "Enter a nickname"),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Nickname cannot be empty.';
-              }
-              return null;
-            },
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Continue'),
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(dialogContext).pop(nicknameController.text.trim());
-              }
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
 
   Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
@@ -198,15 +209,16 @@ Future<String?> _promptForNickname(BuildContext context) async {
       final accessToken = result?['data']?['access_token'];
 
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
-        await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, accessToken);
+        await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
         await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
         // Save current user id here!
-        await saveCurrentUserId(username: username, accessToken: accessToken);
+        // await saveCurrentUserId(username: username, accessToken: accessToken);
 
-      await _handleNicknameUpdate(context, authenticationProvider);
-
+        if (!await _isNickNameAvailable(accessToken, username)) {
+          await _handleNicknameUpdate(context, authenticationProvider);
+        }
 
         NavigationController.navigateToPinEntryScreen(
           navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
@@ -231,7 +243,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
   }
 
   Future<bool> hasPin() async {
-    final storedPin = await _storage.read(key: _pinKey);
+    final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
     return storedPin != null && storedPin.isNotEmpty;
   }
 
@@ -248,7 +260,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
       }
 
       // Save the PIN securely
-      await _storage.write(key: _pinKey, value: pin);
+      await SecureStorageManager().setString(MySharedPreferenceVariables.pinKey, pin);
 
       MyPrint.printOnConsole("PIN saved successfully");
       return true;
@@ -259,27 +271,64 @@ Future<String?> _promptForNickname(BuildContext context) async {
   }
 
   Future<bool> verifyPin(String pin) async {
-    final storedPin = await _storage.read(key: _pinKey);
+    final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
+    final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
+
+    MyPrint.printOnConsole("XX Verifying current PIN: $pin");
+    MyPrint.printOnConsole("XX Stored PIN: $storedPin");
+    MyPrint.printOnConsole("XX Stored Duress PIN: $storedDuressPin");
+
     return pin == storedPin;
   }
 
-  Future<void> saveCurrentUserId({required String username, required String accessToken}) async {
-    final chatUser = await ChatRepository().fetchChatUser(username: username, token: accessToken);
-    if (chatUser != null && chatUser.id.isNotEmpty) {
-      await SharedPrefManager().setString('current_user_id', chatUser.id);
-      print('[DEBUG] Saved current user id: ${chatUser.id}');
-    } else {
-      print('[ERROR] Could not fetch or save user id!');
+  Future<bool> setNewDuressPin(String pin, String confirmPin, BuildContext context) async {
+    try {
+      final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
+      if (pin == storedPin) {
+        MyToast.showError(context: context, msg: "Duress PIN cannot be the same as the main PIN.");
+        return false;
+      }
+      if (pin.length != 4 || pin != confirmPin) {
+        return false;
+      }
+      await SecureStorageManager().setString(MySharedPreferenceVariables.duressPinKey, pin);
+      MyPrint.printOnConsole("Duress PIN saved successfully");
+      return true;
+    } catch (e) {
+      MyPrint.printOnConsole("Error saving Duress PIN: $e");
+      return false;
     }
   }
 
+  Future<bool> verifyDuressPin(String pin) async {
+    final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
+
+    if (storedDuressPin != null && pin == storedDuressPin) {
+      await wipeAllAuthData();
+      return false; // Indicate duress mode
+    }
+
+    return pin == storedDuressPin;
+  }
+
+  // Future<void> saveCurrentUserId({required String username, required String accessToken}) async {
+  //   final chatUser = await ChatRepository().fetchChatUser(username: username, token: accessToken);
+
+  //   if (chatUser != null && chatUser.id.isNotEmpty) {
+  //     await SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, chatUser.id);
+  //     print('[DEBUG] Saved current user id: ${chatUser.id}');
+  //   } else {
+  //     print('[ERROR] Could not fetch or save user id!');
+  //   }
+  // }
+
   Future<void> wipeAllAuthData() async {
-    await _storage.delete(key: _pinKey);
-    await _storage.delete(key: _biometricKey);
+    await SecureStorageManager().delete(key: MySharedPreferenceVariables.pinKey);
+    await SecureStorageManager().delete(key: MySharedPreferenceVariables.biometricKey);
 
     //start code for delete all chat data
     Box? box = await HiveManager().openBox(boxName: "chat_users");
-    if(box != null){
+    if (box != null) {
       for (final entry in box.toMap().entries) {
         try {
           final user = ChatUserModel.fromMap(Map<String, dynamic>.from(entry.value));
@@ -294,51 +343,51 @@ Future<String?> _promptForNickname(BuildContext context) async {
       }
       await box.clear();
     }
-    //end code for delete all chat data
-    // TODO: user data, tokens, etc.
+    await SecureStorageManager().deleteAll();
+    await SharedPrefManager().clearAll();
   }
 
-  Future<bool> isUserLoggedIn() async {
-    String? token = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken);
-    String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
+  // Future<bool> isUserLoggedIn() async {
+  //   String? token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+  //   String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
 
-    MyPrint.printOnConsole("Retrieved authToken: $token");
-    MyPrint.printOnConsole("Retrieved userId: $userId");
+  //   MyPrint.printOnConsole("Retrieved authToken: $token");
+  //   MyPrint.printOnConsole("Retrieved userId: $userId");
 
-    MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
+  //   MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
 
-    if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
-      MyPrint.printOnConsole('No saved credentials found');
-      return false;
-    }
+  //   if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
+  //     MyPrint.printOnConsole('No saved credentials found');
+  //     return false;
+  //   }
 
-    try {
-      UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
+  //   try {
+  //     UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
 
-      if (userModel != null) {
-        MyPrint.printOnConsole('Retrieved user model from token');
+  //     if (userModel != null) {
+  //       MyPrint.printOnConsole('Retrieved user model from token');
 
-        MyPrint.logOnConsole("userModel: ${userModel}");
-        _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
-        _authenticationProvider.email.set(value: userModel.email, isNotify: false);
-        _authenticationProvider.userModel.set(value: userModel, isNotify: true);
-        _authToken = token;
+  //       MyPrint.logOnConsole("userModel: ${userModel}");
+  //       _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
+  //       _authenticationProvider.email.set(value: userModel.email, isNotify: false);
+  //       _authenticationProvider.userModel.set(value: userModel, isNotify: true);
+  //       _authToken = token;
 
-        String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
-        await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
-        _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
+  //       String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
+  //       await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
+  //       _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
 
-        return true;
-      }
+  //       return true;
+  //     }
 
-      MyPrint.printOnConsole('User model not found from token, logging out');
-      await logout(isNavigateToLogin: false);
-      return false;
-    } catch (e) {
-      MyPrint.printOnConsole('Error retrieving user from token: $e');
-      return false;
-    }
-  }
+  //     MyPrint.printOnConsole('User model not found from token, logging out');
+  //     await logout(isNavigateToLogin: false);
+  //     return false;
+  //   } catch (e) {
+  //     MyPrint.printOnConsole('Error retrieving user from token: $e');
+  //     return false;
+  //   }
+  // }
 
   Future<void> onLoginSuccess({required BuildContext context, required UserModel userModel, String authenticationMode = ""}) async {
     MyPrint.printOnConsole("called onLoginSuccess");
@@ -354,7 +403,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
     authenticationProvider.email.set(value: userModel.email, isNotify: false);
 
     String notificationToken = MyUtils.getNewId();
-    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, _authToken ?? "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, userModel.userId);
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
     authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
@@ -445,7 +494,7 @@ Future<String?> _promptForNickname(BuildContext context) async {
     _authToken = null;
 
     // Clears stored credentials from SharedPreferences
-    await SharedPrefManager().setString(MySharedPreferenceVariables.authToken, "");
+    await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, "");
     await SharedPrefManager().setBool(MySharedPreferenceVariables.isCreatorMode, false);
