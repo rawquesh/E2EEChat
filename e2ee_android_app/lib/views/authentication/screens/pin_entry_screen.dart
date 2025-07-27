@@ -240,7 +240,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
   void _showBiometricPrompt() async {
     final canBiometric = await authenticationController.canCheckBiometrics();
     if (!canBiometric) {
-      _goToHome();
+      _showDuressPinPrompt();
       return;
     }
 
@@ -258,7 +258,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _goToHome();
+              _showDuressPinPrompt();
             },
             child: const Text('Not Now'),
           ),
@@ -285,9 +285,48 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
                   );
                 }
               }
-              _goToHome();
+              _showDuressPinPrompt();
             },
             child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDuressPinPrompt() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('Set Up Duress PIN?'),
+        content: const Text(
+          'A duress PIN is a secret PIN that, when entered, will wipe all app data for security. Would you like to set one up?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _goToHome();
+            },
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              NavigationController.navigateToDuressPinEntryScreen(
+                navigationOperationParameters: NavigationOperationParameters(
+                  context: context,
+                  navigationType: NavigationType.pushNamed,
+                ),
+                arguments: PinEntryScreenNavigationArguments(
+                  mode: PinScreenMode.set,
+                ),
+              );
+            },
+            child: const Text('Yes'),
           ),
         ],
       ),

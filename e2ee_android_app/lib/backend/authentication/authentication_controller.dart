@@ -41,6 +41,7 @@ class AuthenticationController {
 
   static final _storage = FlutterSecureStorage();
   static const _pinKey = "user_app_pin";
+  static const _duressPinKey = "duress_pin";
   static const _biometricKey = "biometric_enabled";
 
   final LocalAuthentication _auth = LocalAuthentication();
@@ -259,8 +260,34 @@ Future<String?> _promptForNickname(BuildContext context) async {
   }
 
   Future<bool> verifyPin(String pin) async {
+    final isDuress = await verifyDuressPin(pin);
+    if (isDuress) {
+      await wipeAllAuthData();
+      // This should ideally navigate to the login screen after wiping data.
+      // The navigation part is handled in the UI layer after getting the result.
+      return false; // Return false to indicate PIN verification failed, but duress action was taken.
+    }
     final storedPin = await _storage.read(key: _pinKey);
     return pin == storedPin;
+  }
+
+  Future<bool> setNewDuressPin(String pin, String confirmPin) async {
+    try {
+      if (pin.length != 4 || pin != confirmPin) {
+        return false;
+      }
+      await _storage.write(key: _duressPinKey, value: pin);
+      MyPrint.printOnConsole("Duress PIN saved successfully");
+      return true;
+    } catch (e) {
+      MyPrint.printOnConsole("Error saving Duress PIN: $e");
+      return false;
+    }
+  }
+
+  Future<bool> verifyDuressPin(String pin) async {
+    final storedDuressPin = await _storage.read(key: _duressPinKey);
+    return pin == storedDuressPin;
   }
 
   Future<void> saveCurrentUserId({required String username, required String accessToken}) async {

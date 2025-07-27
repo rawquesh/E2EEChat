@@ -183,6 +183,16 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                     );
                   },
                 ),
+                _settingTile(
+                  icon: Icons.security_update_warning,
+                  title: "Change Duress PIN",
+                  onTap: () async {
+                    await NavigationController.navigateToDuressPinEntryScreen(
+                      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                      arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.changeOld),
+                    );
+                  },
+                ),
                 _biometricTile(),
                 _settingTile(icon: CupertinoIcons.doc_text, title: "Terms of Service", onTap: () {}),
                 _settingTile(icon: CupertinoIcons.lock_shield, title: "Privacy Policy", onTap: () {}),
