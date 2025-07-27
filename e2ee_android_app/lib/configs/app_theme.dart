@@ -324,7 +324,7 @@ class AppTheme {
           onSurface: Colors.white,
           onSecondary: Colors.white,
           // surfaceContainerHighest: Color(0xff09376C),
-        ).copyWith(surface: Colors.black).copyWith(error: Colors.orange));
+        ).copyWith(surface: Colors.black).copyWith(error: Styles.grey500));
   }
 
   //endregion

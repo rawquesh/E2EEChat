@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -497,7 +498,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                         height: 40,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(100),
-                          color: !isRecording && audioPath != null ? Colors.orange : Colors.black.withOpacity(0.2),
+                          color: !isRecording && audioPath != null ? Styles.grey500 : Colors.black.withOpacity(0.2),
                         ),
                         child: Center(child: Text("Send")),
                       ),
@@ -667,7 +668,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(color: Color(0xFFE6A532), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
                   child: Center(
                     child: Text(
                       widget.user.avatar,
@@ -683,7 +684,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: Color(0xFF4CAF50),
+                        color: Styles.grey400,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: Colors.white, width: 1.5),
                       ),
@@ -843,7 +844,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                                         width: 18,
                                         // Increased size for better readability
                                         margin: EdgeInsets.only(top: 5),
-                                        decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+                                        decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
                                         child: Center(
                                           child: Text(
                                             _formatDestructTime(selectedTimeForDestruct),
@@ -872,7 +873,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(color: Color(0xFFE6A532), borderRadius: BorderRadius.circular(22)),
+                  decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(22)),
                   child: AnimatedBuilder(
                     animation: _iconAnimation,
                     builder: (context, child) {

@@ -1,6 +1,7 @@
 import 'package:e2ee_android_app/backend/chats/chats_controller.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
+import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
@@ -164,7 +165,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
         title: const Text(
           'Recent Calls',
           style: TextStyle(
-            color: Color(0xFFE6A532),
+            color: Styles.grey400,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -224,7 +225,7 @@ class _CallsScreenState extends State<CallsScreen> with MySafeState {
             ),
           );
         },
-        backgroundColor: const Color(0xFFE6A532),
+        backgroundColor: Styles.grey400,
         elevation: 4,
         child: const Icon(Icons.add_call, color: Colors.white, size: 28),
       ),

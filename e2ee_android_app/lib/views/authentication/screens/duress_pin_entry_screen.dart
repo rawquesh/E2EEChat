@@ -5,6 +5,7 @@ import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
+import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
@@ -467,16 +468,16 @@ class _DuressPinEntryScreenState extends State<DuressPinEntryScreen> with MySafe
                         decoration: BoxDecoration(
                           color: themeData.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.shade200),
+                          border: Border.all(color: Styles.grey500),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
+                            const Icon(Icons.warning_amber_rounded, color: Styles.grey500, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 'Security: 5 failed attempts will trigger data wipe',
-                                style: TextStyle(color: Colors.orange.shade800, fontSize: 12, fontWeight: FontWeight.w500),
+                                style: TextStyle(color: Styles.grey500, fontSize: 12, fontWeight: FontWeight.w500),
                               ),
                             ),
                           ],

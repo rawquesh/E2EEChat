@@ -4,6 +4,7 @@ import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
@@ -135,7 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.grey[800] : Colors.amber[700],
+                          color: isDark ? Colors.grey[800] : Styles.grey400,
                           shape: BoxShape.circle,
                           boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 6))],
                         ),
@@ -243,7 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     return Column(
       children: [
         ListTile(
-          leading: Icon(icon, color: Colors.amber[700]),
+          leading: Icon(icon, color:  Styles.grey400),
           title: Text(title, style: TextStyle(fontSize: 12)),
           trailing: Icon(Icons.chevron_right),
           onTap: onTap,
@@ -262,7 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
             children: [
               const SizedBox(width: 7),
               // Fingerprint Icon
-              Icon(Icons.fingerprint, color: Colors.amber[700], size: 22),
+              Icon(Icons.fingerprint, color: Styles.grey700, size: 22),
               const SizedBox(width: 18),
               // Text
               Expanded(
@@ -313,7 +314,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                       MyToast.showSuccess(context: context, msg: "Biometric login disabled.");
                     }
                   },
-                  activeColor: Colors.amber[700],
+                  activeColor: Styles.grey400,
                   inactiveThumbColor: Colors.grey[300],
                   inactiveTrackColor: Colors.grey[300]?.withValues(alpha: 0.5),
                 ),

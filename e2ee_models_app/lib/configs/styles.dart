@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-// import 'package:flutter/material.dart';
-
-// import 'package:flutter/material.dart';
-
 class Styles {
   static final Styles _instance = Styles._();
 
@@ -11,32 +7,33 @@ class Styles {
 
   factory Styles() => _instance;
 
-  static const Color yellow50 = Color(0xFFFFFDE7);  // very light
-  static const Color yellow100 = Color(0xFFFFF9C4); // light yellow
-  static const Color yellow200 = Color(0xFFFFF59D); // soft warm
-  static const Color yellow300 = Color(0xFFFFF176); // mild highlight
-  static const Color yellow400 = Color(0xFFFFEE58); // primary action yellow
-  static const Color yellow500 = Color(0xFFFFEB3B); // main button yellow
-  static const Color yellow600 = Color(0xFFFDD835); // hover
-  static const Color yellow700 = Color(0xFFFBC02D); // pressed
-  static const Color yellow800 = Color(0xFFF9A825); // accent
-  static const Color yellow900 = Color(0xFFF57F17); // deep warning yellow
+  // Grey color palette based on Material Design colors
+  static const Color grey50 = Color.fromARGB(255, 207, 207, 207);    // very light grey
+  static const Color grey100 = Color.fromARGB(255, 189, 189, 189);   // light grey
+  static const Color grey200 = Color.fromARGB(255, 165, 165, 165);   // soft warm grey
+  static const Color grey300 = Color.fromARGB(255, 168, 168, 168);   // mild highlight grey
+  static const Color grey400 = Color.fromARGB(255, 173, 173, 173);   // primary action grey
+  static const Color grey500 = Color.fromARGB(255, 168, 168, 168);   // main button grey
+  static const Color grey600 = Color.fromARGB(255, 167, 167, 167);   // hover grey
+  static const Color grey700 = Color.fromARGB(255, 165, 165, 165);   // pressed grey
+  static const Color grey800 = Color.fromARGB(255, 142, 142, 142);   // accent grey
+  static const Color grey900 = Color.fromARGB(255, 136, 136, 136);   // deep warning grey
 
-  // Light and Dark Themes
-  Color lightPrimaryColor = yellow700;
-  Color darkPrimaryColor = yellow800;
+  // Light and Dark Themes using the new Grey palette
+  Color lightPrimaryColor = grey700;
+  Color darkPrimaryColor = grey800;
 
-  Color lightPrimaryVariant = yellow300;
-  Color darkPrimaryVariant = yellow800;
+  Color lightPrimaryVariant = grey300;
+  Color darkPrimaryVariant = grey800;
 
-  Color lightSecondaryColor = yellow400;
-  Color darkSecondaryColor = yellow600;
+  Color lightSecondaryColor = grey400;
+  Color darkSecondaryColor = grey600;
 
-  Color lightSecondaryVariant = yellow300;
-  Color darkSecondaryVariant = yellow800;
+  Color lightSecondaryVariant = grey300;
+  Color darkSecondaryVariant = grey800;
 
-  Color darkTertiaryColor = yellow400;
-  Color darkTertiaryContainerColor = yellow700;
+  Color darkTertiaryColor = grey400;
+  Color darkTertiaryContainerColor = grey700;
 
   Color lightAppBarTextColor = const Color(0xFF000000); // dark text
   Color darkAppBarTextColor = const Color(0xFFFFFFFF); // light text
@@ -48,27 +45,27 @@ class Styles {
   Color darkBackgroundColor = const Color(0xFF121212); // dark base
 
   Color lightAppBarColor = Colors.white;
-  Color darkAppBarColor = const Color(0xFF121212); // deep blue
+  Color darkAppBarColor = const Color(0xFF121212);
 
   Color lightTextFiledFillColor = Colors.white;
   Color darkTextFiledFillColor = const Color(0xFF1E1E1E);
 
-  Color lightHoverColor = yellow500.withOpacity(0.2);
+  Color lightHoverColor = grey500.withOpacity(0.2);
   Color darkHoverColor = Colors.grey.withOpacity(0.5);
 
-  Color lightFocusedTextFormFieldColor = yellow400.withOpacity(0.3);
-  Color darkFocusedTextFormFieldColor = yellow500.withOpacity(0.5);
+  Color lightFocusedTextFormFieldColor = grey400.withOpacity(0.3);
+  Color darkFocusedTextFormFieldColor = grey500.withOpacity(0.5);
 
   // Gradients
   static const LinearGradient gradientBackground = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [yellow500, yellow800],
+    colors: [grey500, grey800],
   );
 
   // Common UI Elements
   Color cardColor = Colors.white;
-  Color myPrimaryColor = yellow800;
+  Color myPrimaryColor = grey800;
   Color textGrey = const Color(0xFF676767);
 
   static const Color scaffoldBackground = Color(0xFF212121);
@@ -92,4 +89,3 @@ class Styles {
   // Button Styling
   double buttonBorderRadius = 5;
 }
-

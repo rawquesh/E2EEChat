@@ -183,7 +183,7 @@
 //     if (password.isEmpty) return Colors.grey;
 //     if (password.length < 8) return Colors.red;
 //     if (_isPasswordStrong()) return Colors.green;
-//     return Colors.orange;
+//     return Styles.grey500;
 //   }
 
 //   String _getPasswordStrengthText() {

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +127,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: Color(0xFFE6A532),
+                      color: Styles.grey400,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Center(
@@ -155,7 +156,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                         ),
                         decoration: BoxDecoration(
                           color: widget.message.isMe
-                              ? Color(0xFFE6A532)
+                              ? Styles.grey400
                               : themeData.colorScheme.onPrimary.withValues(
                                   alpha: 0.1,
                                 ),
