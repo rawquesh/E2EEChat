@@ -2,6 +2,7 @@ import 'package:e2ee_android_app/backend/authentication/authentication_controlle
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_arguments.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
+import 'package:e2ee_android_app/views/authentication/screens/pin_screen_mode.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -10,8 +11,6 @@ import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
-
-enum PinScreenMode { set, confirm, verify, changeOld, changeNew, changeConfirm }
 
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
