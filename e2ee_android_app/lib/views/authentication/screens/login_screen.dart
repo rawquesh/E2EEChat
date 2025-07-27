@@ -353,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                             ),
                           )
                           : const Icon(Icons.login),
-                  label: Text(isLoading ? "Logging in..." : "Authenticate"),
+                  label: Text(isLoading ? "Please wait..." : "Authenticate"),
                 ),
               ),
               // if (isBiometricAvailable) ...[

@@ -41,8 +41,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
-    with SingleTickerProviderStateMixin, MySafeState, WidgetsBindingObserver {
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin, MySafeState, WidgetsBindingObserver {
   int _currentIndex = 0;
   late final ChatRepository _chatRepository;
   late final ChatProvider _chatProvider;
@@ -56,35 +55,19 @@ class _MainScreenState extends State<MainScreen>
   String _currentUserId = '';
   String _currentUserToken = '';
 
-  final List<Widget> _screens = [
-    ChatListScreen(),
-    CallsScreen(),
-    SettingsScreen(),
-  ];
+  final List<Widget> _screens = [ChatListScreen(), CallsScreen(), SettingsScreen()];
 
   Future<void> _initializeSocket() async {
     callController = CallController();
     callProvider = context.read<CallProvider>();
-    _currentUserId =
-        await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
+    _currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     MyPrint.printOnConsole('userId: $_currentUserId');
-    _currentUserToken =
-        await SharedPrefManager().getString(
-          MySharedPreferenceVariables.authToken,
-        ) ??
-        '';
+    _currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
     MyPrint.printOnConsole("auth_token: ${_currentUserToken}");
 
-    _chatRepository.initPusher(
-      userId: _currentUserId,
-      token: _currentUserToken,
-      onMessageReceived: _handleIncomingMessage,
-    );
+    _chatRepository.initPusher(userId: _currentUserId, token: _currentUserToken, onMessageReceived: _handleIncomingMessage);
 
-    callProvider.initController(
-      userId: _currentUserId,
-      token: _currentUserToken,
-    );
+    callProvider.initController(userId: _currentUserId, token: _currentUserToken);
     callProvider.callController.onIncomingCall = _showIncomingCallDialog;
   }
 
@@ -92,15 +75,9 @@ class _MainScreenState extends State<MainScreen>
     if (_isCallDialogShowing) return;
     _isCallDialogShowing = true;
 
-    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
-      (u) => u.id == callerId,
-      orElse: () => ChatUserModel(id: callerId),
-    );
+    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
     if (user.nickname.isEmpty) {
-      final fetched = await _chatRepository.fetchChatUser(
-        userId: callerId,
-        token: _currentUserToken,
-      );
+      final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
       if (fetched != null) user = fetched;
     }
 
@@ -131,26 +108,18 @@ class _MainScreenState extends State<MainScreen>
                 await callProvider.callController.acceptCall();
                 _dismissCallDialog();
 
-                ChatUserModel? user = _chatProvider.chatUsers
-                    .getList()
-                    .firstWhere(
-                      (u) => u.id == callerId,
-                      orElse: () => ChatUserModel(id: callerId),
-                    );
+                ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
+                  (u) => u.id == callerId,
+                  orElse: () => ChatUserModel(id: callerId),
+                );
                 if (user.nickname.isEmpty) {
-                  final fetched = await _chatRepository.fetchChatUser(
-                    userId: callerId,
-                    token: _currentUserToken,
-                  );
+                  final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
                   if (fetched != null) user = fetched;
                 }
 
                 if (!mounted) return;
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(
-                    context: context,
-                    navigationType: NavigationType.pushNamed,
-                  ),
+                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
                   arguments: VoiceCallScreenNavigationArguments(user: user),
                 );
               },
@@ -170,11 +139,11 @@ class _MainScreenState extends State<MainScreen>
   }
 
   void _handleIncomingMessage(dynamic data) async {
+    MyPrint.printOnConsole("XXIncoming message data: $data");
     try {
-      final messageData = data is String
-          ? jsonDecode(data)
-          : Map<String, dynamic>.from(data);
+      final messageData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
       debugPrint("messageData ==> ${messageData}");
+      MyPrint.printOnConsole("XXIncoming messagedata: $messageData");
 
       final senderId = messageData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
@@ -194,9 +163,7 @@ class _MainScreenState extends State<MainScreen>
       //final message = messageData['message']?.toString() ?? '';
       final message = messageData['message']['message']?.toString() ?? '';
       final tempDestructTimer = messageData['message']['destructTimer'] ?? 0;
-      DateTime destructTimer = DateTime.now().add(
-        Duration(seconds: tempDestructTimer),
-      );
+      DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
       if (tempDestructTimer == 0) {
         destructTimer = DateTime.now().add(Duration(days: 365 * 100));
       }
@@ -221,14 +188,9 @@ class _MainScreenState extends State<MainScreen>
       );
 
       _chatProvider.addMessageFor(otherUserId, chatMessage);
-      await _chatController.saveMessageToHive(
-        chatId: otherUserId,
-        message: chatMessage,
-      );
+      await _chatController.saveMessageToHive(chatId: otherUserId, message: chatMessage);
 
-      List<ChatUserModel> users = List<ChatUserModel>.from(
-        _chatProvider.chatUsers.getList(),
-      );
+      List<ChatUserModel> users = List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
 
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
@@ -237,11 +199,8 @@ class _MainScreenState extends State<MainScreen>
 
       var nickname = messageData['message']['nickname']?.toString() ?? '';
 
-
       if (index == -1) {
-        String avatar = username.isNotEmpty
-            ? username[0].toUpperCase()
-            : '?';
+        String avatar = username.isNotEmpty ? username[0].toUpperCase() : '?';
         user = ChatUserModel(
           id: otherUserId,
           nickname: nickname,
@@ -254,7 +213,7 @@ class _MainScreenState extends State<MainScreen>
       } else {
         user = users[index];
         user.nickname = nickname; // Ensure name is up-to-date
-        user.username = username; 
+        user.username = username;
         user.lastMessage = message;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
@@ -393,60 +352,33 @@ class _MainScreenState extends State<MainScreen>
           showElevation: true,
           items: [
             FlashyTabBarItem(
-              icon: Image.asset(
-                AppAssets.chat_icon,
-                height: 26,
-                width: 26,
-                color: themeData.primaryColor,
-              ),
+              icon: Image.asset(AppAssets.chat_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Chats',
                 style: themeData.textTheme.labelSmall
-                    ?.copyWith(
-                      fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    )
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
                     .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
             ),
             FlashyTabBarItem(
-              icon: Image.asset(
-                AppAssets.call_icon,
-                height: 26,
-                width: 26,
-                color: themeData.primaryColor,
-              ),
+              icon: Image.asset(AppAssets.call_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Calls & Contacts',
                 style: themeData.textTheme.labelSmall
-                    ?.copyWith(
-                      fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    )
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
                     .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
             ),
             FlashyTabBarItem(
-              icon: Image.asset(
-                AppAssets.settings_icon,
-                height: 26,
-                width: 26,
-                color: themeData.primaryColor,
-              ),
+              icon: Image.asset(AppAssets.settings_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Settings',
                 style: themeData.textTheme.labelSmall
-                    ?.copyWith(
-                      fontSize: 10,
-                      color: themeData.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    )
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
                     .withEpilogue,
               ),
               activeColor: themeData.primaryColor,

@@ -174,10 +174,10 @@ class AuthenticationController {
     final userInfo = await ChatRepository().fetchChatUser(username: username, token: accessToken);
     if (userInfo != null) {
       MyPrint.printOnConsole("User model retrieved: ${userInfo.toMap()}");
+      SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, userInfo.id);
 
       if (userInfo.nickname.isNotEmpty) {
         SharedPrefManager().setString(MySharedPreferenceVariables.nickname, userInfo.nickname);
-        SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, userInfo.id);
 
         return true;
       } else {
@@ -216,7 +216,7 @@ class AuthenticationController {
         // Save current user id here!
         // await saveCurrentUserId(username: username, accessToken: accessToken);
 
-        if (!await _isNickNameAvailable(accessToken, username)) {
+        if (!(await _isNickNameAvailable(accessToken, username))) {
           await _handleNicknameUpdate(context, authenticationProvider);
         }
 
