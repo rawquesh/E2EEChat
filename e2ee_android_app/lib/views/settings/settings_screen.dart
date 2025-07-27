@@ -40,10 +40,10 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Edit Display Name'),
+          title: const Text('Edit Nickname'),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(hintText: 'Enter display name'),
+            decoration: const InputDecoration(hintText: 'Enter your nickname'),
           ),
           actions: [
             TextButton(
@@ -206,7 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                 SizedBox(height: 10),
                 _settingTile(
                   icon: Icons.person_outline,
-                  title: "Edit Profile",
+                  title: "Edit Nickname",
                   onTap: _showEditNameDialog, // Username editing
                 ),
                 _settingTile(
