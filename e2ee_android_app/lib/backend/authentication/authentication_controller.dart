@@ -260,19 +260,24 @@ Future<String?> _promptForNickname(BuildContext context) async {
   }
 
   Future<bool> verifyPin(String pin) async {
-    final isDuress = await verifyDuressPin(pin);
-    if (isDuress) {
-      await wipeAllAuthData();
-      // This should ideally navigate to the login screen after wiping data.
-      // The navigation part is handled in the UI layer after getting the result.
-      return false; // Return false to indicate PIN verification failed, but duress action was taken.
-    }
     final storedPin = await _storage.read(key: _pinKey);
+    final storedDuressPin = await _storage.read(key: _duressPinKey);
+
+    if (pin == storedDuressPin) {
+      await wipeAllAuthData();
+      return false; // Indicate duress mode
+    }
+
     return pin == storedPin;
   }
 
   Future<bool> setNewDuressPin(String pin, String confirmPin) async {
     try {
+      final storedPin = await _storage.read(key: _pinKey);
+      if (pin == storedPin) {
+        // Optionally, provide feedback to the user that the duress PIN cannot be the same as the main PIN.
+        return false;
+      }
       if (pin.length != 4 || pin != confirmPin) {
         return false;
       }

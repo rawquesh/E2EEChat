@@ -11,7 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
-enum PinScreenMode { set, confirm, verify, changeOld, changeNew, changeConfirm }
+enum PinScreenMode {
+  set,
+  confirm,
+  verify,
+  changeOld,
+  changeNew,
+  changeConfirm,
+  changeDuress
+}
 
 class PinEntryScreen extends StatefulWidget {
   static const String routeName = "/PinEntryScreen";
@@ -208,6 +216,29 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         });
       }
       return;
+    } else if (currentMode == PinScreenMode.changeDuress) {
+      final isCorrect = await authenticationController.verifyPin(pin);
+      if (isCorrect) {
+        if (mounted) {
+          await NavigationController.navigateToDuressPinEntryScreen(
+            navigationOperationParameters: NavigationOperationParameters(
+              context: context,
+              navigationType: NavigationType.pushNamed,
+            ),
+            arguments: PinEntryScreenNavigationArguments(
+              mode: PinScreenMode.changeOld,
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          failedAttempts++;
+          isLoading = false;
+          errorMessage = "Incorrect PIN.";
+          _pinController.clear();
+        });
+      }
+      return;
     } else if (currentMode == PinScreenMode.verify) {
       final isCorrect = await authenticationController.verifyPin(pin);
       if (isCorrect) {
@@ -220,18 +251,32 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
           );
         }
       } else {
-        setState(() {
-          failedAttempts++;
-          isLoading = false;
-          if (failedAttempts >= 5) {
-            errorMessage = "Too many failed attempts. All data will be wiped.";
-            _wipeAppData();
-          } else {
-            errorMessage =
-                "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+        // Check if it was a duress PIN
+        final isDuress = await authenticationController.verifyDuressPin(pin);
+        if (isDuress) {
+          if (mounted) {
+            NavigationController.navigateToLoginScreen(
+              navigationOperationParameters: NavigationOperationParameters(
+                context: context,
+                navigationType: NavigationType.pushNamedAndRemoveUntil,
+              ),
+            );
           }
-          _pinController.clear();
-        });
+        } else {
+          setState(() {
+            failedAttempts++;
+            isLoading = false;
+            if (failedAttempts >= 5) {
+              errorMessage =
+                  "Too many failed attempts. All data will be wiped.";
+              _wipeAppData();
+            } else {
+              errorMessage =
+                  "Incorrect PIN. ${5 - failedAttempts} attempts remaining.";
+            }
+            _pinController.clear();
+          });
+        }
       }
       return;
     }
@@ -391,6 +436,8 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Enter New PIN";
       case PinScreenMode.changeConfirm:
         return "Confirm New PIN";
+      case PinScreenMode.changeDuress:
+        return "Enter Your PIN";
     }
   }
 
@@ -406,10 +453,8 @@ class _PinEntryScreenState extends State<PinEntryScreen> with MySafeState {
         return "Verify your current PIN";
       case PinScreenMode.changeNew:
         return "Enter your new PIN";
-      case PinScreenMode.changeConfirm:
-        return "Re-enter your new PIN to confirm";
-    }
-  }
+      case PinScreenM…
+[924 lines not shown]
 
   @override
   Widget build(BuildContext context) {
