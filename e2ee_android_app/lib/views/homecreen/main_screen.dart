@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:e2ee_android_app/backend/webrtc/call_controller.dart';
 import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
 import 'package:e2ee_android_app/configs/constants.dart';
+import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
+import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/configs/font_manager.dart';
+import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
 import 'package:e2ee_android_app/views/files_and_media/files_media_screen.dart';
@@ -346,9 +349,32 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         bottomNavigationBar: FlashyTabBar(
           animationDuration: const Duration(milliseconds: 300),
           selectedIndex: _currentIndex,
-          onItemSelected: (index) {
-            _currentIndex = index;
-            mySetState();
+          onItemSelected: (index) async {
+            if (index == 2) {
+              final authController = AuthenticationController(
+                  authenticationProvider:
+                      context.read<AuthenticationProvider>());
+              final hasPin = await SecureStorageManager()
+                  .getString(MySharedPreferenceVariables.mediaPinKey);
+              if (hasPin == null) {
+                NavigationController.navigateToVaultPinEntryScreen(
+                  navigationOperationParameters: NavigationOperationParameters(
+                      context: context, navigationType: NavigationType.push),
+                  arguments:
+                      PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
+                );
+              } else {
+                NavigationController.navigateToVaultPinEntryScreen(
+                  navigationOperationParameters: NavigationOperationParameters(
+                      context: context, navigationType: NavigationType.push),
+                  arguments: PinEntryScreenNavigationArguments(
+                      mode: PinScreenMode.verify),
+                );
+              }
+            } else {
+              _currentIndex = index;
+              mySetState();
+            }
           },
           showElevation: true,
           items: [

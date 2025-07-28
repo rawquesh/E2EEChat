@@ -11,6 +11,7 @@ import '../../views/authentication/screens/duress_pin_entry_screen.dart';
 import '../../views/authentication/screens/login_screen.dart';
 import '../../views/authentication/screens/pin_entry_screen.dart';
 import '../../views/authentication/screens/sign_up_screen.dart';
+import '../../views/authentication/screens/vault_pin_entry_screen.dart';
 import '../../views/calls/screens/voice_call_demo_screen.dart';
 import '../../views/common/screens/splashscreen.dart';
 import '../../views/homecreen/main_screen.dart';
@@ -106,6 +107,11 @@ class NavigationController {
           page = parseVoiceCallScreen(settings: settings);
           break;
         }
+      case VaultPinEntryScreen.routeName:
+        {
+          page = parseVaultPinEntryScreen(settings: settings);
+          break;
+        }
       // case MainScreen.routeName:
       //   {
       //     page = parseMainScreen(settings: settings);
@@ -167,6 +173,15 @@ class NavigationController {
       return VoiceCallScreen(arguments: argument);
     }
     return null; // Or return an error screen
+  }
+
+  static Widget? parseVaultPinEntryScreen({required RouteSettings settings}) {
+    dynamic argument = settings.arguments;
+    if (argument is PinEntryScreenNavigationArguments) {
+      return VaultPinEntryScreen(arguments: argument);
+    } else {
+      return null;
+    }
   }
 
   //endregion
@@ -239,6 +254,18 @@ class NavigationController {
     return NavigationOperation.navigate(
       navigationOperationParameters: navigationOperationParameters.copyWith(
         routeName: VoiceCallScreen.routeName,
+        arguments: arguments,
+      ),
+    );
+  }
+
+  static Future<dynamic> navigateToVaultPinEntryScreen({
+    required NavigationOperationParameters navigationOperationParameters,
+    required PinEntryScreenNavigationArguments arguments,
+  }) {
+    return NavigationOperation.navigate(
+      navigationOperationParameters: navigationOperationParameters.copyWith(
+        routeName: VaultPinEntryScreen.routeName,
         arguments: arguments,
       ),
     );

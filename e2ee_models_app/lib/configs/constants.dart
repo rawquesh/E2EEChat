@@ -76,4 +76,5 @@ class MySharedPreferenceVariables {
   static const pinKey = "user_app_pin";
   static const duressPinKey = "duress_pin";
   static const biometricKey = "biometric_enabled";
+  static const mediaPinKey = "media_pin";
 }

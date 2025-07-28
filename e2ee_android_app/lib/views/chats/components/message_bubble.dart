@@ -112,7 +112,6 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text("Message Options"),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

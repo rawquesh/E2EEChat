@@ -21,7 +21,10 @@ import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
 import 'authentication_repository.dart';
 import 'package:hive/hive.dart';
+import 'dart:io';
+
 import 'package:e2ee_models_app/utils/hive_manager.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AuthenticationController {
   late AuthenticationProvider _authenticationProvider;
@@ -247,7 +250,7 @@ class AuthenticationController {
     return storedPin != null && storedPin.isNotEmpty;
   }
 
-  Future<bool> setNewPin(String pin, String confirmPin) async {
+  Future<bool> setNewPin(String pin, String confirmPin, {bool isVaultPin = false}) async {
     try {
       // Validate PIN length
       if (pin.length != 4) {
@@ -260,7 +263,7 @@ class AuthenticationController {
       }
 
       // Save the PIN securely
-      await SecureStorageManager().setString(MySharedPreferenceVariables.pinKey, pin);
+      await SecureStorageManager().setString(isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey, pin);
 
       MyPrint.printOnConsole("PIN saved successfully");
       return true;
@@ -270,8 +273,8 @@ class AuthenticationController {
     }
   }
 
-  Future<bool> verifyPin(String pin) async {
-    final storedPin = await SecureStorageManager().getString(MySharedPreferenceVariables.pinKey);
+  Future<bool> verifyPin(String pin, {bool isVaultPin = false}) async {
+    final storedPin = await SecureStorageManager().getString(isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey);
     final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
 
     MyPrint.printOnConsole("XX Verifying current PIN: $pin");
@@ -325,6 +328,7 @@ class AuthenticationController {
   Future<void> wipeAllAuthData() async {
     await SecureStorageManager().delete(key: MySharedPreferenceVariables.pinKey);
     await SecureStorageManager().delete(key: MySharedPreferenceVariables.biometricKey);
+    await SecureStorageManager().delete(key: MySharedPreferenceVariables.mediaPinKey);
 
     //start code for delete all chat data
     Box? box = await HiveManager().openBox(boxName: "chat_users");
@@ -333,6 +337,22 @@ class AuthenticationController {
         try {
           final user = ChatUserModel.fromMap(Map<String, dynamic>.from(entry.value));
           final messageBox = await Hive.openBox("messages_${user.id}");
+          for (final messageEntry in messageBox.toMap().entries) {
+            final message = ChatMessageModel.fromMap(
+              Map<String, dynamic>.from(messageEntry.value),
+              currentUserId: '',
+            );
+            if (message.message.startsWith(imageTypeChat) ||
+                message.message.startsWith(audioTypeChat) ||
+                message.message.startsWith(videoTypeChat) ||
+                message.message.startsWith(docTypeChat)) {
+              final filePath = message.message.split(",").last;
+              final file = File(filePath);
+              if (await file.exists()) {
+                await file.delete();
+              }
+            }
+          }
           await messageBox.clear();
           await messageBox.close();
           await box.delete(user.id);
@@ -342,6 +362,11 @@ class AuthenticationController {
         }
       }
       await box.clear();
+    }
+    final directory = await getApplicationDocumentsDirectory();
+    final vaultDirectory = Directory('${directory.path}/vault');
+    if (await vaultDirectory.exists()) {
+      await vaultDirectory.delete(recursive: true);
     }
     await SecureStorageManager().deleteAll();
     await SharedPrefManager().clearAll();
