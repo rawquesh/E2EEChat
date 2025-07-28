@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:hive/hive.dart';
@@ -64,6 +66,16 @@ class SelfDestructService {
             );
 
             if (now.isAfter(message.destructTimestamp)) {
+              if (message.message.startsWith(imageTypeChat) ||
+                  message.message.startsWith(audioTypeChat) ||
+                  message.message.startsWith(videoTypeChat) ||
+                  message.message.startsWith(docTypeChat)) {
+                final filePath = message.message.split(",").last;
+                final file = File(filePath);
+                if (await file.exists()) {
+                  await file.delete();
+                }
+              }
               keysToDelete.add(key as String);
               deletedMessages.add(message);
             }

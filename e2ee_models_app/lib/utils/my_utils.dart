@@ -319,4 +319,17 @@ class MyUtils {
     await file.writeAsBytes(fileBytes);
     return filePath;
   }
+
+  static Future<String> saveFileToVault(String filePath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final vaultDirectory = Directory('${directory.path}/vault');
+    if (!await vaultDirectory.exists()) {
+      await vaultDirectory.create();
+    }
+    final fileName = filePath.split('/').last;
+    final newFilePath = '${vaultDirectory.path}/$fileName';
+    final file = File(filePath);
+    await file.copy(newFilePath);
+    return newFilePath;
+  }
 }

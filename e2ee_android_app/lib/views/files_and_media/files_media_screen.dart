@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 // import 'package:provider/provider.dart';
 
 // import '../../backend/common/app_theme/app_theme_controller.dart';
 // import '../../backend/common/app_theme/app_theme_provider.dart';
 
-enum FileType { image, video, document, audio }
+enum FileType { image, video, document, audio, unknown }
 
 class ChatFile {
   final String fileName;
@@ -27,50 +32,6 @@ class ChatFile {
   });
 }
 
-final List<ChatFile> mockFiles = [
-  ChatFile(
-    fileName: "vacation_photo.jpg",
-    type: FileType.image,
-    sender: "Sarah",
-    dateTime: "2m ago",
-    size: "2.1 MB",
-    thumbnailUrl:
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=facearea&w=64&h=64",
-  ),
-  ChatFile(
-    fileName: "meeting.mp4",
-    type: FileType.video,
-    sender: "You",
-    dateTime: "1h ago",
-    size: "18 MB",
-    thumbnailUrl:
-        "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=64&h=64",
-  ),
-  ChatFile(
-    fileName: "report.pdf",
-    type: FileType.document,
-    sender: "Mike",
-    dateTime: "3h ago",
-    size: "310 KB",
-  ),
-  ChatFile(
-    fileName: "summary_2025.pdf",
-    type: FileType.document,
-    sender: "Ben",
-    dateTime: "4h ago",
-    size: "349 KB",
-  ),
-  ChatFile(
-    fileName: "test.mp4",
-    type: FileType.video,
-    sender: "You",
-    dateTime: "1h ago",
-    size: "18 MB",
-    thumbnailUrl:
-    "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=facearea&w=64&h=64",
-  ),
-];
-
 class FilesMediaScreen extends StatefulWidget {
   const FilesMediaScreen({super.key});
 
@@ -79,6 +40,62 @@ class FilesMediaScreen extends StatefulWidget {
 }
 
 class _FilesMediaScreenState extends State<FilesMediaScreen> with MySafeState {
+  List<ChatFile> _vaultFiles = [];
+  bool _isLoading = true;
+  bool _isSelectionMode = false;
+  List<ChatFile> _selectedFiles = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVaultFiles();
+  }
+
+  Future<void> _loadVaultFiles() async {
+    setState(() {
+      _isLoading = true;
+    });
+    final directory = await getApplicationDocumentsDirectory();
+    final vaultDirectory = Directory('${directory.path}/vault');
+    if (await vaultDirectory.exists()) {
+      final files = await vaultDirectory.list().toList();
+      final chatFiles = files.map((file) {
+        final stat = file.statSync();
+        return ChatFile(
+          fileName: file.path.split('/').last,
+          type: _getFileType(file.path),
+          sender: "You",
+          dateTime: stat.modified.toString(),
+          size: '${(stat.size / 1024).toStringAsFixed(2)} KB',
+          thumbnailUrl: file.path,
+        );
+      }).toList();
+      setState(() {
+        _vaultFiles = chatFiles;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  FileType _getFileType(String filePath) {
+    final extension = filePath.split('.').last.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif'].contains(extension)) {
+      return FileType.image;
+    } else if (['mp4', 'mov', 'avi'].contains(extension)) {
+      return FileType.video;
+    } else if (['mp3', 'wav', 'm4a'].contains(extension)) {
+      return FileType.audio;
+    } else if (['pdf', 'doc', 'docx', 'txt'].contains(extension)) {
+      return FileType.document;
+    } else {
+      return FileType.unknown;
+    }
+  }
+
   IconData _iconForFileType(FileType type) {
     switch (type) {
       case FileType.image:
@@ -89,9 +106,10 @@ class _FilesMediaScreenState extends State<FilesMediaScreen> with MySafeState {
         return Icons.picture_as_pdf;
       case FileType.audio:
         return Icons.audiotrack;
-      }
+      default:
+        return Icons.insert_drive_file;
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +118,7 @@ class _FilesMediaScreenState extends State<FilesMediaScreen> with MySafeState {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(
-          "Files & Media",
+          _isSelectionMode ? 'Select Files' : "Files & Media",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: themeData.primaryColor,
@@ -109,95 +127,179 @@ class _FilesMediaScreenState extends State<FilesMediaScreen> with MySafeState {
         centerTitle: true,
         foregroundColor: themeData.primaryColor,
         elevation: 0,
+        actions: [
+          if (_isSelectionMode)
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text("Delete Files"),
+                    content: Text(
+                        "Are you sure you want to delete the selected files?"),
+                    actions: [
+                      TextButton(
+                        child: Text("Cancel"),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                      TextButton(
+                        child: Text("Delete"),
+                        onPressed: () {
+                          _deleteSelectedFiles();
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          IconButton(
+            icon: Icon(_isSelectionMode ? Icons.close : Icons.select_all),
+            onPressed: () {
+              setState(() {
+                _isSelectionMode = !_isSelectionMode;
+                if (!_isSelectionMode) {
+                  _selectedFiles.clear();
+                }
+              });
+            },
+          ),
+        ],
       ),
-      body:
-          mockFiles.isEmpty
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _vaultFiles.isEmpty
               ? Center(
-                child: Text(
-                  "No files or media shared yet.",
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              )
+                  child: Text(
+                    "No files or media in the vault yet.",
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
               : ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                itemCount: mockFiles.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (ctx, i) {
-                  final file = mockFiles[i];
-                  return Card(
-                    color: themeData.colorScheme.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    elevation: 2,
-                    child: ListTile(
-                      leading:
-                          file.type == FileType.image ||
-                                  file.type == FileType.video
-                              ? ClipRRect(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: _vaultFiles.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (ctx, i) {
+                    final file = _vaultFiles[i];
+                    final isSelected = _selectedFiles.contains(file);
+                    return Card(
+                      color: isSelected
+                          ? themeData.primaryColor.withOpacity(0.3)
+                          : themeData.colorScheme.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 2,
+                      child: ListTile(
+                        leading: file.type == FileType.image ||
+                                file.type == FileType.video
+                            ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child:
-                                    file.thumbnailUrl != null
-                                        ? Image.network(
-                                          file.thumbnailUrl!,
-                                          width: 48,
-                                          height: 48,
-                                          fit: BoxFit.cover,
-                                        )
-                                        : Icon(
-                                          _iconForFileType(file.type),
-                                          color: themeData.primaryColor,
-                                          size: 36,
-                                        ),
+                                child: file.thumbnailUrl != null
+                                    ? Image.file(
+                                        File(file.thumbnailUrl!),
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Icon(
+                                        _iconForFileType(file.type),
+                                        color: themeData.primaryColor,
+                                        size: 36,
+                                      ),
                               )
-                              : Icon(
+                            : Icon(
                                 _iconForFileType(file.type),
                                 color: themeData.primaryColor,
                                 size: 36,
                               ),
-                      title: Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  file.fileName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Text(
+                                    file.fileName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (file.isEncrypted)
-                                  Icon(
-                                    Icons.lock,
-                                    color: themeData.primaryColor,
-                                    size: 16,
-                                  ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  if (file.isEncrypted)
+                                    Icon(
+                                      Icons.lock,
+                                      color: themeData.primaryColor,
+                                      size: 16,
+                                    ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        "${file.sender} • ${file.dateTime} • ${file.size}",
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 11,
+                          ],
                         ),
+                        subtitle: Text(
+                          "${file.sender} • ${file.dateTime} • ${file.size}",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 11,
+                          ),
+                        ),
+                        trailing: _isSelectionMode
+                            ? Checkbox(
+                                value: isSelected,
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value!) {
+                                      _selectedFiles.add(file);
+                                    } else {
+                                      _selectedFiles.remove(file);
+                                    }
+                                  });
+                                },
+                              )
+                            : Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey[400],
+                                size: 30,
+                              ),
+                        onTap: () {
+                          if (_isSelectionMode) {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedFiles.remove(file);
+                              } else {
+                                _selectedFiles.add(file);
+                              }
+                            });
+                          } else {
+                            OpenFilex.open(file.thumbnailUrl);
+                          }
+                        }, // Open preview or file
                       ),
-                      trailing: Icon(
-                        Icons.chevron_right,
-                        color: Colors.grey[400],
-                        size: 30,
-                      ),
-                      onTap: () {}, // Open preview or file
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
     );
+  }
+
+  void _deleteSelectedFiles() async {
+    for (var file in _selectedFiles) {
+      final fileToDelete = File(file.thumbnailUrl!);
+      if (await fileToDelete.exists()) {
+        await fileToDelete.delete();
+      }
+    }
+    setState(() {
+      _vaultFiles
+          .removeWhere((element) => _selectedFiles.contains(element));
+      _selectedFiles.clear();
+      _isSelectionMode = false;
+    });
   }
 }

@@ -771,7 +771,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(message: message);
+                    return MessageBubble(
+                      message: message,
+                      chatController: _chatController,
+                      chatId: widget.user.id,
+                    );
                   },
                 );
               },

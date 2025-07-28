@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -104,6 +107,33 @@ class MessageRepository {
       MyPrint.printOnConsole('Deleted chat box for: $chatId');
     } catch (e) {
       MyPrint.printOnConsole('Error deleting chat $chatId: $e');
+    }
+  }
+
+  Future<void> deleteMessage(String chatId, String messageId) async {
+    final box = await _openBox(chatId);
+    try {
+      final messageMap = box?.get(messageId);
+      if (messageMap != null) {
+        final message = ChatMessageModel.fromMap(
+          Map<String, dynamic>.from(messageMap),
+          currentUserId: '',
+        );
+        if (message.message.startsWith(imageTypeChat) ||
+            message.message.startsWith(audioTypeChat) ||
+            message.message.startsWith(videoTypeChat) ||
+            message.message.startsWith(docTypeChat)) {
+          final filePath = message.message.split(",").last;
+          final file = File(filePath);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        }
+      }
+      await box?.delete(messageId);
+      MyPrint.printOnConsole('Deleted message: $messageId');
+    } catch (e) {
+      MyPrint.printOnConsole('Error deleting message $messageId: $e');
     }
   }
 }
