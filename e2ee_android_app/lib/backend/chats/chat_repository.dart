@@ -75,7 +75,7 @@ class ChatRepository {
     final url = Uri.parse('$baseUrl/send-message');
     final body = jsonEncode({
       "sender_id": senderId,
-      "receiver_id": receiverId,
+      "receiver_id": [], // Assuming receiverId is a single ID, adjust if needed
       //"message": message,
       "message": {"message":message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
     });

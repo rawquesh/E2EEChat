@@ -6,6 +6,7 @@ import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_android_app/configs/font_manager.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
+import 'package:e2ee_android_app/views/files_and_media/files_media_screen.dart';
 import 'package:e2ee_android_app/views/settings/settings_screen.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
@@ -55,7 +56,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   String _currentUserId = '';
   String _currentUserToken = '';
 
-  final List<Widget> _screens = [ChatListScreen(), CallsScreen(), SettingsScreen()];
+  final List<Widget> _screens = [ChatListScreen(), CallsScreen(), FilesMediaScreen(), SettingsScreen()];
 
   Future<void> _initializeSocket() async {
     callController = CallController();
@@ -366,6 +367,17 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.call_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Calls & Contacts',
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
+                    .withEpilogue,
+              ),
+              activeColor: themeData.primaryColor,
+              inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
+            ),
+            FlashyTabBarItem(
+              icon: Image.asset(AppAssets.files_icon, height: 26, width: 26, color: themeData.primaryColor),
+              title: Text(
+                'Files & Media',
                 style: themeData.textTheme.labelSmall
                     ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
                     .withEpilogue,
