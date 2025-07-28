@@ -11,22 +11,15 @@ class ChatRepository {
   Channel? _channel;
 
   // initPusher remains the same
-  void initPusher({
-    required String userId,
-    required String token,
-    required Function(dynamic data) onMessageReceived,
-  }) {
+  void initPusher({required String userId, required String token, required Function(dynamic data) onMessageReceived}) {
     final options = PusherOptions(
       key: 'sip6lkxyrl3d0um6vbv9',
-      cluster: 'mt1',
+      cluster: 'mt1', 
       host: '172.86.92.130.sslip.io',
       wsPort: 8080,
       wssPort: 443,
       encrypted: false,
-      authOptions: PusherAuthOptions(
-        'https://172.86.92.130.sslip.io/broadcasting/auth',
-        headers: {'Authorization': 'Bearer $token'},
-      ),
+      authOptions: PusherAuthOptions('https://172.86.92.130.sslip.io/broadcasting/auth', headers: {'Authorization': 'Bearer $token'}),
     );
 
     _pusher = PusherClient(options: options);
@@ -75,21 +68,14 @@ class ChatRepository {
     final url = Uri.parse('$baseUrl/send-message');
     final body = jsonEncode({
       "sender_id": senderId,
-      "receiver_id": [], // Assuming receiverId is a single ID, adjust if needed
+      "receiver_id": receiverId,
       //"message": message,
-      "message": {"message":message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
+      "message": {"message": message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
     });
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: body,
-      );
+      final response = await http.post(url, headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}, body: body);
       MyPrint.printOnConsole('[SEND DEBUG] Status: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
@@ -99,11 +85,7 @@ class ChatRepository {
   }
 
   // fetchChatUser remains the same
-  Future<ChatUserModel?> fetchChatUser({
-    String? username,
-    String? userId,
-    required String token,
-  }) async {
+  Future<ChatUserModel?> fetchChatUser({String? username, String? userId, required String token}) async {
     final url = Uri.parse('$baseUrl/chat/getopponent');
     final Map<String, dynamic> bodyMap = {};
     if (username != null && username.isNotEmpty) bodyMap['username'] = username;
@@ -112,11 +94,7 @@ class ChatRepository {
     final body = jsonEncode(bodyMap);
     final response = await http.post(
       url,
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      },
+      headers: {"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer $token"},
       body: body,
     );
 

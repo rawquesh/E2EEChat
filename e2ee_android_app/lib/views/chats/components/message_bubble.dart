@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
@@ -9,9 +7,7 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:mime/mime.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../configs/constants.dart';
 
@@ -210,7 +206,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                       ? SizedBox()
                                       : InkWell(
                                           onTap: () {
-                                            OpenFilex.open(filePath);
+                                            OpenFilex.open(filePath!);
                                           },
                                           child: Image.file(
                                             File(filePath!),
@@ -262,7 +258,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                               ? SizedBox()
                                               : InkWell(
                                                   onTap: () async {
-                                                    OpenFilex.open(filePath);
+                                                    OpenFilex.open(filePath!);
                                                   },
                                                   child: Container(
                                                     width: 120,
@@ -290,10 +286,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                               ? filePath == null
                                                   ? SizedBox()
                                                   : InkWell(
-                                                      onTap: () async {
-                                                        OpenFilex.open(
-                                                            filePath);
-                                                      },
+                                                      onTap: () async => OpenFilex.open(filePath!),
                                                       child: Container(
                                                         width: 120,
                                                         child: Row(
