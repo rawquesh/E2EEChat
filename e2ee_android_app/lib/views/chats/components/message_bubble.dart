@@ -42,11 +42,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
     }
   }
 
-  //base64 image part
-  Uint8List? imageBytes;
-  Uint8List? audioBytes;
-  Uint8List? videoBytes;
-  Uint8List? docBytes;
+  String? filePath;
 
   @override
   void initState() {
@@ -70,24 +66,11 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       });
     }
 
-    if (widget.message.message.startsWith(imageTypeChat)) {
-      String base64String = widget.message.message.split(",").last;
-      imageBytes = base64Decode(base64String);
-    }
-
-    if (widget.message.message.startsWith(audioTypeChat)) {
-      String base64String = widget.message.message.split(",").last;
-      audioBytes = base64Decode(base64String);
-    }
-
-    if (widget.message.message.startsWith(videoTypeChat)) {
-      String base64String = widget.message.message.split(",").last;
-      videoBytes = base64Decode(base64String);
-    }
-
-    if (widget.message.message.startsWith(docTypeChat)) {
-      String base64String = widget.message.message.split(",").last;
-      docBytes = base64Decode(base64String);
+    if (widget.message.message.startsWith(imageTypeChat) ||
+        widget.message.message.startsWith(audioTypeChat) ||
+        widget.message.message.startsWith(videoTypeChat) ||
+        widget.message.message.startsWith(docTypeChat)) {
+      filePath = widget.message.message.split(",").last;
     }
   }
 
@@ -179,134 +162,120 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                           ],
                         ),
                         child: widget.message.message.startsWith(imageTypeChat)
-                            ? imageBytes == null
-                                  ? SizedBox()
-                                  : InkWell(
-                                      onTap: () {
-                                        openBase64File(
-                                          widget.message.message
-                                              .split(",")
-                                              .last,
-                                          "tempFile",
-                                        );
-                                      },
-                                      child: Image.memory(
-                                        imageBytes!,
-                                        height: 120,
-                                        width: 120,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
+                            ? filePath == null
+                                ? SizedBox()
+                                : InkWell(
+                                    onTap: () {
+                                      OpenFilex.open(filePath);
+                                    },
+                                    child: Image.file(
+                                      File(filePath!),
+                                      height: 120,
+                                      width: 120,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
                             : widget.message.message.startsWith(audioTypeChat)
-                            ? audioBytes == null
-                                  ? SizedBox()
-                                  : InkWell(
-                                      onTap: () async {
-                                        if (isPlaying) {
-                                          await _audioPlayer.stop();
-                                          setState(() => isPlaying = false);
-                                        } else {
-                                          await _playAudioFromBase64();
-                                        }
-                                      },
-                                      child: Container(
-                                        width: 120,
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              isPlaying
-                                                  ? Icons.pause
-                                                  : Icons.play_arrow_rounded,
-                                              color: Colors.white,
-                                              size: 30,
-                                            ),
-                                            Text(
-                                              "Audio",
-                                              style: TextStyle(
+                                ? filePath == null
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () async {
+                                          if (isPlaying) {
+                                            await _audioPlayer.stop();
+                                            setState(() => isPlaying = false);
+                                          } else {
+                                            await _playAudioFromFile();
+                                          }
+                                        },
+                                        child: Container(
+                                          width: 120,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                isPlaying
+                                                    ? Icons.pause
+                                                    : Icons.play_arrow_rounded,
                                                 color: Colors.white,
-                                                fontSize: 15,
+                                                size: 30,
+                                              ),
+                                              Text(
+                                                "Audio",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                : widget.message.message
+                                        .startsWith(videoTypeChat)
+                                    ? filePath == null
+                                        ? SizedBox()
+                                        : InkWell(
+                                            onTap: () async {
+                                              OpenFilex.open(filePath);
+                                            },
+                                            child: Container(
+                                              width: 120,
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.play_arrow_rounded,
+                                                    color: Colors.white,
+                                                    size: 30,
+                                                  ),
+                                                  Text(
+                                                    "Video",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                            : widget.message.message.startsWith(videoTypeChat)
-                            ? videoBytes == null
-                                  ? SizedBox()
-                                  : InkWell(
-                                      onTap: () async {
-                                        openBase64File(
-                                          widget.message.message
-                                              .split(",")
-                                              .last,
-                                          "tempFile",
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 120,
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              isPlaying
-                                                  ? Icons.pause
-                                                  : Icons.play_arrow_rounded,
-                                              color: Colors.white,
-                                              size: 30,
+                                          )
+                                    : widget.message.message
+                                            .startsWith(docTypeChat)
+                                        ? filePath == null
+                                            ? SizedBox()
+                                            : InkWell(
+                                                onTap: () async {
+                                                  OpenFilex.open(filePath);
+                                                },
+                                                child: Container(
+                                                  width: 120,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.folder_rounded,
+                                                        color: Colors.white,
+                                                        size: 25,
+                                                      ),
+                                                      SizedBox(width: 2),
+                                                      Text(
+                                                        "Document",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 15,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )
+                                        : Text(
+                                            widget.message.message,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: widget.message.isMe
+                                                  ? Colors.white
+                                                  : themeData
+                                                      .colorScheme.onSurface,
                                             ),
-                                            Text(
-                                              "Video",
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                            : widget.message.message.startsWith(docTypeChat)
-                            ? docBytes == null
-                                  ? SizedBox()
-                                  : InkWell(
-                                      onTap: () async {
-                                        openBase64File(
-                                          widget.message.message
-                                              .split(",")
-                                              .last,
-                                          "tempFile",
-                                        );
-                                      },
-                                      child: Container(
-                                        width: 120,
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.folder_rounded,
-                                              color: Colors.white,
-                                              size: 25,
-                                            ),
-                                            SizedBox(width: 2),
-                                            Text(
-                                              "Document",
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                            : Text(
-                                widget.message.message,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: widget.message.isMe
-                                      ? Colors.white
-                                      : themeData.colorScheme.onSurface,
-                                ),
-                              ),
+                                          ),
                       ),
                       SizedBox(height: 4),
                       Row(
@@ -383,74 +352,17 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
         : SizedBox();
   }
 
-  Future<void> openBase64File(
-    String base64String,
-    String fileNameWithoutExt,
-  ) async {
-    String cleanedBase64 = base64String.contains(",")
-        ? base64String.split(',').last
-        : base64String;
-    final Uint8List bytes = base64Decode(cleanedBase64);
-    final mimeType = lookupMimeType('', headerBytes: bytes);
-    final ext = extensionFromMime(mimeType);
-    final fileName = '$fileNameWithoutExt.$ext';
-    final file = await saveBase64ToTempFile(bytes, fileName);
-    await OpenFilex.open(file.path);
-  }
-
-  Future<File> saveBase64ToTempFile(Uint8List bytes, String fileName) async {
-    final dir = Directory.systemTemp;
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes);
-    return file;
-  }
-
-  String extensionFromMime(String? mime) {
-    final map = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/gif': 'gif',
-      'application/pdf': 'pdf',
-      'video/mp4': 'mp4',
-      'audio/mpeg': 'mp3',
-      'text/plain': 'txt',
-      'application/msword': 'doc',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-          'docx',
-      'application/vnd.ms-excel': 'xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-          'xlsx',
-    };
-
-    return map[mime] ?? 'bin'; // default unknown extension
-  }
-
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool isPlaying = false;
   bool isLoading = false;
 
-  Future<void> _playAudioFromBase64() async {
-    if (!widget.message.message.startsWith(audioTypeChat)) return;
+  Future<void> _playAudioFromFile() async {
+    if (filePath == null) return;
 
     setState(() => isLoading = true);
 
     try {
-      // Decode base64
-      String base64String = widget.message.message.replaceFirst(
-        audioTypeChat,
-        "",
-      );
-      Uint8List audioBytes = base64Decode(base64String);
-
-      // Write to temp file
-      final tempDir = await getTemporaryDirectory();
-      final filePath =
-          '${tempDir.path}/temp_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      final file = File(filePath);
-      await file.writeAsBytes(audioBytes);
-
-      // Play from file
-      await _audioPlayer.play(DeviceFileSource(filePath));
+      await _audioPlayer.play(DeviceFileSource(filePath!));
       setState(() => isPlaying = true);
 
       _audioPlayer.onPlayerComplete.listen((event) {
