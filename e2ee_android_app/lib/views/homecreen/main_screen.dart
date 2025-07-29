@@ -153,7 +153,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     try {
       final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
       debugPrint("messageData ==> ${payloadData}");
-      MyPrint.printOnConsole("XXIncoming messagedata: $payloadData");
 
       final senderId = payloadData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
@@ -181,7 +180,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         messageData.base64String = path;
       }
 
-      MyPrint.printOnConsole("XXMessage Data : ${payloadData['message']}");
       final tempDestructTimer = payloadData['message']['destructTimer'] ?? 0;
       DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
       if (tempDestructTimer == 0) {
