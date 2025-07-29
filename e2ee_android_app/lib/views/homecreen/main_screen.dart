@@ -63,10 +63,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     callProvider = context.read<CallProvider>();
     _currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     MyPrint.printOnConsole('userId: $_currentUserId');
-    _currentUserToken = await SharedPrefManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    _currentUserToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    
     MyPrint.printOnConsole("auth_token: ${_currentUserToken}");
 
     _chatRepository.initPusher(userId: _currentUserId, token: _currentUserToken, onMessageReceived: _handleIncomingMessage);
+
+    MyPrint.printOnConsole('[PUSHER REPO] Pusher initialized for user: $_currentUserId, token: $_currentUserToken');
 
     callProvider.initController(userId: _currentUserId, token: _currentUserToken);
     callProvider.callController.onIncomingCall = _showIncomingCallDialog;
