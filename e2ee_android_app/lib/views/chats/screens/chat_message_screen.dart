@@ -9,6 +9,8 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'dart:convert';
+
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
@@ -177,24 +179,42 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     }
   }
 
-  void _sendMessage(String msgText) async {
-    //final messageText = _messageController.text.trim();
-    final messageText = msgText;
-    if (messageText.isEmpty) return;
+  void _sendMessage({
+    required ChatMessageType type,
+    String? textMessage,
+    Uint8List? fileBytes,
+    String? fileName,
+  }) async {
+    if (textMessage == null && fileBytes == null) return;
 
-    //_messageController.clear();
-
-    // Optimistically update the UI
+    _messageController.clear();
 
     DateTime destructTimestamp = DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
     if (selectedTimeForDestruct == 0) {
       destructTimestamp = DateTime.now().add(Duration(days: 365 * 100));
     }
 
+    String messageContent;
+    Map<String, dynamic> messageData = {
+      'type': type.toString().split('.').last,
+    };
+
+    if (type == ChatMessageType.text) {
+      messageContent = textMessage!;
+      messageData['text'] = textMessage;
+    } else {
+      String base64String = base64Encode(fileBytes!);
+      messageContent = fileName!;
+      messageData.addAll({
+        'fileName': fileName,
+        'base64String': base64String,
+      });
+    }
+
     final localMessage = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: currentUserId,
-      message: messageText,
+      message: messageContent,
       timestamp: DateTime.now(),
       isMe: true,
       status: 'sent',
@@ -203,6 +223,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     _chatProvider.addMessageFor(widget.user.id, localMessage);
     _loadedMessages += 1;
+
+    if (type != ChatMessageType.text) {
+      await MyUtils.saveFileToDevice(fileBytes!, fileName!);
+    }
 
     await _chatController.saveMessageToHive(chatId: widget.user.id, message: localMessage);
 
@@ -221,8 +245,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     _scrollToBottom();
 
-    // The controller already correctly calls the repository
-    final success = await _chatController.sendMessage(message: messageText, destructTimer: selectedTimeForDestruct);
+    final success = await _chatController.sendMessage(
+      message: jsonEncode(messageData),
+      destructTimer: selectedTimeForDestruct,
+    );
+
     if (!success) {
       MyPrint.printOnConsole('Send failed');
       // Here you might want to update the message status to 'failed'
@@ -241,15 +268,25 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   void _startVoiceRecording() {
-    showAudioDialog(context, (filePath) {
+    showAudioDialog(context, (filePath) async {
       print("Send this to API or chat: $filePath");
-      _sendMessage("$audioTypeChat$filePath");
+      final file = File(filePath);
+      final bytes = await file.readAsBytes();
+      final fileName = filePath.split('/').last;
+      _sendMessage(
+        type: ChatMessageType.audio,
+        fileBytes: bytes,
+        fileName: fileName,
+      );
     });
   }
 
   void _onButtonPressed() {
     if (_hasText) {
-      _sendMessage(_messageController.text.trim());
+      _sendMessage(
+        type: ChatMessageType.text,
+        textMessage: _messageController.text.trim(),
+      );
       _messageController.clear();
     } else {
       _startVoiceRecording();
@@ -417,8 +454,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       final file = File(result.files.single.path!);
       final fileName = result.files.single.name;
       final fileBytes = await file.readAsBytes();
-      final filePath = await MyUtils.saveFileToDevice(fileBytes, fileName);
-      _sendMessage("$docTypeChat$filePath");
+      _sendMessage(
+        type: ChatMessageType.doc,
+        fileBytes: fileBytes,
+        fileName: fileName,
+      );
     }
   }
 
@@ -637,13 +677,20 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     if (image != null) {
       final Uint8List bytes = await image!.readAsBytes();
       final fileName = image!.name;
-      final filePath = await MyUtils.saveFileToDevice(bytes, fileName);
       setState(() {
         fileBytes = bytes;
         if (isImage) {
-          _sendMessage("$imageTypeChat$filePath");
+          _sendMessage(
+            type: ChatMessageType.image,
+            fileBytes: fileBytes,
+            fileName: fileName,
+          );
         } else {
-          _sendMessage("$videoTypeChat$filePath");
+          _sendMessage(
+            type: ChatMessageType.video,
+            fileBytes: fileBytes,
+            fileName: fileName,
+          );
         }
       });
     }

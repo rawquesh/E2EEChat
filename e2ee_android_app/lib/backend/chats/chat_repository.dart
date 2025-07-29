@@ -69,8 +69,10 @@ class ChatRepository {
     final body = jsonEncode({
       "sender_id": senderId,
       "receiver_id": receiverId,
-      //"message": message,
-      "message": {"message": message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
+      "message": message,
+      "destructTimer": timeInSecond,
+      "username": username,
+      "nickname": nickname,
     });
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
 
