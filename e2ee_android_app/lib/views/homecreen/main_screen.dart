@@ -64,7 +64,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     MyPrint.printOnConsole('userId: $_currentUserId');
     _currentUserToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
-    
+
     MyPrint.printOnConsole("auth_token: ${_currentUserToken}");
 
     _chatRepository.initPusher(userId: _currentUserId, token: _currentUserToken, onMessageReceived: _handleIncomingMessage);
@@ -79,7 +79,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     if (_isCallDialogShowing) return;
     _isCallDialogShowing = true;
 
-    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
+    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
+      (u) => u.id == callerId,
+      orElse: () => ChatUserModel(id: callerId),
+    );
     if (user.nickname.isEmpty) {
       final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
       if (fetched != null) user = fetched;
@@ -123,7 +126,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
                 if (!mounted) return;
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                  navigationOperationParameters: NavigationOperationParameters(
+                    context: context,
+                    navigationType: NavigationType.pushNamed,
+                  ),
                   arguments: VoiceCallScreenNavigationArguments(user: user),
                 );
               },
@@ -145,11 +151,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   void _handleIncomingMessage(dynamic data) async {
     MyPrint.printOnConsole("XXIncoming message data: $data");
     try {
-      final messageData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
-      debugPrint("messageData ==> ${messageData}");
-      MyPrint.printOnConsole("XXIncoming messagedata: $messageData");
+      final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
+      debugPrint("messageData ==> ${payloadData}");
+      MyPrint.printOnConsole("XXIncoming messagedata: $payloadData");
 
-      final senderId = messageData['sender_id']?.toString() ?? '';
+      final senderId = payloadData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
 
       // if (username.isEmpty) {
@@ -163,10 +169,20 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       //   username = fetchedUser?.nickname ?? 'Unknown User';
       // }
 
-      final receiverId = messageData['receiver_id']?.toString() ?? '';
-      final message = messageData['message']['message']?.toString() ?? '';
-      MyPrint.printOnConsole("XXMessage Data : ${messageData['message']}");
-      final tempDestructTimer = messageData['message']['destructTimer'] ?? 0;
+      final receiverId = payloadData['receiver_id']?.toString() ?? '';
+      // final message = messageData['message']['message']?.toString() ?? '';
+
+      var messageData = ChatMessageData.fromMap(payloadData['message'] ?? '{}');
+
+      // Save Unit8List to local storage
+
+      if (messageData.type != ChatMessageType.Text.name) {
+        String path = await MyUtils.saveFileToDevice(base64Decode(messageData.base64String), messageData.fileName);
+        messageData.base64String = path;
+      }
+
+      MyPrint.printOnConsole("XXMessage Data : ${payloadData['message']}");
+      final tempDestructTimer = payloadData['message']['destructTimer'] ?? 0;
       DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
       if (tempDestructTimer == 0) {
         destructTimer = DateTime.now().add(Duration(days: 365 * 100));
@@ -174,17 +190,17 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       debugPrint("tempDestructTimer1 ==> ${tempDestructTimer}");
       debugPrint("tempDestructTimer2 ==> ${destructTimer}");
 
-      final timeStr = messageData['timestamp']?.toString() ?? '';
+      final timeStr = payloadData['timestamp']?.toString() ?? '';
       final bool isMe = senderId == _currentUserId;
       final otherUserId = isMe ? receiverId : senderId;
 
       final DateTime time = DateTime.tryParse(timeStr) ?? DateTime.now();
-      final String messageId = messageData['id']?.toString() ?? '';
+      final String messageId = payloadData['id']?.toString() ?? '';
 
       final chatMessage = ChatMessageModel(
         id: messageId.isNotEmpty ? messageId : MyUtils.getNewId(),
         senderId: senderId,
-        message: message,
+        message: messageData,
         timestamp: DateTime.now(),
         isMe: isMe,
         status: 'delivered',
@@ -199,9 +215,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
 
-      var username = messageData['message']['username']?.toString() ?? '';
+      var username = payloadData['message']['username']?.toString() ?? '';
 
-      var nickname = messageData['message']['nickname']?.toString() ?? '';
+      var nickname = payloadData['message']['nickname']?.toString() ?? '';
 
       if (index == -1) {
         String avatar = username.isNotEmpty ? username[0].toUpperCase() : '?';
@@ -210,7 +226,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           nickname: nickname,
           username: username,
           avatar: avatar,
-          lastMessage: message,
+          lastMessage: messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
           lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
         );
@@ -218,7 +234,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         user = users[index];
         user.nickname = nickname; // Ensure name is up-to-date
         user.username = username;
-        user.lastMessage = message;
+        user.lastMessage = messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type;
         user.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
           user.unreadCount = user.unreadCount + 1;
@@ -232,15 +248,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           _appState.showCustomNotification(
             'New message from $nickname',
             //message
-            message.startsWith(imageTypeChat)
-                ? "Image"
-                : message.startsWith(audioTypeChat)
-                ? "Audio"
-                : message.startsWith(videoTypeChat)
-                ? "Video"
-                : message.startsWith(docTypeChat)
-                ? "Document"
-                : message,
+            messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
           );
         }
       } else if (_appState.lifecycleState == AppLifecycleState.paused) {
@@ -248,15 +256,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           DateTime.now().millisecondsSinceEpoch.remainder(100000),
           'New message from $nickname',
           //message,
-          message.startsWith(imageTypeChat)
-              ? "Image"
-              : message.startsWith(audioTypeChat)
-              ? "Audio"
-              : message.startsWith(videoTypeChat)
-              ? "Video"
-              : message.startsWith(docTypeChat)
-              ? "Document"
-              : message,
+          messageData.type,
         );
       }
     } catch (e) {
@@ -281,10 +281,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
           final remaining = provider.getMessagesFor(chatId);
           final lastMsg = remaining.isNotEmpty ? remaining.last : null;
+          final messageData = lastMsg?.message ?? ChatMessageData(type: ChatMessageType.Text.name, text: '');
 
           await _chatController.updateUserLastMessage(
             userId: chatId,
-            lastMessage: lastMsg?.message ?? '',
+            lastMessage: messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
             lastMessageTime: lastMsg?.timestamp ?? DateTime.now(),
           );
         }
@@ -316,10 +317,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
               final remaining = provider.getMessagesFor(chatId);
               final lastMsg = remaining.isNotEmpty ? remaining.last : null;
+              final messageData = lastMsg?.message ?? ChatMessageData(type: ChatMessageType.Text.name, text: '');
 
               await _chatController.updateUserLastMessage(
                 userId: chatId,
-                lastMessage: lastMsg?.message ?? '',
+                lastMessage: messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
                 lastMessageTime: lastMsg?.timestamp ?? DateTime.now(),
               );
             }

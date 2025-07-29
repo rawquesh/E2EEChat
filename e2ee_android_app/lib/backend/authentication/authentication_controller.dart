@@ -1,7 +1,6 @@
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
-import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
 import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
@@ -343,11 +342,8 @@ class AuthenticationController {
           final messageBox = await Hive.openBox("messages_${user.id}");
           for (final messageEntry in messageBox.toMap().entries) {
             final message = ChatMessageModel.fromMap(Map<String, dynamic>.from(messageEntry.value), currentUserId: '');
-            if (message.message.startsWith(imageTypeChat) ||
-                message.message.startsWith(audioTypeChat) ||
-                message.message.startsWith(videoTypeChat) ||
-                message.message.startsWith(docTypeChat)) {
-              final filePath = message.message.split(",").last;
+            if (message.message.base64String.isNotEmpty) {
+              final filePath = message.message.base64String;
               final file = File(filePath);
               if (await file.exists()) {
                 await file.delete();

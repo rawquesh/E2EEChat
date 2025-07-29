@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -61,7 +62,7 @@ class ChatRepository {
     required String username,
     required String nickname,
     required String receiverId,
-    required String message,
+    required ChatMessageData message,
     required int destructTimer,
   }) async {
     int timeInSecond = destructTimer * 60;
@@ -69,8 +70,10 @@ class ChatRepository {
     final body = jsonEncode({
       "sender_id": senderId,
       "receiver_id": receiverId,
-      //"message": message,
-      "message": {"message": message, "destructTimer": timeInSecond, "username": username, "nickname": nickname},
+      "message": message.toMap(),
+      "destructTimer": timeInSecond,
+      "username": username,
+      "nickname": nickname,
     });
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
 

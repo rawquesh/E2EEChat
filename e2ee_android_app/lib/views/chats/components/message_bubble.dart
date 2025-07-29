@@ -72,11 +72,8 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
       });
     }
 
-    if (widget.message.message.startsWith(imageTypeChat) ||
-        widget.message.message.startsWith(audioTypeChat) ||
-        widget.message.message.startsWith(videoTypeChat) ||
-        widget.message.message.startsWith(docTypeChat)) {
-      filePath = widget.message.message.split(",").last;
+    if (widget.message.message.type != ChatMessageType.Text.name) {
+      filePath = widget.message.message.base64String;
     }
   }
 
@@ -201,7 +198,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                             ],
                           ),
                           child:
-                              widget.message.message.startsWith(imageTypeChat)
+                              widget.message.message.type == ChatMessageType.Image.name
                                   ? filePath == null
                                       ? SizedBox()
                                       : InkWell(
@@ -215,8 +212,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                             fit: BoxFit.cover,
                                           ),
                                         )
-                                  : widget.message.message
-                                          .startsWith(audioTypeChat)
+                                  : widget.message.message.type == ChatMessageType.Audio.name
                                       ? filePath == null
                                           ? SizedBox()
                                           : InkWell(
@@ -252,8 +248,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                                 ),
                                               ),
                                             )
-                                      : widget.message.message
-                                              .startsWith(videoTypeChat)
+                                      : widget.message.message.type == ChatMessageType.Video.name
                                           ? filePath == null
                                               ? SizedBox()
                                               : InkWell(
@@ -281,8 +276,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                                     ),
                                                   ),
                                                 )
-                                          : widget.message.message
-                                                  .startsWith(docTypeChat)
+                                          : widget.message.message.type == ChatMessageType.Doc.name
                                               ? filePath == null
                                                   ? SizedBox()
                                                   : InkWell(
@@ -312,7 +306,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                                                       ),
                                                     )
                                               : Text(
-                                                  widget.message.message,
+                                                  widget.message.message.text,
                                                   style: TextStyle(
                                                     fontSize: 13,
                                                     color: widget.message.isMe
