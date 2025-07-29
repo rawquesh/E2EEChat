@@ -15,12 +15,15 @@ class ChatRepository {
   void initPusher({required String userId, required String token, required Function(dynamic data) onMessageReceived}) {
     final options = PusherOptions(
       key: 'sip6lkxyrl3d0um6vbv9',
-      cluster: 'mt1', 
+      cluster: 'mt1',
       host: '172.86.92.130.sslip.io',
       wsPort: 8080,
       wssPort: 443,
       encrypted: false,
-      authOptions: PusherAuthOptions('https://172.86.92.130.sslip.io/broadcasting/auth', headers: {'Authorization': 'Bearer $token'}),
+      authOptions: PusherAuthOptions(
+        'https://172.86.92.130.sslip.io/broadcasting/auth',
+        headers: {'Authorization': 'Bearer $token'},
+      ),
     );
 
     _pusher = PusherClient(options: options);
@@ -66,19 +69,20 @@ class ChatRepository {
     required int destructTimer,
   }) async {
     int timeInSecond = destructTimer * 60;
+
     final url = Uri.parse('$baseUrl/send-message');
-    final body = jsonEncode({
-      "sender_id": senderId,
-      "receiver_id": receiverId,
-      "message": message.toMap(),
-      "destructTimer": timeInSecond,
-      "username": username,
-      "nickname": nickname,
-    });
-    MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $body');
+    var map = message.toMap();
+    map.addAll({"username": username, "nickname": nickname, "destructTimer": timeInSecond});
+
+    final body = jsonEncode({"sender_id": senderId, "receiver_id": receiverId, "message": map});
+    MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $map base64String: ${message.base64String}');
 
     try {
-      final response = await http.post(url, headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}, body: body);
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"},
+        body: body,
+      );
       MyPrint.printOnConsole('[SEND DEBUG] Status: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {

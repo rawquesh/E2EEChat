@@ -194,7 +194,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     if (type == ChatMessageType.Text && (textMessage == null || textMessage.isEmpty)) return;
 
     MyPrint.printOnConsole(
-      'XXData: textMessage: $textMessage, fileBytes: ${fileBytes?.length}, fileName: $fileName type: ${type.name}',
+      'XXData: textMessage: $textMessage, fileBytes: ${fileBytes?.length}, fileName: $fileName type: ${type}',
     );
 
     _messageController.clear();
@@ -220,7 +220,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       fileName: fileName ?? '',
     );
 
-    _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
+     _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
       if (!success) {
         MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
         return;
@@ -228,15 +228,23 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
     });
 
-    // Save Unit8List to local storage
-    String path = await MyUtils.saveFileToDevice(fileBytes ?? Uint8List(0), fileName ?? 'message_file');
+    var newChatMessageData = ChatMessageData(
+      type: type.name,
+      text: textMessage ?? "",
+      base64String: "",
+      fileName: fileName ?? '',
+    );
 
-    chatMessageData.base64String = path;
+    // Save Unit8List to local storage
+    if (type != ChatMessageType.Text && fileBytes != null && fileName != null) {
+      String path = await MyUtils.saveFileToDevice(fileBytes, fileName);
+      newChatMessageData.base64String = path;
+    }
 
     final localMessage = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: currentUserId,
-      message: chatMessageData,
+      message: newChatMessageData,
       timestamp: DateTime.now(),
       isMe: true,
       status: 'sent', // Optimistically set status to 'sent'
