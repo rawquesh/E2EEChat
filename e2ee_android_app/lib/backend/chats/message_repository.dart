@@ -1,13 +1,9 @@
 import 'dart:io';
 
-import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
-import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:hive/hive.dart';
 
 class MessageRepository {
@@ -38,24 +34,24 @@ class MessageRepository {
       }
 
       // Decode and save file if message is not text
-      if (message.message.isNotEmpty) {
-        try {
-          final messageData = jsonDecode(message.message);
-          final type = messageData['type'];
+      // if (message.message.isNotEmpty) {
+      //   try {
+      //     final messageData = (message.message);
+      //     final type = messageData['type'];
 
-          if (type != 'text') {
-            final fileName = messageData['fileName'];
-            final base64String = messageData['base64String'];
-            final fileBytes = base64Decode(base64String);
-            final filePath = await MyUtils.saveFileToDevice(fileBytes, fileName);
-            message.message = filePath;
-          } else {
-            message.message = messageData['text'];
-          }
-        } catch (e) {
-          // Not a JSON, so it's a plain text message
-        }
-      }
+      //     if (type != 'text') {
+      //       final fileName = messageData['fileName'];
+      //       final base64String = messageData['base64String'];
+      //       final fileBytes = base64Decode(base64String);
+      //       final filePath = await MyUtils.saveFileToDevice(fileBytes, fileName);
+      //       message.message = filePath;
+      //     } else {
+      //       message.message = messageData['text'];
+      //     }
+      //   } catch (e) {
+      //     // Not a JSON, so it's a plain text message
+      //   }
+      // }
 
       if (!box.containsKey(key)) {
         await box.put(key, message.toMap());
@@ -146,10 +142,10 @@ class MessageRepository {
         );
 
         // If the message is a file path, delete the file
-        final file = File(message.message);
+        final file = File(message.message.base64String);
         if (await file.exists()) {
           // Check if it's a file path by checking if it has a file extension
-          if (message.message.contains('.')) {
+          if (message.message.base64String.contains('.')) {
             await file.delete();
           }
         }

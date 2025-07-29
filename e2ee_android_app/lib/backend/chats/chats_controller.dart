@@ -35,7 +35,7 @@ class ChatController {
 
   ChatUsersRepository get chatUsersRepository => _chatUsersRepository;
 
-  Future<bool> sendMessage({required String message, required int destructTimer}) async {
+  Future<bool> sendMessage({required ChatMessageData message, required int destructTimer}) async {
     final opponent = _chatProvider.currentOpponent.get();
     if (opponent == null) return false;
     final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);

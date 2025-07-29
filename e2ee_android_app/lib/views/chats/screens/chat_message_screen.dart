@@ -109,7 +109,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     // before we try to scroll.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -117,8 +121,14 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   void _initializeAnimations() {
     _iconAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
     _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
-    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
-    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
+    _iconAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
+    _widthAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
   }
 
   Future<void> _initializeChat() async {
@@ -179,56 +189,73 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     }
   }
 
-  void _sendMessage({
-    required ChatMessageType type,
-    String? textMessage,
-    Uint8List? fileBytes,
-    String? fileName,
-  }) async {
-    if (textMessage == null && fileBytes == null) return;
+  void _sendMessage({required ChatMessageType type, String? textMessage, Uint8List? fileBytes, String? fileName}) async {
+    if (type != ChatMessageType.Text && fileBytes == null) return;
+    if (type == ChatMessageType.Text && (textMessage == null || textMessage.isEmpty)) return;
+
+    MyPrint.printOnConsole(
+      'XXData: textMessage: $textMessage, fileBytes: ${fileBytes?.length}, fileName: $fileName type: ${type.name}',
+    );
 
     _messageController.clear();
 
-    DateTime destructTimestamp = DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
-    if (selectedTimeForDestruct == 0) {
-      destructTimestamp = DateTime.now().add(Duration(days: 365 * 100));
-    }
+    DateTime destructTimestamp = selectedTimeForDestruct == 0
+        ? DateTime.now().add(const Duration(days: 365 * 100))
+        : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
 
-    String messageContent;
-    Map<String, dynamic> messageData = {
-      'type': type.toString().split('.').last,
-    };
+    // String messageTextContent = (type == ChatMessageType.text) ? textMessage! : fileName!;
+    // String base64Content = (type != ChatMessageType.text && fileBytes != null) ? base64Encode(fileBytes) : '';
 
-    if (type == ChatMessageType.text) {
-      messageContent = textMessage!;
-      messageData['text'] = textMessage;
-    } else {
-      String base64String = base64Encode(fileBytes!);
-      messageContent = fileName!;
-      messageData.addAll({
-        'fileName': fileName,
-        'base64String': base64String,
-      });
-    }
+    // Map<String, dynamic> messageDataPayload = {
+    //   'type': type.name,
+    //   'text': (type == ChatMessageType.text) ? textMessage : null,
+    //   'fileName': (type != ChatMessageType.text) ? fileName : null,
+    //   'base64String': (type != ChatMessageType.text) ? base64Content : null,
+    // };
+
+    var chatMessageData = ChatMessageData(
+      type: type.name,
+      text: textMessage ?? "",
+      base64String: base64Encode(fileBytes ?? Uint8List(0)),
+      fileName: fileName ?? '',
+    );
+
+    _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
+      if (!success) {
+        MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
+        return;
+      }
+      MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
+    });
+
+    // Save Unit8List to local storage
+    String path = await MyUtils.saveFileToDevice(fileBytes ?? Uint8List(0), fileName ?? 'message_file');
+
+    chatMessageData.base64String = path;
 
     final localMessage = ChatMessageModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       senderId: currentUserId,
-      message: messageContent,
+      message: chatMessageData,
       timestamp: DateTime.now(),
       isMe: true,
-      status: 'sent',
+      status: 'sent', // Optimistically set status to 'sent'
       destructTimestamp: destructTimestamp,
     );
 
+    await _saveLocalMessage(localMessage: localMessage);
+  }
+
+  Future<void> _saveLocalMessage({required ChatMessageModel localMessage}) async {
     _chatProvider.addMessageFor(widget.user.id, localMessage);
     _loadedMessages += 1;
 
-    if (type != ChatMessageType.text) {
-      await MyUtils.saveFileToDevice(fileBytes!, fileName!);
-    }
-
     await _chatController.saveMessageToHive(chatId: widget.user.id, message: localMessage);
+
+    var text2 = localMessage.message.text;
+    if (text2.isEmpty) {
+      text2 = localMessage.message.type != ChatMessageType.Text.name ? localMessage.message.type : 'Text';
+    }
 
     await _chatController.addUserToChatList(
       ChatUserModel(
@@ -236,7 +263,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         nickname: widget.user.nickname,
         username: widget.user.username,
         avatar: widget.user.avatar,
-        lastMessage: localMessage.message,
+        lastMessage: text2,
         lastMessageTime: localMessage.timestamp.toIso8601String(),
         isOnline: widget.user.isOnline,
         unreadCount: 0,
@@ -244,16 +271,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     );
 
     _scrollToBottom();
-
-    final success = await _chatController.sendMessage(
-      message: jsonEncode(messageData),
-      destructTimer: selectedTimeForDestruct,
-    );
-
-    if (!success) {
-      MyPrint.printOnConsole('Send failed');
-      // Here you might want to update the message status to 'failed'
-    }
   }
 
   @override
@@ -273,20 +290,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       final file = File(filePath);
       final bytes = await file.readAsBytes();
       final fileName = filePath.split('/').last;
-      _sendMessage(
-        type: ChatMessageType.audio,
-        fileBytes: bytes,
-        fileName: fileName,
-      );
+      _sendMessage(type: ChatMessageType.Audio, fileBytes: bytes, fileName: fileName);
     });
   }
 
   void _onButtonPressed() {
     if (_hasText) {
-      _sendMessage(
-        type: ChatMessageType.text,
-        textMessage: _messageController.text.trim(),
-      );
+      _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim());
       _messageController.clear();
     } else {
       _startVoiceRecording();
@@ -454,11 +464,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       final file = File(result.files.single.path!);
       final fileName = result.files.single.name;
       final fileBytes = await file.readAsBytes();
-      _sendMessage(
-        type: ChatMessageType.doc,
-        fileBytes: fileBytes,
-        fileName: fileName,
-      );
+      _sendMessage(type: ChatMessageType.Doc, fileBytes: fileBytes, fileName: fileName);
     }
   }
 
@@ -680,17 +686,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       setState(() {
         fileBytes = bytes;
         if (isImage) {
-          _sendMessage(
-            type: ChatMessageType.image,
-            fileBytes: fileBytes,
-            fileName: fileName,
-          );
+          _sendMessage(type: ChatMessageType.Image, fileBytes: fileBytes, fileName: fileName);
         } else {
-          _sendMessage(
-            type: ChatMessageType.video,
-            fileBytes: fileBytes,
-            fileName: fileName,
-          );
+          _sendMessage(type: ChatMessageType.Video, fileBytes: fileBytes, fileName: fileName);
         }
       });
     }
@@ -764,12 +762,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
               final callController = callProvider.callController;
 
               // Start the call with the current chat user's ID
-              await callController.startCall(widget.user.id, receiverName: widget.user.nickname, receiverAvatar: widget.user.avatar);
+              await callController.startCall(
+                widget.user.id,
+                receiverName: widget.user.nickname,
+                receiverAvatar: widget.user.avatar,
+              );
 
               // Navigate to the new call screen
               if (mounted) {
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                  navigationOperationParameters: NavigationOperationParameters(
+                    context: context,
+                    navigationType: NavigationType.pushNamed,
+                  ),
                   arguments: VoiceCallScreenNavigationArguments(user: widget.user),
                 );
               }
@@ -814,11 +819,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(
-                      message: message,
-                      chatController: _chatController,
-                      chatId: widget.user.id,
-                    );
+                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.user.id);
                   },
                 );
               },
@@ -913,7 +914,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                           ),
                         ),
                         onSubmitted: (_) {
-                          _hasText ? _sendMessage(_messageController.text.trim()) : null;
+                          _hasText ? _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim()) : null;
                           _messageController.clear();
                         },
                       ),

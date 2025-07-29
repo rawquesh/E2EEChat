@@ -1,5 +1,3 @@
-
-
 const double verticalPadding = 8;
 const double horizontalPadding = 16;
 const double circularRadius = 12;
@@ -21,11 +19,7 @@ class ContentVisibilityTypes {
   static const String female = "female";
   static const String both = "both";
 
-  static List<String> get values => [
-    male,
-    female,
-    both,
-  ];
+  static List<String> get values => [male, female, both];
 }
 
 class Gender {
@@ -33,11 +27,7 @@ class Gender {
   static const String female = "female";
   static const String other = "other";
 
-  static List<String> get values => [
-    male,
-    female,
-    other,
-  ];
+  static List<String> get values => [male, female, other];
 }
 
 // {
@@ -56,11 +46,10 @@ class AppTypes {
   static const String withdraw = "withdraw";
 }
 
-class DiscountApplicableTo  {
-  static const String all  = "all" ;
-  static const String selected  = "selected";
+class DiscountApplicableTo {
+  static const String all = "all";
+  static const String selected = "selected";
 }
-
 
 class AppFlavors {
   static const String development = "development";
@@ -112,14 +101,11 @@ class AppAssets {
   static const String scanLotties = '$lottiesFolder/scan.json';
 }
 
-
 String commonUrl = "https://picsum.photos/400/400";
 
-enum ChatMessageType {
-  text,
-  image,
-  video,
-  audio,
-  doc,
-}
+enum ChatMessageType { Text, Image, Video, Audio, Doc }
 
+// String imageTypeChat = "image,";
+// String videoTypeChat = "video,";
+// String audioTypeChat = "audio,";
+// String docTypeChat = "doc,";
