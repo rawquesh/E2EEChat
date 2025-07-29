@@ -125,7 +125,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
 
-    // ✨ Issue 2 Fix: Clear unread count when entering the chat
     await _chatController.clearUnreadCount(widget.user.id);
 
     await _loadInitialMessages();
@@ -136,7 +135,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       }
     });
 
-    // ✨ Issue 1 Fix: Removed Pusher initialization from this screen.
     // The global handler in main_screen.dart will manage all incoming messages.
   }
 
@@ -237,7 +235,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
-    // ✨ Issue 1 Fix: Removed Pusher disposal call.
     _appState.setCurrentChattingWithUserId(null);
     _chatProvider.removeListener(_onProviderChange);
     super.dispose();

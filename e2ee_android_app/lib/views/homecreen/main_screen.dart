@@ -164,8 +164,8 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       // }
 
       final receiverId = messageData['receiver_id']?.toString() ?? '';
-      //final message = messageData['message']?.toString() ?? '';
       final message = messageData['message']['message']?.toString() ?? '';
+      MyPrint.printOnConsole("XXMessage Data : ${messageData['message']}");
       final tempDestructTimer = messageData['message']['destructTimer'] ?? 0;
       DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
       if (tempDestructTimer == 0) {

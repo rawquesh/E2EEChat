@@ -80,7 +80,6 @@ class ChatProvider extends CommonProvider {
     }
   }
 
-  // ✨ FIX: This method now correctly handles both initial loads and pagination.
   void addMessagesFor(
     String userId,
     List<ChatMessageModel> newMessages, {

@@ -213,7 +213,6 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                                       ),
                                     ),
                                   )
-                                // ✨ Issue 3 & 4 Fix: This button now correctly triggers the search
                                 : GestureDetector(
                                     onTap: _onSearch,
                                     child: Container(

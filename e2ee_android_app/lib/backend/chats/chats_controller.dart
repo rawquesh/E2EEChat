@@ -99,7 +99,6 @@ class ChatController {
       final chatUser = await _chatRepository.fetchChatUser(username: username, token: token);
 
       if (chatUser != null) {
-        // ✨ Issue 4 Fix: DO NOT save the user to Hive here.
         // Just update the provider to show the temporary search result.
         // await _chatUsersRepository.saveChatUser(chatUser);
 
@@ -141,7 +140,6 @@ class ChatController {
     }
   }
 
-  // ✨ Issue 2 Fix: New method to clear unread message count.
   Future<void> clearUnreadCount(String userId) async {
     try {
       final user = await _chatUsersRepository.getChatUser(userId);
