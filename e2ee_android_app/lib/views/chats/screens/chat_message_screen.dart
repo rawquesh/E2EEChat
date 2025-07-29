@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -10,6 +9,7 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:file_picker/file_picker.dart';
@@ -244,9 +244,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   void _startVoiceRecording() {
-    showAudioDialog(context, (base64Audio) {
-      print("Send this to API or chat: $base64Audio");
-      _sendMessage("$audioTypeChat$base64Audio");
+    showAudioDialog(context, (filePath) {
+      print("Send this to API or chat: $filePath");
+      _sendMessage("$audioTypeChat$filePath");
     });
   }
 
@@ -417,15 +417,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     FilePickerResult? result = await FilePicker.platform.pickFiles();
 
     if (result != null) {
-      final filePath = result.files.first.path;
-      Uint8List? fileBytes = await File(filePath!).readAsBytes();
-
-      print("File bytes: ${fileBytes}");
-      _sendMessage("$docTypeChat${base64Encode(fileBytes)}");
-        }
+      final file = File(result.files.single.path!);
+      final fileName = result.files.single.name;
+      final fileBytes = await file.readAsBytes();
+      final filePath = await MyUtils.saveFileToDevice(fileBytes, fileName);
+      _sendMessage("$docTypeChat$filePath");
+    }
   }
 
-  void showAudioDialog(BuildContext context, Function(String base64Audio) onSend) {
+  void showAudioDialog(BuildContext context, Function(String filePath) onSend) {
     final record = AudioRecorder();
     String? audioPath;
     bool isRecording = false;
@@ -458,8 +458,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 final file = File(audioPath!);
                 if (await file.exists()) {
                   final bytes = await file.readAsBytes();
-                  final base64Audio = base64Encode(bytes);
-                  onSend(base64Audio);
+                  final fileName = audioPath!.split('/').last;
+                  final filePath = await MyUtils.saveFileToDevice(bytes, fileName);
+                  onSend(filePath);
                 }
               }
               Navigator.of(context).pop();
@@ -638,12 +639,14 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   prepareForSendMessage(bool isImage) async {
     if (image != null) {
       final Uint8List bytes = await image!.readAsBytes();
+      final fileName = image!.name;
+      final filePath = await MyUtils.saveFileToDevice(bytes, fileName);
       setState(() {
         fileBytes = bytes;
         if (isImage) {
-          _sendMessage("$imageTypeChat${base64Encode(fileBytes!)}");
+          _sendMessage("$imageTypeChat$filePath");
         } else {
-          _sendMessage("$videoTypeChat${base64Encode(fileBytes!)}");
+          _sendMessage("$videoTypeChat$filePath");
         }
       });
     }
@@ -767,7 +770,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(message: message);
+                    return MessageBubble(
+                      message: message,
+                      chatController: _chatController,
+                      chatId: widget.user.id,
+                    );
                   },
                 );
               },

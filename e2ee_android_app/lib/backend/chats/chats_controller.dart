@@ -254,4 +254,20 @@ class ChatController {
       return false;
     }
   }
+
+  Future<bool> deleteMessage(String chatId, String messageId) async {
+    try {
+      final message = _chatProvider
+          .getMessagesFor(chatId)
+          .firstWhere((element) => element.id == messageId);
+      message.destructTimestamp = DateTime.now().subtract(Duration(seconds: 1));
+      await _messageRepository.addMessage(chatId: chatId, message: message);
+      await _messageRepository.deleteMessage(chatId, messageId);
+      _chatProvider.removeMessage(chatId, messageId);
+      return true;
+    } catch (e) {
+      MyPrint.printOnConsole('Error deleting message $messageId: $e');
+      return false;
+    }
+  }
 }

@@ -115,8 +115,8 @@ class AppAssets {
 
 String commonUrl = "https://picsum.photos/400/400";
 
-String imageTypeChat = "type=image;base64,";
-String videoTypeChat = "type=video;base64,";
-String audioTypeChat = "type=audio;base64,";
-String docTypeChat = "type=doc;base64,";
+String imageTypeChat = "type=image;path,";
+String videoTypeChat = "type=video;path,";
+String audioTypeChat = "type=audio;path,";
+String docTypeChat = "type=doc;path,";
 

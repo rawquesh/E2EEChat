@@ -134,4 +134,14 @@ class ChatProvider extends CommonProvider {
       notifyListeners();
     }
   }
+
+  void removeMessage(String userId, String messageId) {
+    final current = Map<String, List<ChatMessageModel>>.from(messages.getMap());
+    if (current.containsKey(userId)) {
+      final list = List<ChatMessageModel>.from(current[userId]!);
+      list.removeWhere((msg) => msg.id == messageId);
+      current[userId] = list;
+      messages.setMap(map: current, isClear: true, isNotify: true);
+    }
+  }
 }
