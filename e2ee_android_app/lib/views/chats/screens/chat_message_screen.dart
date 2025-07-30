@@ -262,7 +262,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     var text2 = localMessage.message.text;
     if (text2.isEmpty) {
-      text2 = localMessage.message.type != ChatMessageType.Text.name ? localMessage.message.type : 'Text';
+      text2 =  localMessage.message.type;
     }
 
     await _chatController.addUserToChatList(

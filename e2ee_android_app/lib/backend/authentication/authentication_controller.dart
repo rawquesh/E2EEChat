@@ -212,6 +212,8 @@ class AuthenticationController {
       final result = await _authenticationRepository.registerNewUserFromPayload(payload);
       final accessToken = result?['data']?['access_token'];
 
+      MyPrint.printOnConsole("Login result: $result");
+
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
         await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
