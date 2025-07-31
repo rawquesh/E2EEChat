@@ -34,6 +34,7 @@ import '../components/message_bubble.dart';
 
 class ChatMessageScreen extends StatefulWidget {
   final ChatUserModel user;
+  // TODO rename it to chatInfo
 
   const ChatMessageScreen({Key? key, required this.user}) : super(key: key);
 
@@ -214,7 +215,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     );
 
     // Single | group
-    var type = widget.chatInfo.type;
+    var chatType = widget.chatInfo.type;
 
     if (type == ChatRoomType.Single) {
       _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {

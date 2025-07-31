@@ -153,67 +153,55 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     MyPrint.printOnConsole("XXIncoming message data: $data");
     try {
       final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
-      debugPrint("messageData ==> ${payloadData}");
 
-      // --- Decryption (common for both types) ---
       final senderId = payloadData['sender_id']?.toString() ?? '';
-      if (senderId.isEmpty) return;
+      if (senderId.isEmpty) return; // Ignore invalid messages
 
       var encryptedMessagePayload = payloadData['message'];
       Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
         encryptedData: Map<String, dynamic>.from(encryptedMessagePayload),
-        myUserId: _currentUserId, // Assumes _currentUserId is available
+        myUserId: _currentUserId, // Assuming _currentUserId is a member variable
       );
 
       if (decryptedPayload == null) {
-        MyPrint.printOnConsole("Failed to decrypt message payload");
+        MyPrint.printOnConsole("Error: Failed to decrypt incoming message payload.");
         return;
       }
       var messageData = ChatMessageData.fromMap(decryptedPayload);
 
-      // --- Context-specific logic ---
       final String messageType = payloadData['type']?.toString() ?? 'single';
       final bool isMe = senderId == _currentUserId;
 
       String chatId;
       String chatName;
       String chatAvatarInitial;
-      String lastMessageForChatList;
 
       if (messageType == 'group') {
         chatId = payloadData['group_id']?.toString() ?? '';
         chatName = payloadData['group_name']?.toString() ?? 'Group';
-        // For groups, show the sender's name before the message
-        lastMessageForChatList = "${decryptedPayload['nickname']}: ${messageData.text}";
       } else {
         // 'single'
         final receiverId = payloadData['receiver_id']?.toString() ?? '';
         chatId = isMe ? receiverId : senderId;
-        chatName = decryptedPayload['nickname']?.toString() ?? 'Unknown';
-        lastMessageForChatList = messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type;
+        chatName = decryptedPayload['nickname']?.toString() ?? 'Unknown User';
       }
 
-      // Check for an empty chatId
       if (chatId.isEmpty) {
-        MyPrint.printOnConsole("Could not determine chatId. Ignoring message.");
+        MyPrint.printOnConsole("Error: Could not determine chatId from incoming message.");
         return;
       }
       chatAvatarInitial = chatName.isNotEmpty ? chatName[0].toUpperCase() : '?';
 
-      // --- Common logic using generic chatId ---
+      // Handle file paths for non-text messages
       if (messageData.type != ChatMessageType.Text.name) {
         String path = await MyUtils.saveFileToDevice(base64Decode(messageData.base64String), messageData.fileName);
         messageData.base64String = path;
-        if (messageType == 'group') {
-          lastMessageForChatList = "${decryptedPayload['nickname']}: ${messageData.type}";
-        }
       }
 
-      final tempDestructTimer = decryptedPayload['destructTimer'] ?? 0;
-      DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
-
+      // Create the core message model
       final time = DateTime.tryParse(payloadData['timestamp']?.toString() ?? '') ?? DateTime.now();
       final messageId = payloadData['id']?.toString() ?? MyUtils.getNewId();
+      final tempDestructTimer = decryptedPayload['destructTimer'] as int? ?? 0;
 
       final chatMessage = ChatMessageModel(
         id: messageId,
@@ -222,7 +210,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         timestamp: time,
         isMe: isMe,
         status: 'delivered',
-        destructTimestamp: destructTimer,
+        destructTimestamp: DateTime.now().add(Duration(seconds: tempDestructTimer)),
+        type: messageType,
+        groupId: payloadData['group_id'],
+        groupName: payloadData['group_name'],
       );
 
       _chatProvider.addMessageFor(chatId, chatMessage);
@@ -230,54 +221,58 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
       List<ChatUserModel> users = List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
       int index = users.indexWhere((u) => u.id == chatId);
-      ChatUserModel user;
+      ChatUserModel chatListItem;
+
+      // Determine what to show as the last message snippet in the chat list
+      String lastMessageSnippet = messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type;
+      if (messageType == 'group' && !isMe) {
+        lastMessageSnippet = "${decryptedPayload['nickname']}: $lastMessageSnippet";
+      }
 
       if (index == -1) {
-        user = ChatUserModel(
+        // Create new entry in the chat list
+        chatListItem = ChatUserModel(
           id: chatId,
           nickname: chatName,
-          username: messageType == 'group' ? chatId : (decryptedPayload['username']?.toString() ?? ''),
+          username: messageType == 'group' ? chatId : (decryptedPayload['username'] ?? ''),
           avatar: chatAvatarInitial,
-          lastMessage: lastMessageForChatList,
+          lastMessage: lastMessageSnippet,
           lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
-          isGroup: messageType == 'group', // Mark as group
+          isGroup: messageType == 'group',
         );
       } else {
-        user = users[index];
-        user.nickname = chatName; // Update name in case it changed
-        user.lastMessage = lastMessageForChatList;
-        user.lastMessageTime = time.toIso8601String();
+        // Update existing entry
+        chatListItem = users[index];
+        chatListItem.nickname = chatName; // Update name in case it changed
+        chatListItem.lastMessage = lastMessageSnippet;
+        chatListItem.lastMessageTime = time.toIso8601String();
         if (!isMe && _appState.currentChattingWithUserId != chatId) {
-          user.unreadCount = user.unreadCount + 1;
+          chatListItem.unreadCount++;
         }
       }
 
-      await _chatController.addUserToChatList(user);
+      await _chatController.addUserToChatList(chatListItem);
 
-      if (_appState.lifecycleState == AppLifecycleState.resumed) {
-        if (_appState.currentChattingWithUserId != otherUserId) {
-          _appState.showCustomNotification(
-            'New message from $nickname',
-            //message
-            messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
+      if (!isMe) {
+        final notificationTitle = messageType == 'group' ? chatName : (decryptedPayload['nickname'] ?? 'New Message');
+        final notificationBody = messageType == 'group' ? lastMessageSnippet : messageData.text;
+
+        if (_appState.lifecycleState == AppLifecycleState.resumed) {
+          // TODO fix this
+          if (_appState.currentChattingWithUserId != otherUserId) {
+            _appState.showCustomNotification('New message from $notificationTitle', notificationBody);
+          }
+        } else if (_appState.lifecycleState == AppLifecycleState.paused) {
+          NotificationService().showSystemNotification(
+            DateTime.now().millisecondsSinceEpoch.remainder(100000),
+            'New message from $notificationTitle',
+            messageData.type,
           );
         }
-      } else if (_appState.lifecycleState == AppLifecycleState.paused) {
-        NotificationService().showSystemNotification(
-          DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          'New message from $nickname',
-          //message,
-          messageData.type,
-        );
       }
-
-      // --- Notification Logic ---
-      if (!isMe) {
-        // Your notification logic can continue here, using `chatName` and `messageData`
-      }
-    } catch (e) {
-      MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");
+    } catch (e, s) {
+      MyPrint.printOnConsole("Error in _handleIncomingMessage: $e\n$s");
     }
   }
 

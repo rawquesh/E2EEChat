@@ -46,11 +46,21 @@ class ChatController {
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
     return _chatRepository.sendMessage(
       token: token,
+      // TODO this was the old way.
       senderId: senderId,
       receiverId: receiverId,
-      message: message,
       username: username,
-      nickname: nickname, 
+      nickname: nickname,
+      // TODO lets use Map to send the dynamic data, fix it accordingly
+      messageContext: {
+        'type': opponent.type,
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'username': username,
+        'nickname': nickname,
+        'recievers': opponent.recievers ?? [],
+      },
+      message: message,
       destructTimer: destructTimer,
     );
   }
@@ -59,7 +69,12 @@ class ChatController {
     await _messageRepository.addMessage(chatId: chatId, message: message);
   }
 
-  Future<List<ChatMessageModel>> fetchMessagesPage({required String chatId, required int limit, required int offset, required String currentUserId}) {
+  Future<List<ChatMessageModel>> fetchMessagesPage({
+    required String chatId,
+    required int limit,
+    required int offset,
+    required String currentUserId,
+  }) {
     return _messageRepository.getMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
   }
 
@@ -160,7 +175,11 @@ class ChatController {
     }
   }
 
-  Future<void> updateUserLastMessage({required String userId, required String lastMessage, required DateTime lastMessageTime}) async {
+  Future<void> updateUserLastMessage({
+    required String userId,
+    required String lastMessage,
+    required DateTime lastMessageTime,
+  }) async {
     await _chatUsersRepository.updateUserLastMessage(userId: userId, lastMessage: lastMessage, lastMessageTime: lastMessageTime);
     final List<ChatUserModel> currentUsers = List.from(_chatProvider.chatUsers.getList());
     final int userIndex = currentUsers.indexWhere((u) => u.id == userId);
@@ -220,7 +239,6 @@ class ChatController {
     try {
       final fetched = await fetchMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
 
-
       final ordered = fetched.reversed.toList();
       _chatProvider.addMessagesFor(chatId, ordered, clear: clear);
     } catch (e) {
@@ -257,9 +275,7 @@ class ChatController {
 
   Future<bool> deleteMessage(String chatId, String messageId) async {
     try {
-      final message = _chatProvider
-          .getMessagesFor(chatId)
-          .firstWhere((element) => element.id == messageId);
+      final message = _chatProvider.getMessagesFor(chatId).firstWhere((element) => element.id == messageId);
       message.destructTimestamp = DateTime.now().subtract(Duration(seconds: 1));
       await _messageRepository.addMessage(chatId: chatId, message: message);
       await _messageRepository.deleteMessage(chatId, messageId);
