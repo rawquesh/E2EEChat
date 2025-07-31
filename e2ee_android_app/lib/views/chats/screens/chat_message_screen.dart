@@ -206,16 +206,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         ? DateTime.now().add(const Duration(days: 365 * 100))
         : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
 
-    // String messageTextContent = (type == ChatMessageType.text) ? textMessage! : fileName!;
-    // String base64Content = (type != ChatMessageType.text && fileBytes != null) ? base64Encode(fileBytes) : '';
-
-    // Map<String, dynamic> messageDataPayload = {
-    //   'type': type.name,
-    //   'text': (type == ChatMessageType.text) ? textMessage : null,
-    //   'fileName': (type != ChatMessageType.text) ? fileName : null,
-    //   'base64String': (type != ChatMessageType.text) ? base64Content : null,
-    // };
-
     var chatMessageData = ChatMessageData(
       type: type.name,
       text: textMessage ?? "",
@@ -223,13 +213,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       fileName: fileName ?? '',
     );
 
-    _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
-      if (!success) {
-        MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
-        return;
-      }
-      MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
-    });
+    // Single | group
+    var type = widget.chatInfo.type;
+
+    if (type == ChatRoomType.Single) {
+      _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
+        if (!success) {
+          MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
+          return;
+        }
+        MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
+      });
+    } else {
+      // For group chat, we might need to handle group-specific logic.
+      opponentUserId = widget.user.id; // Assuming group chat uses the same user ID for now.
+    }
 
     var newChatMessageData = ChatMessageData(
       type: type.name,

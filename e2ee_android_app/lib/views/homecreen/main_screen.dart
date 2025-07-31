@@ -155,17 +155,14 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
       debugPrint("messageData ==> ${payloadData}");
 
+      // --- Decryption (common for both types) ---
       final senderId = payloadData['sender_id']?.toString() ?? '';
-      if (senderId.isEmpty) return; // Ignore invalid messages
-
-      final receiverId = payloadData['receiver_id']?.toString() ?? '';
+      if (senderId.isEmpty) return;
 
       var encryptedMessagePayload = payloadData['message'];
-
-      MyPrint.printOnConsole("XXEN Encrypted message payload: $encryptedMessagePayload");
-
       Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
-        Map<String, dynamic>.from(encryptedMessagePayload),
+        encryptedData: Map<String, dynamic>.from(encryptedMessagePayload),
+        myUserId: _currentUserId, // Assumes _currentUserId is available
       );
 
       if (decryptedPayload == null) {
@@ -174,67 +171,84 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       }
       var messageData = ChatMessageData.fromMap(decryptedPayload);
 
+      // --- Context-specific logic ---
+      final String messageType = payloadData['type']?.toString() ?? 'single';
+      final bool isMe = senderId == _currentUserId;
 
+      String chatId;
+      String chatName;
+      String chatAvatarInitial;
+      String lastMessageForChatList;
+
+      if (messageType == 'group') {
+        chatId = payloadData['group_id']?.toString() ?? '';
+        chatName = payloadData['group_name']?.toString() ?? 'Group';
+        // For groups, show the sender's name before the message
+        lastMessageForChatList = "${decryptedPayload['nickname']}: ${messageData.text}";
+      } else {
+        // 'single'
+        final receiverId = payloadData['receiver_id']?.toString() ?? '';
+        chatId = isMe ? receiverId : senderId;
+        chatName = decryptedPayload['nickname']?.toString() ?? 'Unknown';
+        lastMessageForChatList = messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type;
+      }
+
+      // Check for an empty chatId
+      if (chatId.isEmpty) {
+        MyPrint.printOnConsole("Could not determine chatId. Ignoring message.");
+        return;
+      }
+      chatAvatarInitial = chatName.isNotEmpty ? chatName[0].toUpperCase() : '?';
+
+      // --- Common logic using generic chatId ---
       if (messageData.type != ChatMessageType.Text.name) {
         String path = await MyUtils.saveFileToDevice(base64Decode(messageData.base64String), messageData.fileName);
         messageData.base64String = path;
+        if (messageType == 'group') {
+          lastMessageForChatList = "${decryptedPayload['nickname']}: ${messageData.type}";
+        }
       }
 
       final tempDestructTimer = decryptedPayload['destructTimer'] ?? 0;
       DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
-      if (tempDestructTimer == 0) {
-        destructTimer = DateTime.now().add(Duration(days: 365 * 100));
-      }
-      debugPrint("tempDestructTimer1 ==> ${tempDestructTimer}");
-      debugPrint("tempDestructTimer2 ==> ${destructTimer}");
 
-      final timeStr = payloadData['timestamp']?.toString() ?? '';
-      final bool isMe = senderId == _currentUserId;
-      final otherUserId = isMe ? receiverId : senderId;
-
-      final DateTime time = DateTime.tryParse(timeStr) ?? DateTime.now();
-      final String messageId = payloadData['id']?.toString() ?? '';
+      final time = DateTime.tryParse(payloadData['timestamp']?.toString() ?? '') ?? DateTime.now();
+      final messageId = payloadData['id']?.toString() ?? MyUtils.getNewId();
 
       final chatMessage = ChatMessageModel(
-        id: messageId.isNotEmpty ? messageId : MyUtils.getNewId(),
+        id: messageId,
         senderId: senderId,
         message: messageData,
-        timestamp: DateTime.now(),
+        timestamp: time,
         isMe: isMe,
         status: 'delivered',
         destructTimestamp: destructTimer,
       );
 
-      _chatProvider.addMessageFor(otherUserId, chatMessage);
-      await _chatController.saveMessageToHive(chatId: otherUserId, message: chatMessage);
+      _chatProvider.addMessageFor(chatId, chatMessage);
+      await _chatController.saveMessageToHive(chatId: chatId, message: chatMessage);
 
       List<ChatUserModel> users = List<ChatUserModel>.from(_chatProvider.chatUsers.getList());
-
-      int index = users.indexWhere((u) => u.id == otherUserId);
+      int index = users.indexWhere((u) => u.id == chatId);
       ChatUserModel user;
 
-      var username = decryptedPayload['username']?.toString() ?? '';
-
-      var nickname = decryptedPayload['nickname']?.toString() ?? '';
-
       if (index == -1) {
-        String avatar = username.isNotEmpty ? username[0].toUpperCase() : '?';
         user = ChatUserModel(
-          id: otherUserId,
-          nickname: nickname,
-          username: username,
-          avatar: avatar,
-          lastMessage: messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type,
+          id: chatId,
+          nickname: chatName,
+          username: messageType == 'group' ? chatId : (decryptedPayload['username']?.toString() ?? ''),
+          avatar: chatAvatarInitial,
+          lastMessage: lastMessageForChatList,
           lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
+          isGroup: messageType == 'group', // Mark as group
         );
       } else {
         user = users[index];
-        user.nickname = nickname; // Ensure name is up-to-date
-        user.username = username;
-        user.lastMessage = messageData.type == ChatMessageType.Text.name ? messageData.text : messageData.type;
+        user.nickname = chatName; // Update name in case it changed
+        user.lastMessage = lastMessageForChatList;
         user.lastMessageTime = time.toIso8601String();
-        if (!isMe && _appState.currentChattingWithUserId != otherUserId) {
+        if (!isMe && _appState.currentChattingWithUserId != chatId) {
           user.unreadCount = user.unreadCount + 1;
         }
       }
@@ -256,6 +270,11 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           //message,
           messageData.type,
         );
+      }
+
+      // --- Notification Logic ---
+      if (!isMe) {
+        // Your notification logic can continue here, using `chatName` and `messageData`
       }
     } catch (e) {
       MyPrint.printOnConsole("Error in _handleIncomingMessage: $e");

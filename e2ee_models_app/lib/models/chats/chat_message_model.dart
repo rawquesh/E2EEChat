@@ -11,7 +11,7 @@ class ChatMessageData {
   String base64String;
   String text;
   String fileName;
-
+  
   ChatMessageData({this.type = '', this.base64String = '', this.text = '', this.fileName = ''});
 
   // Factory constructor to create a ChatMessageData instance from a map.
@@ -24,7 +24,6 @@ class ChatMessageData {
     );
   }
 
-  // Method to convert a ChatMessageData instance to a map.
   Map<String, dynamic> toMap() {
     return {'type': type, 'base64String': base64String, 'text': text, 'fileName': fileName};
   }
@@ -38,7 +37,6 @@ class ChatMessageData {
 class ChatMessageModel {
   String id;
   String senderId;
-  // The 'message' field is now of type ChatMessageData.
   ChatMessageData message;
   DateTime timestamp;
   DateTime destructTimestamp;
@@ -62,15 +60,10 @@ class ChatMessageModel {
     ChatMessageData messageData;
     final dynamic messageValue = map['message'];
 
-    // This logic now handles nested maps from Hive correctly.
     if (messageValue is Map) {
-      // 1. Check if it's a Map of any kind (e.g., Map<dynamic, dynamic> from Hive).
-      // 2. Explicitly convert the nested map to the required Map<String, dynamic> type.
       final messageMap = Map<String, dynamic>.from(messageValue);
-      // 3. Now, create the ChatMessageData from the correctly typed map.
       messageData = ChatMessageData.fromMap(messageMap);
     } else if (messageValue is String && messageValue.isNotEmpty) {
-      // This part handles cases where the message might be a JSON string (good for fallback).
       try {
         final decodedMessage = json.decode(messageValue) as Map<String, dynamic>;
         messageData = ChatMessageData.fromMap(decodedMessage);
@@ -79,7 +72,6 @@ class ChatMessageModel {
         messageData = ChatMessageData(); // Fallback on decoding error.
       }
     } else {
-      // Fallback for null or other unexpected types.
       messageData = ChatMessageData();
     }
 
