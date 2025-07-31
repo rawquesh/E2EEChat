@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/views/my_app.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -11,6 +12,8 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
   return runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      await EncryptionService().init();
 
       AppInitController appInitController = AppInitController();
 

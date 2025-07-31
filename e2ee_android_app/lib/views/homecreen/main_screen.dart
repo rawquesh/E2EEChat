@@ -4,6 +4,7 @@ import 'package:e2ee_android_app/backend/webrtc/call_controller.dart';
 import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
 import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_android_app/configs/font_manager.dart';
+import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
 import 'package:e2ee_android_app/views/files_and_media/files_media_screen.dart';
@@ -157,30 +158,29 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       final senderId = payloadData['sender_id']?.toString() ?? '';
       if (senderId.isEmpty) return; // Ignore invalid messages
 
-      // if (username.isEmpty) {
-      //   MyPrint.printOnConsole(
-      //     "Username not in payload, fetching from API for ID: $senderId",
-      //   );
-      //   final fetchedUser = await _chatRepository.fetchChatUser(
-      //     userId: senderId,
-      //     token: _currentUserToken,
-      //   );
-      //   username = fetchedUser?.nickname ?? 'Unknown User';
-      // }
-
       final receiverId = payloadData['receiver_id']?.toString() ?? '';
-      // final message = messageData['message']['message']?.toString() ?? '';
 
-      var messageData = ChatMessageData.fromMap(payloadData['message'] ?? '{}');
+      var encryptedMessagePayload = payloadData['message'];
 
-      // Save Unit8List to local storage
+      MyPrint.printOnConsole("XXEN Encrypted message payload: $encryptedMessagePayload");
+
+      Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
+        Map<String, dynamic>.from(encryptedMessagePayload),
+      );
+
+      if (decryptedPayload == null) {
+        MyPrint.printOnConsole("Failed to decrypt message payload");
+        return;
+      }
+      var messageData = ChatMessageData.fromMap(decryptedPayload);
+
 
       if (messageData.type != ChatMessageType.Text.name) {
         String path = await MyUtils.saveFileToDevice(base64Decode(messageData.base64String), messageData.fileName);
         messageData.base64String = path;
       }
 
-      final tempDestructTimer = payloadData['message']['destructTimer'] ?? 0;
+      final tempDestructTimer = decryptedPayload['destructTimer'] ?? 0;
       DateTime destructTimer = DateTime.now().add(Duration(seconds: tempDestructTimer));
       if (tempDestructTimer == 0) {
         destructTimer = DateTime.now().add(Duration(days: 365 * 100));
@@ -213,9 +213,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       int index = users.indexWhere((u) => u.id == otherUserId);
       ChatUserModel user;
 
-      var username = payloadData['message']['username']?.toString() ?? '';
+      var username = decryptedPayload['username']?.toString() ?? '';
 
-      var nickname = payloadData['message']['nickname']?.toString() ?? '';
+      var nickname = decryptedPayload['nickname']?.toString() ?? '';
 
       if (index == -1) {
         String avatar = username.isNotEmpty ? username[0].toUpperCase() : '?';

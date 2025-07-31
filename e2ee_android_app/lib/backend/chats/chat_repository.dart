@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -74,7 +75,21 @@ class ChatRepository {
     var map = message.toMap();
     map.addAll({"username": username, "nickname": nickname, "destructTimer": timeInSecond});
 
-    final body = jsonEncode({"sender_id": senderId, "receiver_id": receiverId, "message": map});
+    // 1. Fetch recipient's public key and encrypt the payload
+    final encryptionService = EncryptionService();
+    final recipientPublicKeyPem = await encryptionService.fetchPublicKey(receiverId, token);
+
+    if (recipientPublicKeyPem == null) {
+      MyPrint.printOnConsole('XXEN Error: Could not fetch public key for receiver $receiverId');
+      return false;
+    }
+
+    var encryptedPayload = await encryptionService.encryptMessagePayload(
+      payload: map,
+      recipientPublicKeyPem: recipientPublicKeyPem,
+    );
+
+    final body = jsonEncode({"sender_id": senderId, "type": "single", "receiver_id": receiverId, "message": encryptedPayload});
     MyPrint.printOnConsole('[SEND DEBUG] POST $url with body: $map base64String: ${message.base64String}');
 
     try {
@@ -112,4 +127,47 @@ class ChatRepository {
       return null;
     }
   }
+
+Future<String?> fetchPublicKey({required String? userId, required String token}) async {
+  // 1. Guard against a null userId to prevent the error
+  if (userId == null || userId.isEmpty) {
+    MyPrint.printOnConsole("XXEN Error: userId is null or empty.");
+    return null;
+  }
+
+  final url = Uri.parse('$baseUrl/users/$userId/keys');
+
+  try {
+    final response = await http.get(
+      url,
+      headers: {
+        "Accept": "application/json",
+        "Authorization": "Bearer $token"
+      },
+    );
+
+    MyPrint.printOnConsole("Response status for user $userId: ${response.statusCode}");
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> body = json.decode(response.body);
+      final Map<String, dynamic>? data = body['data'];
+      final String? publicKey = data?['publicKey'];
+
+      if (publicKey != null && publicKey.isNotEmpty) {
+        MyPrint.printOnConsole('Successfully parsed publicKey!');
+        return publicKey;
+      } else {
+        MyPrint.printOnConsole('Error: publicKey key not found or is empty in the response data.');
+        return null;
+      }
+    } else {
+      MyPrint.printOnConsole("Failed to fetch key. Server responded with ${response.statusCode}: ${response.body}");
+      return null;
+    }
+  } catch (e) {
+    MyPrint.printOnConsole("An exception occurred during the network request: $e");
+    return null;
+  }
+}
+
 }

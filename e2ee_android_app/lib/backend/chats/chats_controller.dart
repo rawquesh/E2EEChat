@@ -219,6 +219,8 @@ class ChatController {
   }) async {
     try {
       final fetched = await fetchMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
+
+
       final ordered = fetched.reversed.toList();
       _chatProvider.addMessagesFor(chatId, ordered, clear: clear);
     } catch (e) {

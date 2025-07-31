@@ -15,16 +15,11 @@ class MessageRepository {
     );
   }
 
-  Future<void> addMessage({
-    required String chatId,
-    required ChatMessageModel message,
-  }) async {
+  Future<void> addMessage({required String chatId, required ChatMessageModel message}) async {
     final box = await _openBox(chatId);
     try {
       if (box == null) {
-        MyPrint.printOnConsole(
-          'Hive box for $chatId is null! Message not saved.',
-        );
+        MyPrint.printOnConsole('Hive box for $chatId is null! Message not saved.');
         return;
       }
       final key = message.id;
@@ -55,9 +50,7 @@ class MessageRepository {
 
       if (!box.containsKey(key)) {
         await box.put(key, message.toMap());
-        MyPrint.printOnConsole(
-          'Message saved: ${message.id} - ${message.message}',
-        );
+        MyPrint.printOnConsole('Message saved: ${message.id} - ${message.message}');
       } else {
         MyPrint.printOnConsole('Duplicate message ignored: ${message.id}');
       }
@@ -75,38 +68,27 @@ class MessageRepository {
     final box = await _openBox(chatId);
     if (box == null) return [];
     final entries = box.toMap().entries.toList();
+
     entries.sort((a, b) {
-      final at =
-          DateTime.tryParse(a.value['timestamp'] ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bt =
-          DateTime.tryParse(b.value['timestamp'] ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
+      final at = DateTime.tryParse(a.value['timestamp'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bt = DateTime.tryParse(b.value['timestamp'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bt.compareTo(at);
     });
     final page = entries.skip(offset).take(limit).toList();
-    return page
-        .map(
-          (e) => ChatMessageModel.fromMap(
-            Map<String, dynamic>.from(e.value),
-            currentUserId: currentUserId,
-          ),
-        )
-        .toList();
+
+    for (var entry in page) {
+      MyPrint.printOnConsole('MMMessage Data: ${entry.value}');
+    }
+
+    return page.map((e) => ChatMessageModel.fromMap(Map<String, dynamic>.from(e.value), currentUserId: currentUserId)).toList();
   }
 
-  Stream<ChatMessageModel?> watchMessages({
-    required String chatId,
-    required String currentUserId,
-  }) async* {
+  Stream<ChatMessageModel?> watchMessages({required String chatId, required String currentUserId}) async* {
     final box = await _openBox(chatId);
     if (box == null) return;
     await for (final event in box.watch()) {
       if (event.value != null) {
-        yield ChatMessageModel.fromMap(
-          Map<String, dynamic>.from(event.value),
-          currentUserId: currentUserId,
-        );
+        yield ChatMessageModel.fromMap(Map<String, dynamic>.from(event.value), currentUserId: currentUserId);
       }
     }
   }
@@ -136,10 +118,7 @@ class MessageRepository {
     try {
       final messageMap = box?.get(messageId);
       if (messageMap != null) {
-        final message = ChatMessageModel.fromMap(
-          Map<String, dynamic>.from(messageMap),
-          currentUserId: '',
-        );
+        final message = ChatMessageModel.fromMap(Map<String, dynamic>.from(messageMap), currentUserId: '');
 
         // If the message is a file path, delete the file
         final file = File(message.message.base64String);

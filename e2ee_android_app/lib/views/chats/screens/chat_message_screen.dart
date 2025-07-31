@@ -75,7 +75,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _chatController = ChatController(chatProvider: _chatProvider);
 
     _appState = context.read<AppState>();
-    _appState.setCurrentChattingWithUserId(widget.user.id);
+    // add below method in postcallbacks to ensure it runs after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appState.setCurrentChattingWithUserId(widget.user.id);
+    });
 
     opponentUserId = widget.user.id;
     opponentUsername = widget.user.nickname;
@@ -105,16 +108,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   void _scrollToBottom() {
-    // We use a post-frame callback to ensure the ListView has been updated
-    // before we try to scroll.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     });
   }
 
@@ -220,7 +223,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       fileName: fileName ?? '',
     );
 
-     _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
+    _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
       if (!success) {
         MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
         return;
@@ -262,7 +265,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     var text2 = localMessage.message.text;
     if (text2.isEmpty) {
-      text2 =  localMessage.message.type;
+      text2 = localMessage.message.type;
     }
 
     await _chatController.addUserToChatList(
@@ -287,7 +290,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
-    _appState.setCurrentChattingWithUserId(null);
+    // _appState.setCurrentChattingWithUserId(null);
     _chatProvider.removeListener(_onProviderChange);
     super.dispose();
   }

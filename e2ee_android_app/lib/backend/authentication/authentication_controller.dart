@@ -198,13 +198,16 @@ class AuthenticationController {
   Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
     try {
       MyPrint.printOnConsole("Generating keys for login...");
-      final keyBundle = await KeyManager.generateAndStoreKeys();
+
+      final myPublicKeyPem = await SecureStorageManager().getString(MySharedPreferenceVariables.myPublicKey);
+
+      MyPrint.printOnConsole("XXEN My public key: $myPublicKeyPem");
 
       Map<String, dynamic> payload = {
         "username": username,
         "password": password,
-        "publicKey": keyBundle['publicKey'],
-        "identityKey": keyBundle['identityKey'],
+        "publicKey": myPublicKeyPem,
+        "identityKey": "null",
       };
 
       MyPrint.printOnConsole("Login payload: $payload");
@@ -217,7 +220,7 @@ class AuthenticationController {
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
         await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
-        await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
+        // await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
 
         // Save current user id here!
         // await saveCurrentUserId(username: username, accessToken: accessToken);
