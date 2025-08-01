@@ -51,7 +51,7 @@ class ChatController {
       // receiverId: receiverId,
       // username: username,
       // nickname: nickname,
-      // TODO lets use Map to send the dynamic data, fix it accordingly
+      // TODO verify this also.
       messageContext: {
         'type': opponent.type.name.toLowerCase(),
         'sender_id': senderId,
@@ -59,7 +59,7 @@ class ChatController {
         'username': username,
         'nickname': nickname,
         'recievers': opponent.receivers ?? [],
-        'group_id': opponent.groupId,
+        'group_id': opponent.id,
         'group_name': opponent.groupName,
       },
       message: message,

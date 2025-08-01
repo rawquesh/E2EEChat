@@ -193,6 +193,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   void _sendMessage({required ChatMessageType type, String? textMessage, Uint8List? fileBytes, String? fileName}) async {
+    // TODO: on signle message it works fine, make sure to handle group messages properly.
     if (type != ChatMessageType.Text && fileBytes == null) return;
     if (type == ChatMessageType.Text && (textMessage == null || textMessage.isEmpty)) return;
 

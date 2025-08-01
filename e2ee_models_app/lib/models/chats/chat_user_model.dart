@@ -14,8 +14,7 @@ class ChatUserModel {
 
   // Group chat fields
   final ChatRoomType type;
-  final String? groupId;
-  final String? groupName;
+  final String? groupName;  
   final List<String>? receivers;
 
   ChatUserModel({
@@ -28,7 +27,6 @@ class ChatUserModel {
     this.isOnline = false,
     this.unreadCount = 0,
     this.type = ChatRoomType.Single,
-    this.groupId,
     this.groupName,
     this.receivers,
   });
@@ -51,7 +49,6 @@ class ChatUserModel {
       type: (ParsingHelper.parseStringMethod(map['type'])) == "group"
           ? ChatRoomType.Group
           : ChatRoomType.Single,
-      groupId: ParsingHelper.parseStringMethod(map['group_id']),
       groupName: ParsingHelper.parseStringMethod(map['group_name']),
       receivers: map['receivers'] == null
           ? []
@@ -70,7 +67,6 @@ class ChatUserModel {
       'is_online': isOnline,
       'unread_count': unreadCount,
       'type': type.name,
-      'group_id': groupId,
       'group_name': groupName,
       'receivers': receivers,
     };

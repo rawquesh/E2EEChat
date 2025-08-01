@@ -1,12 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MySharedPreferenceVariables {
-  static const String currentUserId = "currentUserId";
-  static const String authToken = "authToken";
-  static const String username = "username";
-  static const String nickname = "nickname";
-}
 
 class SharedPrefManager {
   Future<String?> getString(String key) async {

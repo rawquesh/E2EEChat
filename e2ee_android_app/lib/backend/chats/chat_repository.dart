@@ -76,7 +76,7 @@ class ChatRepository {
     });
 
 
-// TODO for this logic to work, make the necessary changes.
+// TODO verify this also.
     // Determine recipients for encryption
     List<String> recipientIds = [];
     if (messageContext['type'] == 'group') {
@@ -84,6 +84,11 @@ class ChatRepository {
     } else {
       recipientIds = [messageContext['receiver_id']];
     }
+
+    MyPrint.printOnConsole("XXEN Recipients for encryption: $recipientIds");
+    MyPrint.printOnConsole("XXEN data: ${innerMessagePayload}");
+
+
 
     // Encrypt the payload
     final encryptionService = EncryptionService();

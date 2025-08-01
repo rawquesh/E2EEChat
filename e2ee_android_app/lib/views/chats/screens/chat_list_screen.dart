@@ -1,4 +1,7 @@
+// import 'package:e2ee_android_app/utils/storage_manager.dart';
+// import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +13,7 @@ import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/notification/notification_service.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
-import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
+// import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 
 // Main Chat List Screen
 class ChatListScreen extends StatefulWidget {
@@ -142,14 +145,14 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           ),
                           const SizedBox(height: 16),
                           if (searchState == SearchState.loading)
-                            const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: CircularProgressIndicator(),
-                            )
+                            const Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator())
                           else if (searchState == SearchState.empty)
                             Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: Text("No users found", style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                              child: Text(
+                                "No users found",
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                              ),
                             )
                           else if (searchState == SearchState.error)
                             Padding(
@@ -195,16 +198,21 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                               spacing: 8.0,
                               runSpacing: 4.0,
                               children: selectedUsers
-                                  .map((user) => Chip(
-                                        label: Text(user.nickname, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
-                                        backgroundColor: Theme.of(context).colorScheme.primary,
-                                        deleteIcon: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onPrimary),
-                                        onDeleted: () {
-                                          setState(() {
-                                            selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
-                                          });
-                                        },
-                                      ))
+                                  .map(
+                                    (user) => Chip(
+                                      label: Text(
+                                        user.nickname,
+                                        style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+                                      ),
+                                      backgroundColor: Theme.of(context).colorScheme.primary,
+                                      deleteIcon: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                                      onDeleted: () {
+                                        setState(() {
+                                          selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
+                                        });
+                                      },
+                                    ),
+                                  )
                                   .toList(),
                             ),
                         ],
@@ -226,12 +234,15 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+
                     if (groupNameController.text.isNotEmpty && selectedUsers.isNotEmpty) {
                       final groupName = groupNameController.text.trim();
                       final groupId = DateTime.now().millisecondsSinceEpoch.toString();
                       final receivers = selectedUsers.map((user) => user.id).toList();
+                      // final myUserId = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
 
+                      // TODO this is not working properly, save all the group info.
                       final group = ChatUserModel(
                         id: groupId,
                         groupName: groupName,
@@ -241,25 +252,18 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                         lastMessageTime: DateTime.now().toIso8601String(),
                       );
 
+                      MyPrint.printOnConsole('XXGroup created: ${group.toMap()}');
                       _chatController.addUserToChatList(group);
 
                       _chatProvider.currentOpponent.set(value: group);
-                      _chatController.sendMessage(
-                        message: ChatMessageData(
-                          text: 'Welcome to the group!',
-                          type: 'Text',
-                        ),
-                        destructTimer: 0,
-                      );
+                      // _chatController.sendMessage(
+                      //   message: ChatMessageData(text: 'Welcome to the group!', type: 'Text'),
+                      //   destructTimer: 0,
+                      // );
 
                       _chatProvider.resetGroupSearch();
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatMessageScreen(chatInfo: group),
-                        ),
-                      );
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => ChatMessageScreen(chatInfo: group)));
                     }
                   },
                   child: Text('Create', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
@@ -354,7 +358,13 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           width: _isSearchFocused ? 2 : 1,
                         ),
                         boxShadow: _isSearchFocused
-                            ? [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2), blurRadius: 8, offset: Offset(0, 4))]
+                            ? [
+                                BoxShadow(
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ]
                             : [],
                       ),
                       child: Row(
@@ -371,7 +381,11 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                             child: TextField(
                               controller: _searchController,
                               focusNode: _searchFocusNode,
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Search conversations...',
                                 hintStyle: TextStyle(
@@ -439,7 +453,10 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           children: [
                             Container(
                               padding: EdgeInsets.all(20),
-                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(20)),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                               child: LoadingWidget(),
                             ),
                             SizedBox(height: 16),
@@ -480,11 +497,13 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                         subtitle: 'Start chatting to see your conversations here',
                       );
                     }
+                    
 
                     return ListView.builder(
                       padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
                       itemCount: users.length,
                       itemBuilder: (context, index) {
+                        MyPrint.printOnConsole('XXGroup ListView.builder: ${users[index].toMap()}');
                         final user = users[index];
                         return AnimatedContainer(
                           duration: Duration(milliseconds: 300),
