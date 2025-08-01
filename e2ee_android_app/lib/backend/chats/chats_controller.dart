@@ -137,23 +137,31 @@ class ChatController {
     }
   }
 
-  Future<List<ChatUserModel>> searchUsers(String query) async {
+  Future<void> searchUsers(String query) async {
     MyPrint.printOnConsole("searchUsers called with query: $query");
+    _chatProvider.groupSearchState.set(value: SearchState.loading, isNotify: true);
 
     try {
       final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
       MyPrint.printOnConsole("Token retrieved: $token");
-      if (token == null || token.isEmpty) return [];
+      if (token == null || token.isEmpty) {
+        _chatProvider.groupSearchState.set(value: SearchState.error, isNotify: true);
+        return;
+      }
 
-      // This is a placeholder for the actual API call
-      // In a real implementation, you would have an endpoint that returns a list of users
       final List<ChatUserModel> users = await _chatRepository.fetchChatUsers(query: query, token: token);
 
       MyPrint.printOnConsole('Users found: ${users.length}');
-      return users;
+      if (users.isNotEmpty) {
+        _chatProvider.groupCreationSearchResults.setList(list: users, isClear: true, isNotify: true);
+        _chatProvider.groupSearchState.set(value: SearchState.success, isNotify: true);
+      } else {
+        _chatProvider.groupCreationSearchResults.setList(list: [], isClear: true, isNotify: true);
+        _chatProvider.groupSearchState.set(value: SearchState.empty, isNotify: true);
+      }
     } catch (e) {
       MyPrint.printOnConsole('Error searching users: $e');
-      return [];
+      _chatProvider.groupSearchState.set(value: SearchState.error, isNotify: true);
     }
   }
 

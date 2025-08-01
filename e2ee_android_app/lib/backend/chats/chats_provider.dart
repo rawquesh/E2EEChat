@@ -25,6 +25,14 @@ class ChatProvider extends CommonProvider {
       value: SearchState.initial,
       notify: notify,
     );
+    groupSearchState = CommonProviderPrimitiveParameter<SearchState>(
+      value: SearchState.initial,
+      notify: notify,
+    );
+    groupCreationSearchResults = CommonProviderListParameter<ChatUserModel>(
+      list: <ChatUserModel>[],
+      notify: notify,
+    );
 
     messages = CommonProviderMapParameter<String, List<ChatMessageModel>>(
       map: <String, List<ChatMessageModel>>{},
@@ -40,11 +48,15 @@ class ChatProvider extends CommonProvider {
   late CommonProviderPrimitiveParameter<ChatUserModel?> currentOpponent;
   late CommonProviderMapParameter<String, List<ChatMessageModel>> messages;
   late CommonProviderPrimitiveParameter<SearchState> searchState;
+  late CommonProviderPrimitiveParameter<SearchState> groupSearchState;
+  late CommonProviderListParameter<ChatUserModel> groupCreationSearchResults;
 
   void reset() {
     chatUsers.setList(list: <ChatUserModel>[], isClear: true, isNotify: false);
     currentOpponent.set(value: null, isNotify: false);
     searchState.set(value: SearchState.initial, isNotify: false);
+    groupSearchState.set(value: SearchState.initial, isNotify: false);
+    groupCreationSearchResults.setList(list: <ChatUserModel>[], isClear: true, isNotify: false);
     messages.setMap(
       map: <String, List<ChatMessageModel>>{},
       isClear: true,
@@ -55,6 +67,11 @@ class ChatProvider extends CommonProvider {
 
   void resetSearch() {
     searchState.set(value: SearchState.initial, isNotify: true);
+  }
+
+  void resetGroupSearch() {
+    groupSearchState.set(value: SearchState.initial, isNotify: false);
+    groupCreationSearchResults.setList(list: [], isClear: true, isNotify: true);
   }
 
   List<ChatMessageModel> getMessagesFor(String userId) {

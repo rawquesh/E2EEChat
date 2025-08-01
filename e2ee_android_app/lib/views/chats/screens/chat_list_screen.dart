@@ -88,8 +88,6 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
     final groupNameController = TextEditingController();
     final userSearchController = TextEditingController();
     final List<ChatUserModel> selectedUsers = [];
-    final List<ChatUserModel> searchResults = [];
-    bool isSearching = false;
 
     showDialog(
       context: context,
@@ -97,89 +95,137 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Create Group'),
-              content: SingleChildScrollView(
-                child: Container(
-                  width: double.maxFinite,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: groupNameController,
-                        decoration: InputDecoration(labelText: 'Group Name'),
-                      ),
-                      TextField(
-                        controller: userSearchController,
-                        decoration: InputDecoration(
-                          labelText: 'Search Users',
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.search),
-                            onPressed: () async {
-                              setState(() {
-                                isSearching = true;
-                              });
-                              final query = userSearchController.text.trim();
-                              if (query.isNotEmpty) {
-                                final results = await _chatController.searchUsers(query);
-                                setState(() {
-                                  searchResults.clear();
-                                  searchResults.addAll(results);
-                                  isSearching = false;
-                                });
-                              } else {
-                                setState(() {
-                                  isSearching = false;
-                                });
-                              }
-                            },
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('Create New Group', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              content: Consumer<ChatProvider>(
+                builder: (context, chatProvider, child) {
+                  final searchResults = chatProvider.groupCreationSearchResults.getList();
+                  final searchState = chatProvider.groupSearchState.get();
+
+                  return SingleChildScrollView(
+                    child: Container(
+                      width: double.maxFinite,
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextField(
+                            controller: groupNameController,
+                            decoration: InputDecoration(
+                              labelText: 'Group Name',
+                              labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.background,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
                           ),
-                        ),
-                      ),
-                      if (isSearching)
-                        CircularProgressIndicator()
-                      else if (searchResults.isNotEmpty)
-                        Container(
-                          height: 150,
-                          child: ListView.builder(
-                            itemCount: searchResults.length,
-                            itemBuilder: (context, index) {
-                              final user = searchResults[index];
-                              final isSelected = selectedUsers.any((selectedUser) => selectedUser.id == user.id);
-                              return ListTile(
-                                title: Text(user.nickname),
-                                trailing: Checkbox(
-                                  value: isSelected,
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      if (value == true) {
-                                        if (!isSelected) {
-                                          selectedUsers.add(user);
-                                        }
-                                      } else {
-                                        selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
-                                      }
-                                    });
-                                  },
-                                ),
-                              );
-                            },
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: userSearchController,
+                            decoration: InputDecoration(
+                              labelText: 'Search Users',
+                              labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.background,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              suffixIcon: IconButton(
+                                icon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                                onPressed: () {
+                                  final query = userSearchController.text.trim();
+                                  if (query.isNotEmpty) {
+                                    _chatController.searchUsers(query);
+                                  }
+                                },
+                              ),
+                            ),
                           ),
-                        ),
-                      if (selectedUsers.isNotEmpty)
-                        Wrap(
-                          spacing: 8.0,
-                          children: selectedUsers.map((user) => Chip(label: Text(user.nickname))).toList(),
-                        ),
-                    ],
-                  ),
-                ),
+                          const SizedBox(height: 16),
+                          if (searchState == SearchState.loading)
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            )
+                          else if (searchState == SearchState.empty)
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text("No users found", style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                            )
+                          else if (searchState == SearchState.error)
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text("An error occurred", style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                            )
+                          else if (searchResults.isNotEmpty)
+                            Container(
+                              height: 150,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.background,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListView.builder(
+                                itemCount: searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final user = searchResults[index];
+                                  final isSelected = selectedUsers.any((selectedUser) => selectedUser.id == user.id);
+                                  return ListTile(
+                                    title: Text(user.nickname, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                                    trailing: Checkbox(
+                                      value: isSelected,
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          if (value == true) {
+                                            if (!isSelected) {
+                                              selectedUsers.add(user);
+                                            }
+                                          } else {
+                                            selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
+                                          }
+                                        });
+                                      },
+                                      activeColor: Theme.of(context).colorScheme.primary,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          if (selectedUsers.isNotEmpty)
+                            Wrap(
+                              spacing: 8.0,
+                              runSpacing: 4.0,
+                              children: selectedUsers
+                                  .map((user) => Chip(
+                                        label: Text(user.nickname, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
+                                        backgroundColor: Theme.of(context).colorScheme.primary,
+                                        deleteIcon: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                                        onDeleted: () {
+                                          setState(() {
+                                            selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
+                                          });
+                                        },
+                                      ))
+                                  .toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
+                  onPressed: () {
+                    _chatProvider.resetGroupSearch();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                 ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: () {
                     if (groupNameController.text.isNotEmpty && selectedUsers.isNotEmpty) {
                       final groupName = groupNameController.text.trim();
@@ -206,6 +252,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                         destructTimer: 0,
                       );
 
+                      _chatProvider.resetGroupSearch();
                       Navigator.pop(context);
                       Navigator.push(
                         context,
@@ -215,7 +262,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                       );
                     }
                   },
-                  child: Text('Create'),
+                  child: Text('Create', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
                 ),
               ],
             );
