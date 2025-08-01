@@ -149,11 +149,10 @@ class ChatController {
         return;
       }
 
-      final List<ChatUserModel> users = await _chatRepository.fetchChatUsers(query: query, token: token);
+      final ChatUserModel? user = await _chatRepository.fetchChatUser(username: query, token: token);
 
-      MyPrint.printOnConsole('Users found: ${users.length}');
-      if (users.isNotEmpty) {
-        _chatProvider.groupCreationSearchResults.setList(list: users, isClear: true, isNotify: true);
+      if (user != null) {
+        _chatProvider.groupCreationSearchResults.setList(list: [user], isClear: true, isNotify: true);
         _chatProvider.groupSearchState.set(value: SearchState.success, isNotify: true);
       } else {
         _chatProvider.groupCreationSearchResults.setList(list: [], isClear: true, isNotify: true);
