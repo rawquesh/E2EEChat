@@ -10,6 +10,7 @@ import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/notification/notification_service.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
+import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 
 // Main Chat List Screen
 class ChatListScreen extends StatefulWidget {
@@ -209,7 +210,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ChatMessageScreen(user: group),
+                          builder: (context) => ChatMessageScreen(chatInfo: group),
                         ),
                       );
                     }

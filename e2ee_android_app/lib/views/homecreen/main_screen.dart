@@ -211,10 +211,6 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         isMe: isMe,
         status: 'delivered',
         destructTimestamp: DateTime.now().add(Duration(seconds: tempDestructTimer)),
-        // TODO fix erros below
-        type: messageType,
-        groupId: payloadData['group_id'],
-        groupName: payloadData['group_name'],
       );
 
       _chatProvider.addMessageFor(chatId, chatMessage);
@@ -240,7 +236,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           lastMessage: lastMessageSnippet,
           lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
-          isGroup: messageType == 'group',
+          type: messageType == 'group' ? ChatRoomType.Group : ChatRoomType.Single,
         );
       } else {
         // Update existing entry
@@ -260,8 +256,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         final notificationBody = messageType == 'group' ? lastMessageSnippet : messageData.text;
 
         if (_appState.lifecycleState == AppLifecycleState.resumed) {
-          // TODO fix this
-          if (_appState.currentChattingWithUserId != otherUserId) {
+          if (_appState.currentChattingWithUserId != chatId) {
             _appState.showCustomNotification('New message from $notificationTitle', notificationBody);
           }
         } else if (_appState.lifecycleState == AppLifecycleState.paused) {
