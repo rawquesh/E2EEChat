@@ -216,6 +216,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     // Single | group
     var chatType = widget.chatInfo.type;
+// TODO change widget.user to widget.chatInfo
 
     if (type == ChatRoomType.Single) {
       _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {

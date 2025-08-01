@@ -211,6 +211,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         isMe: isMe,
         status: 'delivered',
         destructTimestamp: DateTime.now().add(Duration(seconds: tempDestructTimer)),
+        // TODO fix erros below
         type: messageType,
         groupId: payloadData['group_id'],
         groupName: payloadData['group_name'],

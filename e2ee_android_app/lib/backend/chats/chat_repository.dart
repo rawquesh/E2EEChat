@@ -75,6 +75,8 @@ class ChatRepository {
       "destructTimer": timeInSecond,
     });
 
+
+// TODO for this logic to work, make the necessary changes.
     // Determine recipients for encryption
     List<String> recipientIds = [];
     if (messageContext['type'] == 'group') {
