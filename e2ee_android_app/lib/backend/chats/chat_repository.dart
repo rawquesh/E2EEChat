@@ -144,6 +144,24 @@ class ChatRepository {
     }
   }
 
+  Future<List<ChatUserModel>> fetchChatUsers({required String query, required String token}) async {
+    final url = Uri.parse('$baseUrl/chat/get-opponents');
+    final body = jsonEncode({'query': query});
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer $token"},
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      final dynamic data = json.decode(response.body)['data'];
+      if (data is List) {
+        return data.map((user) => ChatUserModel.fromMap(user)).toList();
+      }
+    }
+    return [];
+  }
+
   Future<String?> fetchPublicKey({required String? userId, required String token}) async {
     // 1. Guard against a null userId to prevent the error
     if (userId == null || userId.isEmpty) {

@@ -17,12 +17,14 @@ class MessageBubble extends StatefulWidget {
   final ChatMessageModel message;
   final ChatController chatController;
   final String chatId;
+  final ChatRoomType chatRoomType;
 
   const MessageBubble(
       {Key? key,
       required this.message,
       required this.chatController,
-      required this.chatId})
+      required this.chatId,
+      required this.chatRoomType})
       : super(key: key);
 
   @override
@@ -168,6 +170,18 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                           ? CrossAxisAlignment.end
                           : CrossAxisAlignment.start,
                       children: [
+                        if (widget.chatRoomType == ChatRoomType.Group && !widget.message.isMe)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
+                            child: Text(
+                              widget.message.message.senderNickname ?? '',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: themeData.colorScheme.primary,
+                              ),
+                            ),
+                          ),
                         Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: 16,

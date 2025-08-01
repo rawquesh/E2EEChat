@@ -1,4 +1,6 @@
-// TODO add new filds to support group chat
+import 'package:e2ee_models_app/utils/parsing_helper.dart';
+
+enum ChatRoomType { Single, Group }
 
 class ChatUserModel {
   String id;
@@ -10,6 +12,12 @@ class ChatUserModel {
   bool isOnline;
   int unreadCount;
 
+  // Group chat fields
+  final ChatRoomType type;
+  final String? groupId;
+  final String? groupName;
+  final List<String>? receivers;
+
   ChatUserModel({
     this.id = '',
     this.nickname = '',
@@ -19,18 +27,35 @@ class ChatUserModel {
     this.lastMessageTime = '',
     this.isOnline = false,
     this.unreadCount = 0,
+    this.type = ChatRoomType.Single,
+    this.groupId,
+    this.groupName,
+    this.receivers,
   });
 
   factory ChatUserModel.fromMap(Map<String, dynamic> map) {
     return ChatUserModel(
-      id: map['id']?.toString() ?? '',
+      id: ParsingHelper.parseStringMethod(map['id']),
       nickname: map['name'] ?? map['username'] ?? '',
-      username: map['username'] ?? '',
-      avatar: (map['username'] ?? map['name'] ?? '').toString().isNotEmpty ? (map['username'] ?? map['name'])[0].toUpperCase() : '',
-      lastMessage: map['last_message'] ?? '',
-      lastMessageTime: map['last_message_time'] ?? '',
-      isOnline: map['is_online'] ?? false,
-      unreadCount: map['unread_count'] ?? 0,
+      username: ParsingHelper.parseStringMethod(map['username']),
+      avatar: (map['username'] ?? map['name'] ?? '')
+              .toString()
+              .isNotEmpty
+          ? (map['username'] ?? map['name'])[0].toUpperCase()
+          : '',
+      lastMessage: ParsingHelper.parseStringMethod(map['last_message']),
+      lastMessageTime:
+          ParsingHelper.parseStringMethod(map['last_message_time']),
+      isOnline: ParsingHelper.parseBoolMethod(map['is_online']),
+      unreadCount: ParsingHelper.parseIntMethod(map['unread_count']),
+      type: (ParsingHelper.parseStringMethod(map['type'])) == "group"
+          ? ChatRoomType.Group
+          : ChatRoomType.Single,
+      groupId: ParsingHelper.parseStringMethod(map['group_id']),
+      groupName: ParsingHelper.parseStringMethod(map['group_name']),
+      receivers: map['receivers'] == null
+          ? []
+          : List<String>.from(map['receivers']),
     );
   }
 
@@ -44,6 +69,10 @@ class ChatUserModel {
       'last_message_time': lastMessageTime,
       'is_online': isOnline,
       'unread_count': unreadCount,
+      'type': type.name,
+      'group_id': groupId,
+      'group_name': groupName,
+      'receivers': receivers,
     };
   }
 }

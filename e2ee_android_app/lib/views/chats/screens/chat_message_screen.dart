@@ -33,10 +33,9 @@ import '../../../configs/constants.dart';
 import '../components/message_bubble.dart';
 
 class ChatMessageScreen extends StatefulWidget {
-  final ChatUserModel user;
-  // TODO rename it to chatInfo
+  final ChatUserModel chatInfo;
 
-  const ChatMessageScreen({Key? key, required this.user}) : super(key: key);
+  const ChatMessageScreen({Key? key, required this.chatInfo}) : super(key: key);
 
   @override
   _ChatMessageScreenState createState() => _ChatMessageScreenState();
@@ -69,7 +68,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   @override
   void initState() {
-    MyPrint.printOnConsole(widget.user.toMap()..putIfAbsent("UserX", () => "UserX"));
+    MyPrint.printOnConsole(widget.chatInfo.toMap()..putIfAbsent("UserX", () => "UserX"));
 
     super.initState();
     _chatProvider = context.read<ChatProvider>();
@@ -78,11 +77,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _appState = context.read<AppState>();
     // add below method in postcallbacks to ensure it runs after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _appState.setCurrentChattingWithUserId(widget.user.id);
+      _appState.setCurrentChattingWithUserId(widget.chatInfo.id);
     });
 
-    opponentUserId = widget.user.id;
-    opponentUsername = widget.user.nickname;
+    opponentUserId = widget.chatInfo.id;
+    opponentUsername = widget.chatInfo.nickname;
 
     _initializeAnimations();
     _messageController.addListener(_onTextChanged);
@@ -93,7 +92,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   void _onProviderChange() {
     // This method listens for the specific self-destruct event
     final lastDeleted = _chatProvider.lastDeletedMessages;
-    if (lastDeleted != null && lastDeleted.chatId == widget.user.id) {
+    if (lastDeleted != null && lastDeleted.chatId == widget.chatInfo.id) {
       MyPrint.printOnConsole("[Real-time] Detected self-destruct for this chat. Reloading messages.");
 
       // Reset the pagination counter and reload messages from scratch
@@ -139,9 +138,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
     currentUserToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
 
-    _chatProvider.currentOpponent.set(value: widget.user, isNotify: false);
+    _chatProvider.currentOpponent.set(value: widget.chatInfo, isNotify: false);
 
-    await _chatController.clearUnreadCount(widget.user.id);
+    await _chatController.clearUnreadCount(widget.chatInfo.id);
 
     await _loadInitialMessages();
 
@@ -156,13 +155,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   Future<void> _loadInitialMessages() async {
     await _chatController.loadMessagesToProvider(
-      chatId: widget.user.id,
+      chatId: widget.chatInfo.id,
       limit: _pageSize,
       offset: _loadedMessages,
       currentUserId: currentUserId,
       clear: true,
     );
-    final fetchedCount = _chatProvider.getMessagesFor(widget.user.id).length;
+    final fetchedCount = _chatProvider.getMessagesFor(widget.chatInfo.id).length;
     _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _scrollToBottom();
@@ -171,13 +170,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   Future<void> _loadMoreMessages() async {
     _isLoadingMore = true;
     await _chatController.loadMessagesToProvider(
-      chatId: widget.user.id,
+      chatId: widget.chatInfo.id,
       limit: _pageSize,
       offset: _loadedMessages,
       currentUserId: currentUserId,
       clear: false,
     );
-    final fetchedCount = _chatProvider.getMessagesFor(widget.user.id).length;
+    final fetchedCount = _chatProvider.getMessagesFor(widget.chatInfo.id).length;
     _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _isLoadingMore = false;
@@ -212,13 +211,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       text: textMessage ?? "",
       base64String: base64Encode(fileBytes ?? Uint8List(0)),
       fileName: fileName ?? '',
+      senderNickname: opponentUsername,
     );
 
     // Single | group
     var chatType = widget.chatInfo.type;
-// TODO change widget.user to widget.chatInfo
 
-    if (type == ChatRoomType.Single) {
+    if (chatType == ChatRoomType.Single) {
       _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
         if (!success) {
           MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
@@ -228,7 +227,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       });
     } else {
       // For group chat, we might need to handle group-specific logic.
-      opponentUserId = widget.user.id; // Assuming group chat uses the same user ID for now.
+      opponentUserId = widget.chatInfo.id; // Assuming group chat uses the same user ID for now.
     }
 
     var newChatMessageData = ChatMessageData(
@@ -258,10 +257,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   Future<void> _saveLocalMessage({required ChatMessageModel localMessage}) async {
-    _chatProvider.addMessageFor(widget.user.id, localMessage);
+    _chatProvider.addMessageFor(widget.chatInfo.id, localMessage);
     _loadedMessages += 1;
 
-    await _chatController.saveMessageToHive(chatId: widget.user.id, message: localMessage);
+    await _chatController.saveMessageToHive(chatId: widget.chatInfo.id, message: localMessage);
 
     var text2 = localMessage.message.text;
     if (text2.isEmpty) {
@@ -270,13 +269,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     await _chatController.addUserToChatList(
       ChatUserModel(
-        id: widget.user.id,
-        nickname: widget.user.nickname,
-        username: widget.user.username,
-        avatar: widget.user.avatar,
+        id: widget.chatInfo.id,
+        nickname: widget.chatInfo.nickname,
+        username: widget.chatInfo.username,
+        avatar: widget.chatInfo.avatar,
         lastMessage: text2,
         lastMessageTime: localMessage.timestamp.toIso8601String(),
-        isOnline: widget.user.isOnline,
+        isOnline: widget.chatInfo.isOnline,
         unreadCount: 0,
       ),
     );
@@ -325,7 +324,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _chatController.clearChat(widget.user.id);
+              await _chatController.clearChat(widget.chatInfo.id);
             },
             child: const Text('Clear'),
           ),
@@ -345,7 +344,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await _chatController.deleteChat(widget.user.id);
+              await _chatController.deleteChat(widget.chatInfo.id);
               Navigator.pop(context);
             },
             child: const Text('Delete'),
@@ -727,12 +726,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                   decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
                   child: Center(
                     child: Text(
-                      widget.user.avatar,
+                      widget.chatInfo.avatar,
                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
-                if (widget.user.isOnline)
+                if (widget.chatInfo.isOnline)
                   Positioned(
                     right: 0,
                     bottom: 0,
@@ -754,10 +753,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.user.nickname,
+                    widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
                   ),
-                  Text(widget.user.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  if (widget.chatInfo.type == ChatRoomType.Group)
+                    Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
+                  else
+                    Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -774,9 +776,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
               // Start the call with the current chat user's ID
               await callController.startCall(
-                widget.user.id,
-                receiverName: widget.user.nickname,
-                receiverAvatar: widget.user.avatar,
+                widget.chatInfo.id,
+                receiverName: widget.chatInfo.nickname,
+                receiverAvatar: widget.chatInfo.avatar,
               );
 
               // Navigate to the new call screen
@@ -786,7 +788,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     context: context,
                     navigationType: NavigationType.pushNamed,
                   ),
-                  arguments: VoiceCallScreenNavigationArguments(user: widget.user),
+                  arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
                 );
               }
             },
@@ -812,7 +814,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           Expanded(
             child: Consumer<ChatProvider>(
               builder: (context, chatProvider, child) {
-                final msgList = chatProvider.getMessagesFor(widget.user.id);
+                final msgList = chatProvider.getMessagesFor(widget.chatInfo.id);
                 final isLoadingMore = _isLoadingMore;
 
                 return ListView.builder(
@@ -830,7 +832,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.user.id);
+                    return MessageBubble(
+                      message: message,
+                      chatController: _chatController,
+                      chatId: widget.chatInfo.id,
+                      chatRoomType: widget.chatInfo.type,
+                    );
                   },
                 );
               },

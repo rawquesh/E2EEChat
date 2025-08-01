@@ -53,12 +53,14 @@ class ChatController {
       nickname: nickname,
       // TODO lets use Map to send the dynamic data, fix it accordingly
       messageContext: {
-        'type': opponent.type,
+        'type': opponent.type.name.toLowerCase(),
         'sender_id': senderId,
         'receiver_id': receiverId,
         'username': username,
         'nickname': nickname,
-        'recievers': opponent.recievers ?? [],
+        'recievers': opponent.receivers ?? [],
+        'group_id': opponent.groupId,
+        'group_name': opponent.groupName,
       },
       message: message,
       destructTimer: destructTimer,
@@ -132,6 +134,26 @@ class ChatController {
       _chatProvider.searchState.set(value: SearchState.error, isNotify: true);
       MyPrint.printOnConsole('Error searching user: $e');
       return false;
+    }
+  }
+
+  Future<List<ChatUserModel>> searchUsers(String query) async {
+    MyPrint.printOnConsole("searchUsers called with query: $query");
+
+    try {
+      final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+      MyPrint.printOnConsole("Token retrieved: $token");
+      if (token == null || token.isEmpty) return [];
+
+      // This is a placeholder for the actual API call
+      // In a real implementation, you would have an endpoint that returns a list of users
+      final List<ChatUserModel> users = await _chatRepository.fetchChatUsers(query: query, token: token);
+
+      MyPrint.printOnConsole('Users found: ${users.length}');
+      return users;
+    } catch (e) {
+      MyPrint.printOnConsole('Error searching users: $e');
+      return [];
     }
   }
 

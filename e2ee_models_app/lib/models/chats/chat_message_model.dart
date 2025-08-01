@@ -11,8 +11,9 @@ class ChatMessageData {
   String base64String;
   String text;
   String fileName;
-  
-  ChatMessageData({this.type = '', this.base64String = '', this.text = '', this.fileName = ''});
+  String? senderNickname;
+
+  ChatMessageData({this.type = '', this.base64String = '', this.text = '', this.fileName = '', this.senderNickname});
 
   // Factory constructor to create a ChatMessageData instance from a map.
   factory ChatMessageData.fromMap(Map<String, dynamic> map) {
@@ -21,11 +22,12 @@ class ChatMessageData {
       base64String: ParsingHelper.parseStringMethod(map['base64String']),
       text: ParsingHelper.parseStringMethod(map['text']),
       fileName: ParsingHelper.parseStringMethod(map['fileName']),
+      senderNickname: ParsingHelper.parseStringMethod(map['sender_nickname']),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'type': type, 'base64String': base64String, 'text': text, 'fileName': fileName};
+    return {'type': type, 'base64String': base64String, 'text': text, 'fileName': fileName, 'sender_nickname': senderNickname};
   }
 
   @override

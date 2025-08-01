@@ -214,7 +214,7 @@ class _ChatListItemState extends State<ChatListItem>
                           children: [
                             Expanded(
                               child: Text(
-                                widget.user.nickname,
+                                widget.user.type == ChatRoomType.Group ? widget.user.groupName ?? '' : widget.user.nickname,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -314,15 +314,17 @@ class _ChatListItemState extends State<ChatListItem>
             ],
           ),
           child: Center(
-            child: Text(
-              widget.user.avatar,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
-            ),
+            child: widget.user.type == ChatRoomType.Group
+                ? Icon(Icons.group, color: Colors.white, size: 28)
+                : Text(
+                    widget.user.avatar,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
           ),
         ),
 

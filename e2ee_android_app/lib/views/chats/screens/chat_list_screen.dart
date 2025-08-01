@@ -83,6 +83,147 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
     setState(() {});
   }
 
+  void _showCreateGroupDialog() {
+    final groupNameController = TextEditingController();
+    final userSearchController = TextEditingController();
+    final List<ChatUserModel> selectedUsers = [];
+    final List<ChatUserModel> searchResults = [];
+    bool isSearching = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Create Group'),
+              content: SingleChildScrollView(
+                child: Container(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: groupNameController,
+                        decoration: InputDecoration(labelText: 'Group Name'),
+                      ),
+                      TextField(
+                        controller: userSearchController,
+                        decoration: InputDecoration(
+                          labelText: 'Search Users',
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.search),
+                            onPressed: () async {
+                              setState(() {
+                                isSearching = true;
+                              });
+                              final query = userSearchController.text.trim();
+                              if (query.isNotEmpty) {
+                                final results = await _chatController.searchUsers(query);
+                                setState(() {
+                                  searchResults.clear();
+                                  searchResults.addAll(results);
+                                  isSearching = false;
+                                });
+                              } else {
+                                setState(() {
+                                  isSearching = false;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      if (isSearching)
+                        CircularProgressIndicator()
+                      else if (searchResults.isNotEmpty)
+                        Container(
+                          height: 150,
+                          child: ListView.builder(
+                            itemCount: searchResults.length,
+                            itemBuilder: (context, index) {
+                              final user = searchResults[index];
+                              final isSelected = selectedUsers.any((selectedUser) => selectedUser.id == user.id);
+                              return ListTile(
+                                title: Text(user.nickname),
+                                trailing: Checkbox(
+                                  value: isSelected,
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        if (!isSelected) {
+                                          selectedUsers.add(user);
+                                        }
+                                      } else {
+                                        selectedUsers.removeWhere((selectedUser) => selectedUser.id == user.id);
+                                      }
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      if (selectedUsers.isNotEmpty)
+                        Wrap(
+                          spacing: 8.0,
+                          children: selectedUsers.map((user) => Chip(label: Text(user.nickname))).toList(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (groupNameController.text.isNotEmpty && selectedUsers.isNotEmpty) {
+                      final groupName = groupNameController.text.trim();
+                      final groupId = DateTime.now().millisecondsSinceEpoch.toString();
+                      final receivers = selectedUsers.map((user) => user.id).toList();
+
+                      final group = ChatUserModel(
+                        id: groupId,
+                        groupName: groupName,
+                        type: ChatRoomType.Group,
+                        receivers: receivers,
+                        lastMessage: 'Group created',
+                        lastMessageTime: DateTime.now().toIso8601String(),
+                      );
+
+                      _chatController.addUserToChatList(group);
+
+                      _chatProvider.currentOpponent.set(value: group);
+                      _chatController.sendMessage(
+                        message: ChatMessageData(
+                          text: 'Welcome to the group!',
+                          type: 'Text',
+                        ),
+                        destructTimer: 0,
+                      );
+
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatMessageScreen(user: group),
+                        ),
+                      );
+                    }
+                  },
+                  child: Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
@@ -140,6 +281,10 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                               ),
                             ),
                           ],
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add, color: Theme.of(context).colorScheme.primary),
+                          onPressed: _showCreateGroupDialog,
                         ),
                       ],
                     ),
