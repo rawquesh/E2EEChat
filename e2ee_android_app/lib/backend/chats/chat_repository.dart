@@ -95,6 +95,8 @@ class ChatRepository {
       "message": encryptedPayload,
     });
 
+    printLongText('[SEND DEBUG] Final Request Body: $body');
+
     // Send the request
     final url = Uri.parse('$baseUrl/send-message');
     MyPrint.printOnConsole('[SEND DEBUG] POST $url');
@@ -106,6 +108,14 @@ class ChatRepository {
     } catch (e) {
       MyPrint.printOnConsole('[SEND DEBUG] Error sending message: $e');
       return false;
+    }
+  }
+
+  void printLongText(String text) {
+    const int chunkSize = 800;
+    for (var i = 0; i < text.length; i += chunkSize) {
+      final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
+      print(text.substring(i, end));
     }
   }
 

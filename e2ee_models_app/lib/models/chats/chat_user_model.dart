@@ -14,7 +14,7 @@ class ChatUserModel {
 
   // Group chat fields
   final ChatRoomType type;
-  final String? groupName;  
+  final String? groupName;
   final List<String>? receivers;
 
   ChatUserModel({
@@ -37,16 +37,16 @@ class ChatUserModel {
       nickname: map['name'] ?? map['username'] ?? '',
       username: ParsingHelper.parseStringMethod(map['username']),
       avatar: (map['username'] ?? map['name'] ?? '')
-              .toString()
-              .isNotEmpty
+          .toString()
+          .isNotEmpty
           ? (map['username'] ?? map['name'])[0].toUpperCase()
           : '',
       lastMessage: ParsingHelper.parseStringMethod(map['last_message']),
       lastMessageTime:
-          ParsingHelper.parseStringMethod(map['last_message_time']),
+      ParsingHelper.parseStringMethod(map['last_message_time']),
       isOnline: ParsingHelper.parseBoolMethod(map['is_online']),
       unreadCount: ParsingHelper.parseIntMethod(map['unread_count']),
-      type: (ParsingHelper.parseStringMethod(map['type'])) == "group"
+      type: (ParsingHelper.parseStringMethod(map['type']).toLowerCase()) == "group"
           ? ChatRoomType.Group
           : ChatRoomType.Single,
       groupName: ParsingHelper.parseStringMethod(map['group_name']),
