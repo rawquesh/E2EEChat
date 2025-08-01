@@ -105,7 +105,7 @@ String commonUrl = "https://picsum.photos/400/400";
 
 enum ChatMessageType { Text, Image, Video, Audio, Doc }
 
-enum ChatRoomType { Single, Group }
+// enum ChatRoomType { Single, Group }
 
 // String imageTypeChat = "image,";
 // String videoTypeChat = "video,";

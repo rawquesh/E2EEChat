@@ -9,6 +9,7 @@
 # packages, and plugins designed to encourage good coding practices.
 analyzer:
   errors:
+    constant_identifier_names: ignore
     depend_on_referenced_packages: ignore
     deprecated_member_use: ignore
     must_be_immutable: ignore

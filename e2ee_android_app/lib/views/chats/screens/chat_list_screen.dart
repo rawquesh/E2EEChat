@@ -449,7 +449,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                               Navigator.push(
                                 context,
                                 PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) => ChatMessageScreen(user: user),
+                                  pageBuilder: (context, animation, secondaryAnimation) => ChatMessageScreen(chatInfo: user),
                                   transitionsBuilder: (context, animation, secondaryAnimation, child) {
                                     const begin = Offset(1.0, 0.0);
                                     const end = Offset.zero;

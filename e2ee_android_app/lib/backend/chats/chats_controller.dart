@@ -46,11 +46,11 @@ class ChatController {
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
     return _chatRepository.sendMessage(
       token: token,
-      // TODO this was the old way.
-      senderId: senderId,
-      receiverId: receiverId,
-      username: username,
-      nickname: nickname,
+      // // TODO this was the old way.
+      // senderId: senderId,
+      // receiverId: receiverId,
+      // username: username,
+      // nickname: nickname,
       // TODO lets use Map to send the dynamic data, fix it accordingly
       messageContext: {
         'type': opponent.type.name.toLowerCase(),
