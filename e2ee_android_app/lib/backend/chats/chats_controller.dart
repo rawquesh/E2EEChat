@@ -205,8 +205,8 @@ class ChatController {
         lastMessageTime: lastMessageTime.toIso8601String(),
         isOnline: currentUsers[userIndex].isOnline,
         unreadCount: currentUsers[userIndex].unreadCount,
-        groupName: currentUsers[userIndex].groupName,
         type: currentUsers[userIndex].type,
+        groupName: currentUsers[userIndex].groupName,
         receivers: currentUsers[userIndex].receivers,
       );
       currentUsers[userIndex] = updatedUser;

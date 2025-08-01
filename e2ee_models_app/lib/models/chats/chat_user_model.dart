@@ -66,7 +66,7 @@ class ChatUserModel {
       'last_message_time': lastMessageTime,
       'is_online': isOnline,
       'unread_count': unreadCount,
-      'type': type.name,
+      'type': type.name.toLowerCase(),
       'group_name': groupName,
       'receivers': receivers,
     };
