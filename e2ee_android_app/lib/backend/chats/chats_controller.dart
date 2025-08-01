@@ -37,6 +37,8 @@ class ChatController {
     final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
+    final avatarUrl = await SharedPrefManager().getString('profile_pic_url'); // Get avatar URL
+
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
 
     Map<String, dynamic> messageContext;
@@ -50,7 +52,7 @@ class ChatController {
     // Add sender's info to the message data itself
     message.username = username;
     message.nickname = nickname;
-    message.avatar = nickname.isNotEmpty ? nickname[0].toUpperCase() : "?";
+    message.avatar = avatarUrl; // Pass avatarUrl
 
     return _chatRepository.sendMessage(token: token, messageContext: messageContext, message: message, destructTimer: destructTimer);
   }

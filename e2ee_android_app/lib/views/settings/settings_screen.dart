@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
@@ -10,6 +12,7 @@ import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../backend/authentication/authentication_controller.dart';
@@ -31,6 +34,44 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   late AuthenticationController authenticationController;
   late AuthenticationProvider authenticationProvider;
   late MyUserController userController;
+
+  File? _profileImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _profileImage = File(image.path);
+      });
+      // Immediately try to upload the new image
+      await _uploadProfilePicture();
+    }
+  }
+
+  Future<void> _uploadProfilePicture() async {
+    if (_profileImage == null) return;
+
+    final success = await userController.updateProfile(name: nickname, profilePhoto: _profileImage);
+
+    if (success) {
+      MyToast.showSuccess(context: context, msg: 'Profile picture updated');
+      // The profile picture URL will be saved to SharedPreferences by the controller.
+      // We can then reload it here if we want to display the updated image immediately.
+      _loadProfilePicture();
+    } else {
+      MyToast.showError(context: context, msg: 'Failed to update profile picture');
+    }
+  }
+
+  Future<void> _loadProfilePicture() async {
+    final profilePicPath = await SharedPrefManager().getString('profile_pic_path');
+    if (profilePicPath != null && profilePicPath.isNotEmpty) {
+      setState(() {
+        _profileImage = File(profilePicPath);
+      });
+    }
+  }
 
   Future<void> _showEditNameDialog() async {
     final TextEditingController controller = TextEditingController(text: nickname);
@@ -74,8 +115,6 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     setState(() {});
   }
 
-
-
   Future<void> _logoutAndWipeData() async {
     await authenticationController.logout();
     await authenticationController.wipeAllAuthData();
@@ -94,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
     userController = MyUserController(repository: UserRepository(), authenticationProvider: authenticationProvider);
     _getNames();
+    _loadProfilePicture();
   }
 
   @override
@@ -131,21 +171,38 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                 child: Center(
                   child: Column(
                     children: [
-                      // User Initial
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.grey[800] : Styles.grey400,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 6))],
-                        ),
-                        child: Center(
-                          child: Text(
-                            username.isNotEmpty ? username[0].toUpperCase() : "?",
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      // User Initial with Edit Button
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: isDark ? Colors.grey[800] : Styles.grey400,
+                            backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                            child: _profileImage == null
+                                ? Text(
+                                    username.isNotEmpty ? username[0].toUpperCase() : "?",
+                                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                                  )
+                                : null,
                           ),
-                        ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                height: 30,
+                                width: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: accentColor,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: Icon(Icons.edit, color: Colors.white, size: 16),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 10),
                       // Username
@@ -154,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: isDark ? Colors.white : Colors.black87),
                       ),
                       Text(
-                        "@"+ username,
+                        "@" + username,
                         style: TextStyle(fontWeight: FontWeight.normal, fontSize: 14, color: isDark ? Colors.white : Colors.black87),
                       ),
                     ],
@@ -244,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
     return Column(
       children: [
         ListTile(
-          leading: Icon(icon, color:  Styles.grey400),
+          leading: Icon(icon, color: Styles.grey400),
           title: Text(title, style: TextStyle(fontSize: 12)),
           trailing: Icon(Icons.chevron_right),
           onTap: onTap,
@@ -274,10 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                       "Biometric Login",
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                     ),
-                    Text(
-                      _biometricEnabled ? "Enabled" : "Disabled",
-                      style: TextStyle(fontSize: 11.5, color: _biometricEnabled ? Colors.green[700] : Colors.grey[600]),
-                    ),
+                    Text(_biometricEnabled ? "Enabled" : "Disabled", style: TextStyle(fontSize: 11.5, color: _biometricEnabled ? Colors.green[700] : Colors.grey[600])),
                   ],
                 ),
               ),

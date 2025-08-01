@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -10,9 +11,8 @@ import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 
-import '../../../configs/constants.dart';
-
 import '../../../backend/chats/chats_controller.dart';
+import '../../../configs/constants.dart';
 
 class MessageBubble extends StatefulWidget {
   final ChatMessageModel message;
@@ -20,13 +20,7 @@ class MessageBubble extends StatefulWidget {
   final String chatId;
   final ChatRoomType chatRoomType;
 
-  const MessageBubble(
-      {Key? key,
-      required this.message,
-      required this.chatController,
-      required this.chatId,
-      required this.chatRoomType})
-      : super(key: key);
+  const MessageBubble({Key? key, required this.message, required this.chatController, required this.chatId, required this.chatRoomType}) : super(key: key);
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -58,15 +52,11 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
     super.initState();
 
     if (widget.message.destructTimestamp.isAfter(DateTime.now())) {
-      _remainingTime = widget.message.destructTimestamp.difference(
-        DateTime.now(),
-      );
+      _remainingTime = widget.message.destructTimestamp.difference(DateTime.now());
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (mounted) {
           setState(() {
-            _remainingTime = widget.message.destructTimestamp.difference(
-              DateTime.now(),
-            );
+            _remainingTime = widget.message.destructTimestamp.difference(DateTime.now());
             if (_remainingTime!.isNegative) {
               _timer?.cancel();
             }
@@ -116,8 +106,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                         title: Text("Delete"),
                         onTap: () async {
                           Navigator.pop(context);
-                          await widget.chatController
-                              .deleteMessage(widget.chatId, widget.message.id);
+                          await widget.chatController.deleteMessage(widget.chatId, widget.message.id);
                         },
                       ),
                       if (filePath != null)
@@ -139,241 +128,130 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
             child: Padding(
               padding: EdgeInsets.only(bottom: 12),
               child: Row(
-                mainAxisAlignment: widget.message.isMe
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
+                mainAxisAlignment: widget.message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (!widget.message.isMe) ...[
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Styles.grey400,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'S',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                    // Updated Avatar
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Styles.grey400,
+                      backgroundImage: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty ? CachedNetworkImageProvider(widget.message.message.avatar!) : null,
+                      child: widget.message.message.avatar == null || widget.message.message.avatar!.isEmpty
+                          ? Text(
+                              'S', // Fallback initial
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                            )
+                          : null,
                     ),
                     SizedBox(width: 8),
                   ],
                   Flexible(
                     child: Column(
-                      crossAxisAlignment: widget.message.isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
+                      crossAxisAlignment: widget.message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                       children: [
                         if (widget.chatRoomType == ChatRoomType.Group && !widget.message.isMe)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
                             child: Text(
                               widget.message.message.senderNickname ?? '',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: themeData.colorScheme.primary,
-                              ),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: themeData.colorScheme.primary),
                             ),
                           ),
                         Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: widget.message.isMe
-                                ? Styles.grey400
-                                : themeData.colorScheme.onPrimary.withValues(
-                                    alpha: 0.1,
-                                  ),
+                            color: widget.message.isMe ? Styles.grey400 : themeData.colorScheme.onPrimary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
-                              bottomLeft: Radius.circular(
-                                widget.message.isMe ? 16 : 4,
-                              ),
-                              bottomRight: Radius.circular(
-                                widget.message.isMe ? 4 : 16,
-                              ),
+                              bottomLeft: Radius.circular(widget.message.isMe ? 16 : 4),
+                              bottomRight: Radius.circular(widget.message.isMe ? 4 : 16),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: Offset(0, 2))],
                           ),
-                          child:
-                              widget.message.message.type == ChatMessageType.Image.name
-                                  ? filePath == null
-                                      ? SizedBox()
-                                      : InkWell(
-                                          onTap: () {
-                                            OpenFilex.open(filePath!);
-                                          },
-                                          child: Image.file(
-                                            File(filePath!),
-                                            height: 120,
-                                            width: 120,
-                                            fit: BoxFit.cover,
+                          child: widget.message.message.type == ChatMessageType.Image.name
+                              ? filePath == null
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () {
+                                          OpenFilex.open(filePath!);
+                                        },
+                                        child: Image.file(File(filePath!), height: 120, width: 120, fit: BoxFit.cover),
+                                      )
+                              : widget.message.message.type == ChatMessageType.Audio.name
+                              ? filePath == null
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () async {
+                                          if (isPlaying) {
+                                            await _audioPlayer.stop();
+                                            setState(() => isPlaying = false);
+                                          } else {
+                                            await _playAudioFromFile();
+                                          }
+                                        },
+                                        child: Container(
+                                          width: 120,
+                                          child: Row(
+                                            children: [
+                                              Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                                              Text("Audio", style: TextStyle(color: Colors.white, fontSize: 15)),
+                                            ],
                                           ),
-                                        )
-                                  : widget.message.message.type == ChatMessageType.Audio.name
-                                      ? filePath == null
-                                          ? SizedBox()
-                                          : InkWell(
-                                              onTap: () async {
-                                                if (isPlaying) {
-                                                  await _audioPlayer.stop();
-                                                  setState(
-                                                      () => isPlaying = false);
-                                                } else {
-                                                  await _playAudioFromFile();
-                                                }
-                                              },
-                                              child: Container(
-                                                width: 120,
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      isPlaying
-                                                          ? Icons.pause
-                                                          : Icons
-                                                              .play_arrow_rounded,
-                                                      color: Colors.white,
-                                                      size: 30,
-                                                    ),
-                                                    Text(
-                                                      "Audio",
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 15,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            )
-                                      : widget.message.message.type == ChatMessageType.Video.name
-                                          ? filePath == null
-                                              ? SizedBox()
-                                              : InkWell(
-                                                  onTap: () async {
-                                                    OpenFilex.open(filePath!);
-                                                  },
-                                                  child: Container(
-                                                    width: 120,
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons
-                                                              .play_arrow_rounded,
-                                                          color: Colors.white,
-                                                          size: 30,
-                                                        ),
-                                                        Text(
-                                                          "Video",
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 15,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                )
-                                          : widget.message.message.type == ChatMessageType.Doc.name
-                                              ? filePath == null
-                                                  ? SizedBox()
-                                                  : InkWell(
-                                                      onTap: () async => OpenFilex.open(filePath!),
-                                                      child: Container(
-                                                        width: 120,
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
-                                                              Icons
-                                                                  .folder_rounded,
-                                                              color:
-                                                                  Colors.white,
-                                                              size: 25,
-                                                            ),
-                                                            SizedBox(width: 2),
-                                                            Text(
-                                                              "Document",
-                                                              style: TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 15,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    )
-                                              : Text(
-                                                  widget.message.message.text,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: widget.message.isMe
-                                                        ? Colors.white
-                                                        : themeData.colorScheme
-                                                            .onSurface,
-                                                  ),
-                                                ),
+                                        ),
+                                      )
+                              : widget.message.message.type == ChatMessageType.Video.name
+                              ? filePath == null
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () async {
+                                          OpenFilex.open(filePath!);
+                                        },
+                                        child: Container(
+                                          width: 120,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                                              Text("Video", style: TextStyle(color: Colors.white, fontSize: 15)),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                              : widget.message.message.type == ChatMessageType.Doc.name
+                              ? filePath == null
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () async => OpenFilex.open(filePath!),
+                                        child: Container(
+                                          width: 120,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.folder_rounded, color: Colors.white, size: 25),
+                                              SizedBox(width: 2),
+                                              Text("Document", style: TextStyle(color: Colors.white, fontSize: 15)),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                              : Text(widget.message.message.text, style: TextStyle(fontSize: 13, color: widget.message.isMe ? Colors.white : themeData.colorScheme.onSurface)),
                         ),
                         SizedBox(height: 4),
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (_remainingTime != null &&
-                                !_remainingTime!.isNegative &&
-                                widget.message.destructTimestamp
-                                        .difference(DateTime.now())
-                                        .inDays <
-                                    365)
+                            if (_remainingTime != null && !_remainingTime!.isNegative && widget.message.destructTimestamp.difference(DateTime.now()).inDays < 365)
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.whatshot,
-                                    color: Colors.red,
-                                    size: 12,
-                                  ),
+                                  Icon(Icons.whatshot, color: Colors.red, size: 12),
                                   SizedBox(width: 4),
-                                  Text(
-                                    _formatRemainingTime(_remainingTime!),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.red,
-                                    ),
-                                  ),
+                                  Text(_formatRemainingTime(_remainingTime!), style: TextStyle(fontSize: 10, color: Colors.red)),
                                   SizedBox(width: 4),
-                                  Text(
-                                    '•',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[500],
-                                    ),
-                                  ),
+                                  Text('•', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                                   SizedBox(width: 4),
                                 ],
                               ),
-                            Text(
-                              _formatTime(widget.message.timestamp),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[500],
-                              ),
-                            ),
+                            Text(_formatTime(widget.message.timestamp), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                           ],
                         ),
                       ],
@@ -384,18 +262,11 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                     Container(
                       width: 28,
                       height: 28,
-                      decoration: BoxDecoration(
-                        color: themeData.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                      decoration: BoxDecoration(color: themeData.colorScheme.primary, borderRadius: BorderRadius.circular(14)),
                       child: Center(
                         child: Text(
                           'M',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
