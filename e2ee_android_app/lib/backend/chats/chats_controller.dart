@@ -15,12 +15,7 @@ class ChatController {
   late MessageRepository _messageRepository;
   late ChatUsersRepository _chatUsersRepository;
 
-  ChatController({
-    ChatProvider? chatProvider,
-    ChatRepository? repository,
-    MessageRepository? messageRepository,
-    ChatUsersRepository? chatUsersRepository,
-  }) {
+  ChatController({ChatProvider? chatProvider, ChatRepository? repository, MessageRepository? messageRepository, ChatUsersRepository? chatUsersRepository}) {
     _chatProvider = chatProvider ?? ChatProvider();
     _chatRepository = repository ?? ChatRepository();
     _messageRepository = messageRepository ?? MessageRepository();
@@ -42,41 +37,32 @@ class ChatController {
     final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
-    final receiverId = opponent.id;
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
-    return _chatRepository.sendMessage(
-      token: token,
-      // // TODO this was the old way.
-      // senderId: senderId,
-      // receiverId: receiverId,
-      // username: username,
-      // nickname: nickname,
-      // TODO verify this also.
-      messageContext: {
-        'type': opponent.type.name.toLowerCase(),
+
+    Map<String, dynamic> messageContext;
+
+    if (opponent.type == ChatRoomType.Group) {
+      messageContext = {
+        'type': 'group',
         'sender_id': senderId,
-        'receiver_id': receiverId,
-        'username': username,
-        'nickname': nickname,
-        'recievers': opponent.receivers ?? [],
         'group_id': opponent.id,
         'group_name': opponent.groupName,
-      },
-      message: message,
-      destructTimer: destructTimer,
-    );
+        'receivers': opponent.receivers ?? [],
+        'username': username,
+        'nickname': nickname,
+      };
+    } else {
+      messageContext = {'type': 'single', 'sender_id': senderId, 'receiver_id': opponent.id, 'username': username, 'nickname': nickname};
+    }
+
+    return _chatRepository.sendMessage(token: token, messageContext: messageContext, message: message, destructTimer: destructTimer);
   }
 
   Future<void> saveMessageToHive({required String chatId, required ChatMessageModel message}) async {
     await _messageRepository.addMessage(chatId: chatId, message: message);
   }
 
-  Future<List<ChatMessageModel>> fetchMessagesPage({
-    required String chatId,
-    required int limit,
-    required int offset,
-    required String currentUserId,
-  }) {
+  Future<List<ChatMessageModel>> fetchMessagesPage({required String chatId, required int limit, required int offset, required String currentUserId}) {
     return _messageRepository.getMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
   }
 
@@ -204,11 +190,7 @@ class ChatController {
     }
   }
 
-  Future<void> updateUserLastMessage({
-    required String userId,
-    required String lastMessage,
-    required DateTime lastMessageTime,
-  }) async {
+  Future<void> updateUserLastMessage({required String userId, required String lastMessage, required DateTime lastMessageTime}) async {
     await _chatUsersRepository.updateUserLastMessage(userId: userId, lastMessage: lastMessage, lastMessageTime: lastMessageTime);
     final List<ChatUserModel> currentUsers = List.from(_chatProvider.chatUsers.getList());
     final int userIndex = currentUsers.indexWhere((u) => u.id == userId);
@@ -223,6 +205,9 @@ class ChatController {
         lastMessageTime: lastMessageTime.toIso8601String(),
         isOnline: currentUsers[userIndex].isOnline,
         unreadCount: currentUsers[userIndex].unreadCount,
+        groupName: currentUsers[userIndex].groupName,
+        type: currentUsers[userIndex].type,
+        receivers: currentUsers[userIndex].receivers,
       );
       currentUsers[userIndex] = updatedUser;
       currentUsers.sort((a, b) => DateTime.parse(b.lastMessageTime).compareTo(DateTime.parse(a.lastMessageTime)));
@@ -258,13 +243,7 @@ class ChatController {
     }
   }
 
-  Future<void> loadMessagesToProvider({
-    required String chatId,
-    required int limit,
-    required int offset,
-    required String currentUserId,
-    bool clear = false,
-  }) async {
+  Future<void> loadMessagesToProvider({required String chatId, required int limit, required int offset, required String currentUserId, bool clear = false}) async {
     try {
       final fetched = await fetchMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
 

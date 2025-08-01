@@ -1,10 +1,10 @@
 import 'dart:convert';
+
 import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
-import 'package:http/http.dart' as http;
-
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
+import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 
 class ChatRepository {
@@ -21,10 +21,7 @@ class ChatRepository {
       wsPort: 8080,
       wssPort: 443,
       encrypted: false,
-      authOptions: PusherAuthOptions(
-        'https://172.86.92.130.sslip.io/broadcasting/auth',
-        headers: {'Authorization': 'Bearer $token'},
-      ),
+      authOptions: PusherAuthOptions('https://172.86.92.130.sslip.io/broadcasting/auth', headers: {'Authorization': 'Bearer $token'}),
     );
 
     _pusher = PusherClient(options: options);
@@ -69,18 +66,13 @@ class ChatRepository {
     int timeInSecond = destructTimer * 60;
 
     var innerMessagePayload = message.toMap();
-    innerMessagePayload.addAll({
-      "username": messageContext['username'],
-      "nickname": messageContext['nickname'],
-      "destructTimer": timeInSecond,
-    });
+    innerMessagePayload.addAll({"username": messageContext['username'], "nickname": messageContext['nickname'], "destructTimer": timeInSecond});
 
-
-// TODO verify this also.
+    // TODO verify this also.
     // Determine recipients for encryption
     List<String> recipientIds = [];
     if (messageContext['type'] == 'group') {
-      recipientIds = List<String>.from(messageContext['recievers'] ?? []);
+      recipientIds = List<String>.from(messageContext['receivers'] ?? []);
     } else {
       recipientIds = [messageContext['receiver_id']];
     }
@@ -88,15 +80,9 @@ class ChatRepository {
     MyPrint.printOnConsole("XXEN Recipients for encryption: $recipientIds");
     MyPrint.printOnConsole("XXEN data: ${innerMessagePayload}");
 
-
-
     // Encrypt the payload
     final encryptionService = EncryptionService();
-    var encryptedPayload = await encryptionService.encryptPayload(
-      payload: innerMessagePayload,
-      recipientIds: recipientIds,
-      token: token,
-    );
+    var encryptedPayload = await encryptionService.encryptPayload(payload: innerMessagePayload, recipientIds: recipientIds, token: token);
 
     if (encryptedPayload == null) {
       MyPrint.printOnConsole("XXEN Encryption failed. Cannot send message.");
@@ -114,11 +100,7 @@ class ChatRepository {
     MyPrint.printOnConsole('[SEND DEBUG] POST $url');
 
     try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"},
-        body: body,
-      );
+      final response = await http.post(url, headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}, body: body);
       MyPrint.printOnConsole('[SEND DEBUG] Status: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
@@ -135,11 +117,7 @@ class ChatRepository {
     if (userId != null && userId.isNotEmpty) bodyMap['userid'] = userId;
     if (bodyMap.isEmpty) return null;
     final body = jsonEncode(bodyMap);
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer $token"},
-      body: body,
-    );
+    final response = await http.post(url, headers: {"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer $token"}, body: body);
 
     if (response.statusCode == 200) {
       final dynamic data = json.decode(response.body)['data'];
@@ -186,13 +164,12 @@ class ChatRepository {
   }
 }
 
-
 // curl --location 'https://172.86.92.130.sslip.io/api/users/<USER_ID>/keys' \
- 
+
 // --header 'Accept: application/json' \
- 
+
 // --header 'Content-Type: application/json' \
- 
+
 // --header 'Authorization: Bearer <TOKEN>' \
 
 // --data ''

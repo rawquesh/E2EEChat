@@ -1,5 +1,6 @@
 // import 'package:e2ee_android_app/utils/storage_manager.dart';
 // import 'package:e2ee_models_app/configs/constants.dart';
+import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
@@ -11,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/notification/notification_service.dart';
+import '../../../utils/storage_manager.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
 // import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
@@ -149,10 +151,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           else if (searchState == SearchState.empty)
                             Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                "No users found",
-                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                              ),
+                              child: Text("No users found", style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                             )
                           else if (searchState == SearchState.error)
                             Padding(
@@ -162,10 +161,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           else if (searchResults.isNotEmpty)
                             Container(
                               height: 150,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.background,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.background, borderRadius: BorderRadius.circular(12)),
                               child: ListView.builder(
                                 itemCount: searchResults.length,
                                 itemBuilder: (context, index) {
@@ -200,10 +196,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                               children: selectedUsers
                                   .map(
                                     (user) => Chip(
-                                      label: Text(
-                                        user.nickname,
-                                        style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
-                                      ),
+                                      label: Text(user.nickname, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
                                       backgroundColor: Theme.of(context).colorScheme.primary,
                                       deleteIcon: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onPrimary),
                                       onDeleted: () {
@@ -235,14 +228,15 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () async {
-
                     if (groupNameController.text.isNotEmpty && selectedUsers.isNotEmpty) {
                       final groupName = groupNameController.text.trim();
                       final groupId = DateTime.now().millisecondsSinceEpoch.toString();
                       final receivers = selectedUsers.map((user) => user.id).toList();
-                      // final myUserId = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+                      final myUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
+                      if (myUserId.isNotEmpty && !receivers.contains(myUserId)) {
+                        receivers.add(myUserId);
+                      }
 
-                      // TODO this is not working properly, save all the group info.
                       final group = ChatUserModel(
                         id: groupId,
                         groupName: groupName,
@@ -256,10 +250,6 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                       _chatController.addUserToChatList(group);
 
                       _chatProvider.currentOpponent.set(value: group);
-                      // _chatController.sendMessage(
-                      //   message: ChatMessageData(text: 'Welcome to the group!', type: 'Text'),
-                      //   destructTimer: 0,
-                      // );
 
                       _chatProvider.resetGroupSearch();
                       Navigator.pop(context);
@@ -283,11 +273,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(
-          statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Colors.white,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
+        value: SystemUiOverlayStyle(statusBarIconBrightness: Brightness.light, systemNavigationBarColor: Colors.white, systemNavigationBarIconBrightness: Brightness.dark),
         child: SafeArea(
           child: Column(
             children: [
@@ -298,10 +284,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                      Theme.of(context).colorScheme.surface.withValues(alpha: 0.4),
-                    ],
+                    colors: [Theme.of(context).colorScheme.surface.withValues(alpha: 0.8), Theme.of(context).colorScheme.surface.withValues(alpha: 0.4)],
                   ),
                   borderRadius: BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
                 ),
@@ -316,21 +299,11 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           children: [
                             Text(
                               'DarkCrypt',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.primary,
-                                letterSpacing: -0.5,
-                              ),
+                              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary, letterSpacing: -0.5),
                             ),
                             Text(
                               'Chat',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                letterSpacing: 0.5,
-                              ),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), letterSpacing: 0.5),
                             ),
                           ],
                         ),
@@ -347,52 +320,26 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       height: 52,
                       decoration: BoxDecoration(
-                        color: _isSearchFocused
-                            ? Theme.of(context).colorScheme.surface
-                            : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+                        color: _isSearchFocused ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: _isSearchFocused
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                          color: _isSearchFocused ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                           width: _isSearchFocused ? 2 : 1,
                         ),
-                        boxShadow: _isSearchFocused
-                            ? [
-                                BoxShadow(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 4),
-                                ),
-                              ]
-                            : [],
+                        boxShadow: _isSearchFocused ? [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2), blurRadius: 8, offset: Offset(0, 4))] : [],
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.search_rounded,
-                            color: _isSearchFocused
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                            size: 22,
-                          ),
+                          Icon(Icons.search_rounded, color: _isSearchFocused ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), size: 22),
                           SizedBox(width: 12),
                           Expanded(
                             child: TextField(
                               controller: _searchController,
                               focusNode: _searchFocusNode,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w500),
                               decoration: InputDecoration(
                                 hintText: 'Search conversations...',
-                                hintStyle: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                ),
+                                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 16, fontWeight: FontWeight.w400),
                                 border: InputBorder.none,
                                 focusedBorder: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -409,25 +356,15 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                                     onTap: _clearSearch,
                                     child: Container(
                                       padding: EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        Icons.close_rounded,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                        size: 16,
-                                      ),
+                                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                                      child: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 16),
                                     ),
                                   )
                                 : GestureDetector(
                                     onTap: _onSearch,
                                     child: Container(
                                       padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
+                                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(10)),
                                       child: Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
                                     ),
                                   ),
@@ -453,20 +390,13 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                           children: [
                             Container(
                               padding: EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(20)),
                               child: LoadingWidget(),
                             ),
                             SizedBox(height: 16),
                             Text(
                               'Searching...',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 16, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
@@ -474,30 +404,17 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                     }
 
                     if (state == SearchState.empty) {
-                      return _buildEmptyState(
-                        icon: Icons.person_search_rounded,
-                        title: 'User not found',
-                        subtitle: 'Try searching with a different name',
-                      );
+                      return _buildEmptyState(icon: Icons.person_search_rounded, title: 'User not found', subtitle: 'Try searching with a different name');
                     }
 
                     if (state == SearchState.error) {
-                      return _buildEmptyState(
-                        icon: Icons.error_outline_rounded,
-                        title: 'Search Error',
-                        subtitle: 'Something went wrong. Please try again.',
-                      );
+                      return _buildEmptyState(icon: Icons.error_outline_rounded, title: 'Search Error', subtitle: 'Something went wrong. Please try again.');
                     }
 
                     final users = _chatProvider.chatUsers.getList();
                     if (users.isEmpty && state == SearchState.initial) {
-                      return _buildEmptyState(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        title: 'No conversations',
-                        subtitle: 'Start chatting to see your conversations here',
-                      );
+                      return _buildEmptyState(icon: Icons.chat_bubble_outline_rounded, title: 'No conversations', subtitle: 'Start chatting to see your conversations here');
                     }
-                    
 
                     return ListView.builder(
                       padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
