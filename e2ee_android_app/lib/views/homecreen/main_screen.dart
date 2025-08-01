@@ -80,10 +80,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     if (_isCallDialogShowing) return;
     _isCallDialogShowing = true;
 
-    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
-      (u) => u.id == callerId,
-      orElse: () => ChatUserModel(id: callerId),
-    );
+    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
     if (user.nickname.isEmpty) {
       final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
       if (fetched != null) user = fetched;
@@ -116,10 +113,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
                 await callProvider.callController.acceptCall();
                 _dismissCallDialog();
 
-                ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
-                  (u) => u.id == callerId,
-                  orElse: () => ChatUserModel(id: callerId),
-                );
+                ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
                 if (user.nickname.isEmpty) {
                   final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
                   if (fetched != null) user = fetched;
@@ -127,10 +121,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
                 if (!mounted) return;
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(
-                    context: context,
-                    navigationType: NavigationType.pushNamed,
-                  ),
+                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
                   arguments: VoiceCallScreenNavigationArguments(user: user),
                 );
               },
@@ -155,7 +146,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
 
       final senderId = payloadData['sender_id']?.toString() ?? '';
-      if (senderId.isEmpty) return; // Ignore invalid messages
+      if (senderId.isEmpty) return;
+
+      final bool isMe = senderId == _currentUserId;
+      if (isMe) return;
 
       var encryptedMessagePayload = payloadData['message'];
       Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
@@ -170,15 +164,18 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       var messageData = ChatMessageData.fromMap(decryptedPayload);
 
       final String messageType = payloadData['type']?.toString() ?? 'single';
-      final bool isMe = senderId == _currentUserId;
 
       String chatId;
       String chatName;
       String chatAvatarInitial;
+      List<String> receivers = [];
 
       if (messageType == 'group') {
         chatId = payloadData['group_id']?.toString() ?? '';
         chatName = payloadData['group_name']?.toString() ?? 'Group';
+        if (payloadData['receivers'] != null) {
+          receivers = List<String>.from(payloadData['receivers']);
+        }
       } else {
         // 'single'
         final receiverId = payloadData['receiver_id']?.toString() ?? '';
@@ -237,6 +234,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           lastMessageTime: time.toIso8601String(),
           unreadCount: isMe ? 0 : 1,
           type: messageType == 'group' ? ChatRoomType.Group : ChatRoomType.Single,
+          receivers: receivers,
+          // Add receivers here
+          groupName: messageType == 'group' ? chatName : null,
         );
       } else {
         // Update existing entry
@@ -260,11 +260,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             _appState.showCustomNotification('New message from $notificationTitle', notificationBody);
           }
         } else if (_appState.lifecycleState == AppLifecycleState.paused) {
-          NotificationService().showSystemNotification(
-            DateTime.now().millisecondsSinceEpoch.remainder(100000),
-            'New message from $notificationTitle',
-            messageData.type,
-          );
+          NotificationService().showSystemNotification(DateTime.now().millisecondsSinceEpoch.remainder(100000), 'New message from $notificationTitle', messageData.type);
         }
       }
     } catch (e, s) {
@@ -369,9 +365,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.chat_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Chats',
-                style: themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
-                    .withEpilogue,
+                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -380,9 +374,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.call_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Calls & Contacts',
-                style: themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
-                    .withEpilogue,
+                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -391,9 +383,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.files_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Files & Media',
-                style: themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
-                    .withEpilogue,
+                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -402,9 +392,7 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.settings_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Settings',
-                style: themeData.textTheme.labelSmall
-                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
-                    .withEpilogue,
+                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
