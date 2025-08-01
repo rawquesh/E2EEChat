@@ -146,16 +146,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       final payloadData = data is String ? jsonDecode(data) : Map<String, dynamic>.from(data);
 
       final senderId = payloadData['sender_id']?.toString() ?? '';
-      if (senderId.isEmpty) return;
+      if (senderId.isEmpty) return; // Ignore invalid messages
 
       final bool isMe = senderId == _currentUserId;
       if (isMe) return;
 
       var encryptedMessagePayload = payloadData['message'];
-      Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
-        encryptedData: Map<String, dynamic>.from(encryptedMessagePayload),
-        myUserId: _currentUserId, // Assuming _currentUserId is a member variable
-      );
+      Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(encryptedData: Map<String, dynamic>.from(encryptedMessagePayload), myUserId: _currentUserId);
 
       if (decryptedPayload == null) {
         MyPrint.printOnConsole("Error: Failed to decrypt incoming message payload.");

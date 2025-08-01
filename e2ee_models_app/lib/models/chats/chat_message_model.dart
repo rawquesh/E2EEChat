@@ -11,6 +11,7 @@ class ChatMessageData {
   String text;
   String fileName;
   String? senderNickname;
+  String nickname;
   String username;
   String? avatar;
   int destructTimer;
@@ -24,6 +25,7 @@ class ChatMessageData {
     this.text = '',
     this.fileName = '',
     this.senderNickname,
+    this.nickname = '',
     this.username = '',
     this.avatar,
     this.destructTimer = 0,
@@ -38,6 +40,7 @@ class ChatMessageData {
       base64String: ParsingHelper.parseStringMethod(map['base64String']),
       text: ParsingHelper.parseStringMethod(map['text']),
       fileName: ParsingHelper.parseStringMethod(map['fileName']),
+      nickname: ParsingHelper.parseStringMethod(map['nickname']) ?? ParsingHelper.parseStringMethod(map['sender_nickname']) ?? '',
       senderNickname: ParsingHelper.parseStringMethod(map['sender_nickname']),
       username: ParsingHelper.parseStringMethod(map['username']),
       avatar: map['avatar'] != null ? ParsingHelper.parseStringMethod(map['avatar']) : null,
@@ -49,9 +52,18 @@ class ChatMessageData {
   }
 
   Map<String, dynamic> toMap({bool toJson = true}) {
-    final data = {'type': type, 'base64String': base64String, 'text': text, 'fileName': fileName, 'sender_nickname': senderNickname, 'username': username, 'destructTimer': destructTimer};
+    final data = {
+      'type': type,
+      'base64String': base64String,
+      'text': text,
+      'fileName': fileName,
+      'sender_nickname': senderNickname,
+      'username': username,
+      'destructTimer': destructTimer,
+      'nickname': nickname,
+      'avatar': avatar ?? '',
+    };
 
-    if (avatar != null) data['avatar'] = avatar;
     if (iv != null) data['iv'] = iv;
     if (keys != null) data['keys'] = keys;
 

@@ -65,10 +65,10 @@ class ChatRepository {
   }) async {
     int timeInSecond = destructTimer * 60;
 
+    // The inner message payload now contains the text, file info, etc.
     var innerMessagePayload = message.toMap();
-    innerMessagePayload.addAll({"username": messageContext['username'], "nickname": messageContext['nickname'], "destructTimer": timeInSecond});
+    innerMessagePayload['destructTimer'] = timeInSecond;
 
-    // TODO verify this also.
     // Determine recipients for encryption
     List<String> recipientIds = [];
     if (messageContext['type'] == 'group') {
@@ -78,7 +78,7 @@ class ChatRepository {
     }
 
     MyPrint.printOnConsole("XXEN Recipients for encryption: $recipientIds");
-    MyPrint.printOnConsole("XXEN data: ${innerMessagePayload}");
+    MyPrint.printOnConsole("XXEN data: $innerMessagePayload");
 
     // Encrypt the payload
     final encryptionService = EncryptionService();
@@ -89,10 +89,13 @@ class ChatRepository {
       return false;
     }
 
-    // Construct final body
+    // Construct final body according to the new structure
     final body = jsonEncode({
-      ...messageContext, // Spread all context fields
-      "message": encryptedPayload,
+      ...messageContext,
+      "message": {
+        ...innerMessagePayload,
+        ...encryptedPayload,
+      },
     });
 
     printLongText('[SEND DEBUG] Final Request Body: $body');

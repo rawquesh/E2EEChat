@@ -42,18 +42,15 @@ class ChatController {
     Map<String, dynamic> messageContext;
 
     if (opponent.type == ChatRoomType.Group) {
-      messageContext = {
-        'type': 'group',
-        'sender_id': senderId,
-        'group_id': opponent.id,
-        'group_name': opponent.groupName,
-        'receivers': opponent.receivers ?? [],
-        'username': username,
-        'nickname': nickname,
-      };
+      messageContext = {'type': 'group', 'sender_id': senderId, 'group_id': opponent.id, 'group_name': opponent.groupName, 'receivers': opponent.receivers ?? []};
     } else {
-      messageContext = {'type': 'single', 'sender_id': senderId, 'receiver_id': opponent.id, 'username': username, 'nickname': nickname};
+      messageContext = {'type': 'single', 'sender_id': senderId, 'receiver_id': opponent.id};
     }
+
+    // Add sender's info to the message data itself
+    message.username = username;
+    message.nickname = nickname;
+    message.avatar = nickname.isNotEmpty ? nickname[0].toUpperCase() : "?";
 
     return _chatRepository.sendMessage(token: token, messageContext: messageContext, message: message, destructTimer: destructTimer);
   }
