@@ -46,7 +46,7 @@ class ChatController {
     final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
-    String? avatarUrl = await SharedPrefManager().getString('profile_pic_url');
+    String? avatarUrl = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
     avatarUrl ??= _authenticationProvider.userModel.get()?.profilePicture;
 
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;

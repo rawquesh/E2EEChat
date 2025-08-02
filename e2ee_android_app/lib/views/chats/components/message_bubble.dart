@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:e2ee_android_app/utils/storage_manager.dart';
+import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
@@ -31,6 +33,16 @@ class MessageBubble extends StatefulWidget {
 class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   Timer? _timer;
   Duration? _remainingTime;
+  String? avatar;
+
+  /*  Future<void> setAvatar() async {
+    if (widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty) {
+      avatar = widget.message.message.avatar;
+    } else {
+      final avatarUrl = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+      avatar = avatarUrl;
+    }
+  }*/
 
   String _formatTime(DateTime timestamp) {
     final now = DateTime.now();
@@ -53,6 +65,11 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   void initState() {
     super.initState();
 
+    if (widget.message.isMe) {
+      _loadOwnAvatar();
+    }
+
+    // Destruct timer logic
     if (widget.message.destructTimestamp.isAfter(DateTime.now())) {
       _remainingTime = widget.message.destructTimestamp.difference(DateTime.now());
       _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -69,6 +86,15 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
 
     if (widget.message.message.type != ChatMessageType.Text.name) {
       filePath = widget.message.message.base64String;
+    }
+  }
+
+  Future<void> _loadOwnAvatar() async {
+    final url = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+    if (mounted) {
+      setState(() {
+        avatar = url;
+      });
     }
   }
 
@@ -267,16 +293,14 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                   ),
                   if (widget.message.isMe) ...[
                     SizedBox(width: 8),
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Styles.grey400,
-                      child: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty
-                          ? CommonCachedNetworkImage(imageUrl: widget.message.message.avatar!, borderRadius: 14, height: 28, width: 28)
-                          : Text(
-                              'M', // Fallback initial
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                    ),
+                    avatar != null && avatar!.isNotEmpty
+                        ? CommonCachedNetworkImage(imageUrl: avatar!, borderRadius: 14, height: 28, width: 28)
+                        : const CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Colors.grey,
+                            child: Icon(Icons.person, size: 16, color: Colors.white),
+                          ),
+                    // CommonCachedNetworkImage(imageUrl: wi, borderRadius: 14, height: 28, width: 28)
                   ],
                 ],
               ),
