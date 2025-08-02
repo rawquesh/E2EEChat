@@ -58,6 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
       MyToast.showSuccess(context: context, msg: 'Profile picture updated');
       // The profile picture URL will be saved to SharedPreferences by the controller.
       // We can then reload it here if we want to display the updated image immediately.
+      await SharedPrefManager().setString('profile_pic_path', _profileImage!.path);
       _loadProfilePicture();
     } else {
       MyToast.showError(context: context, msg: 'Failed to update profile picture');

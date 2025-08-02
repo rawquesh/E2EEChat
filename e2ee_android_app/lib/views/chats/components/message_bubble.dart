@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
+import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 
@@ -136,13 +136,12 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: Styles.grey400,
-                      backgroundImage: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty ? CachedNetworkImageProvider(widget.message.message.avatar!) : null,
-                      child: widget.message.message.avatar == null || widget.message.message.avatar!.isEmpty
-                          ? Text(
+                      child: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty
+                          ? CommonCachedNetworkImage(imageUrl: widget.message.message.avatar!, borderRadius: 14, height: 28, width: 28)
+                          : Text(
                               'S', // Fallback initial
                               style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            )
-                          : null,
+                            ),
                     ),
                     SizedBox(width: 8),
                   ],
@@ -259,16 +258,15 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                   ),
                   if (widget.message.isMe) ...[
                     SizedBox(width: 8),
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(color: themeData.colorScheme.primary, borderRadius: BorderRadius.circular(14)),
-                      child: Center(
-                        child: Text(
-                          'M',
-                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Styles.grey400,
+                      child: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty
+                          ? CommonCachedNetworkImage(imageUrl: widget.message.message.avatar!, borderRadius: 14, height: 28, width: 28)
+                          : Text(
+                              'M', // Fallback initial
+                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
                     ),
                   ],
                 ],

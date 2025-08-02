@@ -178,8 +178,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.clear();
 
     DateTime destructTimestamp = selectedTimeForDestruct == 0 ? DateTime.now().add(const Duration(days: 365 * 100)) : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
+    final avatarUrl = await SharedPrefManager().getString('profile_pic_url');
 
-    var chatMessageData = ChatMessageData(type: type.name, text: textMessage ?? "", base64String: base64Encode(fileBytes ?? Uint8List(0)), fileName: fileName ?? '', senderNickname: opponentUsername);
+    var chatMessageData = ChatMessageData(
+      type: type.name,
+      text: textMessage ?? "",
+      base64String: base64Encode(fileBytes ?? Uint8List(0)),
+      fileName: fileName ?? '',
+      senderNickname: opponentUsername,
+      avatar: avatarUrl,
+    );
 
     _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
       if (!success) {
@@ -189,7 +197,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
     });
 
-    var newChatMessageData = ChatMessageData(type: type.name, text: textMessage ?? "", base64String: "", fileName: fileName ?? '');
+    var newChatMessageData = ChatMessageData(type: type.name, text: textMessage ?? "", base64String: "", fileName: fileName ?? '', avatar: avatarUrl);
 
     if (type != ChatMessageType.Text && fileBytes != null && fileName != null) {
       String path = await MyUtils.saveFileToDevice(fileBytes, fileName);
