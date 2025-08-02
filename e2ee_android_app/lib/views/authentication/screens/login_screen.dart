@@ -38,9 +38,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   void initState() {
     super.initState();
     authenticationProvider = context.read<AuthenticationProvider>();
-    authenticationController = AuthenticationController(
-      authenticationProvider: authenticationProvider,
-    );
+    authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
 
     usernameController.addListener(_onUsernameChanged);
     passwordController.addListener(_onPasswordChanged);
@@ -69,34 +67,8 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     });
   }
 
-  /* Future<void> _checkBiometricAvailability() async {
-    // Check if biometric authentication is available
-    // This would typically use local_auth package
-    try {
-      // final LocalAuthentication auth = LocalAuthentication();
-      // final bool isAvailable = await auth.canCheckBiometrics;
-      // final List<BiometricType> availableBiometrics = await auth.getAvailableBiometrics();
-
-      // For demo purposes, assuming biometric is available
-      setState(() {
-        isBiometricAvailable = true;
-      });
-    } catch (e) {
-      setState(() {
-        isBiometricAvailable = false;
-      });
-    }
-  }*/
-
   Future<void> _loadFailedAttempts() async {
-    // Load failed attempts from secure storage
-    // This would typically use flutter_secure_storage
     try {
-      // final storage = FlutterSecureStorage();
-      // final attempts = await storage.read(key: 'failed_attempts');
-      // failedAttempts = int.tryParse(attempts ?? '0') ?? 0;
-
-      // For demo purposes
       failedAttempts = 0;
     } catch (e) {
       failedAttempts = 0;
@@ -104,11 +76,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   }
 
   Future<void> _saveFailedAttempts() async {
-    // Save failed attempts to secure storage
-    try {
-      // final storage = FlutterSecureStorage();
-      // await storage.write(key: 'failed_attempts', value: failedAttempts.toString());
-    } catch (e) {
+    try {} catch (e) {
       // Handle error
     }
   }
@@ -120,17 +88,10 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
       // final storage = FlutterSecureStorage();
       // await storage.deleteAll();
 
-      MyToast.showError(
-        context: context,
-        msg: "Security breach detected. All data has been wiped.",
-      );
+      MyToast.showError(context: context, msg: "Security breach detected. All data has been wiped.");
 
       // Navigate to setup screen or exit app
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        "/SetupScreen",
-        (route) => false,
-      );
+      Navigator.pushNamedAndRemoveUntil(context, "/SetupScreen", (route) => false);
     } catch (e) {
       // Handle error
     }
@@ -148,26 +109,19 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     final password = passwordController.text.trim();
 
     if (!RegExp(r'^[a-z0-9]+$').hasMatch(username)) {
-      MyToast.showError(
-        context: context,
-        msg: "Username must be lowercase and alphanumeric.",
-      );
+      MyToast.showError(context: context, msg: "Username must be lowercase and alphanumeric.");
       return;
     }
 
     if (password.length < 6) {
-      MyToast.showError(
-        context: context,
-        msg: "Password must be at least 6 characters.",
-      );
+      MyToast.showError(context: context, msg: "Password must be at least 6 characters.");
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      final success = await authenticationController.loginWithUsernamePassword(
-          context, username, password);
+      final success = await authenticationController.loginWithUsernamePassword(context, username, password);
 
       if (!success) {
         failedAttempts++;
@@ -178,45 +132,11 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
         }
       }
     } catch (e) {
-      MyToast.showError(
-        context: context,
-        msg: "Login failed. Please try again.",
-      );
+      MyToast.showError(context: context, msg: "Login failed. Please try again.");
     } finally {
       setState(() => isLoading = false);
     }
   }
-
-  // Future<void> _authenticateWithBiometrics() async {
-  //   try {
-  //     bool didAuthenticate = true;
-
-  //     if (didAuthenticate) {
-  //       failedAttempts = 0;
-  //       await _saveFailedAttempts();
-  //       MyToast.showSuccess(
-  //         context: context,
-  //         msg: "Biometric authentication successful!",
-  //       );
-  //     }
-  //   } catch (e) {
-  //     MyToast.showError(
-  //       context: context,
-  //       msg: "Biometric authentication failed.",
-  //     );
-  //   }
-  // }
-
-  // void _navigateToSignup() {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(builder: (context) => const SignUpScreen()),
-  //   );
-  // }
-
-  // void _navigateToForgotPassword() {
-  //   Navigator.pushNamed(context, "/ForgotPasswordScreen");
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -236,10 +156,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
               const SizedBox(height: 16),
               Text(
                 "DarkCrypt Chat",
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: primaryColor),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
@@ -257,16 +174,9 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                   hintText: "e.g. john123",
                   hintStyle: TextStyle(color: Colors.grey[500]),
                   labelStyle: TextStyle(color: theme.colorScheme.onSurface),
-                  prefixIcon: const Icon(
-                    Icons.person_outline,
-                    color: Colors.grey,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
+                  prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(radius),
                     borderSide: BorderSide(color: primaryColor, width: 2),
@@ -287,25 +197,15 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                   hintText: "Enter your password",
                   hintStyle: TextStyle(color: Colors.grey[500]),
                   labelStyle: TextStyle(color: theme.colorScheme.onSurface),
-                  prefixIcon: const Icon(
-                    Icons.lock_outline,
-                    color: Colors.grey,
-                  ),
+                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      passwordVisible ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.grey[400],
-                    ),
+                    icon: Icon(passwordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey[400]),
                     onPressed: () {
                       setState(() => passwordVisible = !passwordVisible);
                     },
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(radius),
-                  ),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(radius),
                     borderSide: BorderSide(color: primaryColor, width: 2),
@@ -313,95 +213,21 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                 ),
               ),
               const SizedBox(height: 8),
-              // Align(
-              //   alignment: Alignment.centerRight,
-              //   child: TextButton(
-              //     onPressed: _navigateToForgotPassword,
-              //     style: TextButton.styleFrom(
-              //       foregroundColor: primaryColor,
-              //       padding: const EdgeInsets.symmetric(horizontal: 8),
-              //     ),
-              //     child: const Text(
-              //       "Forgot Password?",
-              //       style: TextStyle(fontSize: 13),
-              //     ),
-              //   ),
-              // ),
               const SizedBox(height: 20),
               SizedBox(
                 height: 50,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isFormValid
-                            ? primaryColor
-                            : theme.disabledColor.withAlpha(75),
+                    backgroundColor: isFormValid ? primaryColor : theme.disabledColor.withAlpha(75),
                     foregroundColor: theme.colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(radius),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
                   ),
                   onPressed: isFormValid && !isLoading ? _login : null,
-                  icon:
-                      isLoading
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Icon(Icons.login),
+                  icon: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.login),
                   label: Text(isLoading ? "Please wait..." : "Authenticate"),
                 ),
               ),
-              // if (isBiometricAvailable) ...[
-              //   const SizedBox(height: 16),
-              //   Row(
-              //     children: [
-              //       Expanded(child: Divider(color: Colors.grey[300])),
-              //       Padding(
-              //         padding: const EdgeInsets.symmetric(horizontal: 16),
-              //         child: Text(
-              //           "OR",
-              //           style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              //         ),
-              //       ),
-              //       Expanded(child: Divider(color: Colors.grey[300])),
-              //     ],
-              //   ),
-                // const SizedBox(height: 16),
-                // SizedBox(
-                //   height: 50,
-                //   child: OutlinedButton.icon(
-                //     style: OutlinedButton.styleFrom(
-                //       foregroundColor: primaryColor,
-                //       side: BorderSide(color: primaryColor),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(radius),
-                //       ),
-                //     ),
-                //     onPressed: _authenticateWithBiometrics,
-                //     icon: const Icon(Icons.password),
-                //     label: const Text("Use Digital Pin To Authenticate"),
-                //   ),
-                // ),
-              ],
-
-              // const SizedBox(height: 24),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: [
-              //     const Text("Don't have an account?"),
-              //     TextButton(
-              //       onPressed: _navigateToSignup,
-              //       style: TextButton.styleFrom(foregroundColor: primaryColor),
-              //       child: const Text("Sign up"),
-              //     ),
-              //   ],
-              // ),
-            // ],
+            ],
           ),
         ),
       ),
