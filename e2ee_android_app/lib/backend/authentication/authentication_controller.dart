@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
@@ -10,22 +12,20 @@ import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
+import 'package:e2ee_models_app/utils/hive_manager.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../navigation/navigation_arguments.dart';
 import '../navigation/navigation_controller.dart';
 import 'authentication_provider.dart';
 import 'authentication_repository.dart';
-import 'package:hive/hive.dart';
-import 'dart:io';
-
-import 'package:e2ee_models_app/utils/hive_manager.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AuthenticationController {
   late AuthenticationProvider _authenticationProvider;
@@ -195,7 +195,7 @@ class AuthenticationController {
     return false;
   }
 
-  Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password) async {
+  Future<bool> loginWithUsernamePassword(BuildContext context, String username, String password, {String? token}) async {
     try {
       MyPrint.printOnConsole("Generating keys for login...");
 
@@ -203,16 +203,15 @@ class AuthenticationController {
 
       MyPrint.printOnConsole("XXEN My public key: $myPublicKeyPem");
 
-      Map<String, dynamic> payload = {
-        "username": username,
-        "password": password,
-        "publicKey": myPublicKeyPem,
-        "identityKey": "null",
-      };
+      Map<String, dynamic> payload = {"username": username, "password": password, "publicKey": myPublicKeyPem, "identityKey": "null"};
+
+      if (token != null) {
+        payload['token'] = token;
+      }
 
       MyPrint.printOnConsole("Login payload: $payload");
 
-      final result = await _authenticationRepository.registerNewUserFromPayload(payload);
+      final result = (token != null) ? await _authenticationRepository.registerNewUserFromPayloadWithToken(payload) : await _authenticationRepository.registerNewUserFromPayload(payload);
       final accessToken = result?['data']?['access_token'];
 
       MyPrint.printOnConsole("Login result: $result");
@@ -299,9 +298,7 @@ class AuthenticationController {
   }
 
   Future<bool> verifyPin(String pin, {bool isVaultPin = false}) async {
-    final storedPin = await SecureStorageManager().getString(
-      isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey,
-    );
+    final storedPin = await SecureStorageManager().getString(isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey);
     final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
 
     MyPrint.printOnConsole("XX Verifying current PIN: $pin");
@@ -437,11 +434,7 @@ class AuthenticationController {
 
     if (context.checkMounted() && context.mounted) {
       if (authenticationMode == AuthenticationModes.google) {
-        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
-          userId: userModel.userId,
-          authenticationMode: authenticationMode,
-          email: userModel.email,
-        );
+        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(userId: userModel.userId, authenticationMode: authenticationMode, email: userModel.email);
 
         if (!isUserExist) {
           // New user, navigate to sign-up
@@ -509,12 +502,7 @@ class AuthenticationController {
     }
   }
 
-  Future<bool> logout({
-    bool isShowConfirmationDialog = false,
-    bool isNavigateToLogin = false,
-    bool isForceLogout = false,
-    String forceLogoutMessage = "",
-  }) async {
+  Future<bool> logout({bool isShowConfirmationDialog = false, bool isNavigateToLogin = false, bool isForceLogout = false, String forceLogoutMessage = ""}) async {
     MyPrint.printOnConsole("AuthenticationController().logout() called");
 
     await _authenticationRepository.signOut();

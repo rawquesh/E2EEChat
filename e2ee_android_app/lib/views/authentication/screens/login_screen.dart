@@ -25,14 +25,18 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   bool isLoading = false;
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController tokenController = TextEditingController();
   final FocusNode usernameFocusNode = FocusNode();
   final FocusNode passwordFocusNode = FocusNode();
+  final FocusNode tokenFocusNode = FocusNode();
 
   bool isUsernameEntered = false;
   bool isPasswordEntered = false;
+  bool isTokenEntered = false;
   bool passwordVisible = false;
   bool isBiometricAvailable = true;
   int failedAttempts = 0;
+  bool _loginWithToken = false;
 
   @override
   void initState() {
@@ -42,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
 
     usernameController.addListener(_onUsernameChanged);
     passwordController.addListener(_onPasswordChanged);
+    tokenController.addListener(_onTokenChanged);
     // _checkBiometricAvailability();
     _loadFailedAttempts();
   }
@@ -50,8 +55,10 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
+    tokenController.dispose();
     usernameFocusNode.dispose();
     passwordFocusNode.dispose();
+    tokenFocusNode.dispose();
     super.dispose();
   }
 
@@ -64,6 +71,12 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   void _onPasswordChanged() {
     setState(() {
       isPasswordEntered = passwordController.text.trim().isNotEmpty;
+    });
+  }
+
+  void _onTokenChanged() {
+    setState(() {
+      isTokenEntered = tokenController.text.trim().isNotEmpty;
     });
   }
 
@@ -100,13 +113,20 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   bool get isFormValid {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
+    final token = tokenController.text.trim();
     final usernameValid = RegExp(r'^[a-z0-9]+$').hasMatch(username);
-    return username.isNotEmpty && password.length >= 6 && usernameValid;
+
+    if (_loginWithToken) {
+      return username.isNotEmpty && password.length >= 6 && usernameValid && token.isNotEmpty;
+    } else {
+      return username.isNotEmpty && password.length >= 6 && usernameValid;
+    }
   }
 
   Future<void> _login() async {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
+    final token = _loginWithToken ? tokenController.text.trim() : null;
 
     if (!RegExp(r'^[a-z0-9]+$').hasMatch(username)) {
       MyToast.showError(context: context, msg: "Username must be lowercase and alphanumeric.");
@@ -118,10 +138,15 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
       return;
     }
 
+    if (_loginWithToken && (token == null || token.isEmpty)) {
+      MyToast.showError(context: context, msg: "Token is required.");
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
-      final success = await authenticationController.loginWithUsernamePassword(context, username, password);
+      final success = await authenticationController.loginWithUsernamePassword(context, username, password, token: token);
 
       if (!success) {
         failedAttempts++;
@@ -212,6 +237,40 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
+              CheckboxListTile(
+                title: const Text("Login with token"),
+                value: _loginWithToken,
+                onChanged: (newValue) {
+                  setState(() {
+                    _loginWithToken = newValue!;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              if (_loginWithToken) const SizedBox(height: 20),
+              if (_loginWithToken)
+                TextField(
+                  controller: tokenController,
+                  focusNode: tokenFocusNode,
+                  textInputAction: TextInputAction.done,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceVariant.withAlpha(50),
+                    labelText: "Token",
+                    hintText: "Enter your token",
+                    hintStyle: TextStyle(color: Colors.grey[500]),
+                    labelStyle: TextStyle(color: theme.colorScheme.onSurface),
+                    prefixIcon: const Icon(Icons.vpn_key_outlined, color: Colors.grey),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(radius)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(radius),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 8),
               const SizedBox(height: 20),
               SizedBox(
