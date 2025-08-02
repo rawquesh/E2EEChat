@@ -22,6 +22,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 
+import '../../../backend/authentication/authentication_provider.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/common/app_state.dart';
@@ -71,7 +72,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
     super.initState();
     _chatProvider = context.read<ChatProvider>();
-    _chatController = ChatController(chatProvider: _chatProvider);
+    final authProvider = context.read<AuthenticationProvider>();
+    _chatController = ChatController(chatProvider: _chatProvider, authenticationProvider: authProvider);
 
     _appState = context.read<AppState>();
     // add below method in postcallbacks to ensure it runs after the widget is built
@@ -178,7 +180,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.clear();
 
     DateTime destructTimestamp = selectedTimeForDestruct == 0 ? DateTime.now().add(const Duration(days: 365 * 100)) : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
-    final avatarUrl = await SharedPrefManager().getString('profile_pic_url');
+    final authProvider = context.read<AuthenticationProvider>();
+    final sharedAvatar = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+    final avatarUrl = sharedAvatar?.isNotEmpty == true ? sharedAvatar! : authProvider.userModel.get()?.profilePicture ?? '';
+    MyPrint.printOnConsole('chat message screen Avatar url: $avatarUrl');
 
     var chatMessageData = ChatMessageData(
       type: type.name,
@@ -645,6 +650,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
+    MyPrint.printOnConsole("Chat Message Screen build called for message check avatar: ${widget.chatInfo.avatar}");
 
     return Scaffold(
       appBar: AppBar(
@@ -760,7 +766,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type);
+                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: ,);
                   },
                 );
               },

@@ -7,9 +7,11 @@ import 'package:e2ee_models_app/backend/navigation/navigation_operation_peramete
 import 'package:e2ee_models_app/backend/navigation/navigation_type.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
+import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -56,9 +58,6 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
 
     if (success) {
       MyToast.showSuccess(context: context, msg: 'Profile picture updated');
-      // The profile picture URL will be saved to SharedPreferences by the controller.
-      // We can then reload it here if we want to display the updated image immediately.
-      await SharedPrefManager().setString('profile_pic_path', _profileImage!.path);
       _loadProfilePicture();
     } else {
       MyToast.showError(context: context, msg: 'Failed to update profile picture');
@@ -66,7 +65,8 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   }
 
   Future<void> _loadProfilePicture() async {
-    final profilePicPath = await SharedPrefManager().getString('profile_pic_path');
+    final profilePicPath = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+    MyPrint.printOnConsole('settings screen Profile picture path: $profilePicPath');
     if (profilePicPath != null && profilePicPath.isNotEmpty) {
       setState(() {
         _profileImage = File(profilePicPath);
@@ -172,19 +172,14 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
                 child: Center(
                   child: Column(
                     children: [
-                      // User Initial with Edit Button
                       Stack(
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: isDark ? Colors.grey[800] : Styles.grey400,
-                            backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
-                            child: _profileImage == null
-                                ? Text(
-                                    username.isNotEmpty ? username[0].toUpperCase() : "?",
-                                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-                                  )
-                                : null,
+                          CommonCachedNetworkImage(
+                            imageUrl: _profileImage != null ? _profileImage!.path : authenticationProvider.userModel.get()?.profilePicture ?? "",
+                            height: 80,
+                            width: 80,
+                            borderRadius: 40,
+                            fit: BoxFit.cover,
                           ),
                           Positioned(
                             bottom: 0,

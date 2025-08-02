@@ -4,6 +4,7 @@ import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 
+import '../authentication/authentication_provider.dart';
 import 'chat_repository.dart';
 import 'chat_users_repository.dart';
 import 'chats_provider.dart';
@@ -14,12 +15,20 @@ class ChatController {
   late ChatRepository _chatRepository;
   late MessageRepository _messageRepository;
   late ChatUsersRepository _chatUsersRepository;
+  late AuthenticationProvider _authenticationProvider;
 
-  ChatController({ChatProvider? chatProvider, ChatRepository? repository, MessageRepository? messageRepository, ChatUsersRepository? chatUsersRepository}) {
+  ChatController({
+    ChatProvider? chatProvider,
+    ChatRepository? repository,
+    MessageRepository? messageRepository,
+    ChatUsersRepository? chatUsersRepository,
+    AuthenticationProvider? authenticationProvider,
+  }) {
     _chatProvider = chatProvider ?? ChatProvider();
     _chatRepository = repository ?? ChatRepository();
     _messageRepository = messageRepository ?? MessageRepository();
     _chatUsersRepository = chatUsersRepository ?? ChatUsersRepository();
+    _authenticationProvider = authenticationProvider ?? AuthenticationProvider();
   }
 
   ChatProvider get chatProvider => _chatProvider;
@@ -37,7 +46,8 @@ class ChatController {
     final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
-    final avatarUrl = await SharedPrefManager().getString('profile_pic_url'); // Get avatar URL
+    String? avatarUrl = await SharedPrefManager().getString('profile_pic_url');
+    avatarUrl ??= _authenticationProvider.userModel.get()?.profilePicture;
 
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
 
@@ -52,7 +62,7 @@ class ChatController {
     // Add sender's info to the message data itself
     message.username = username;
     message.nickname = nickname;
-    message.avatar = avatarUrl; // Pass avatarUrl
+    message.avatar = avatarUrl;
 
     return _chatRepository.sendMessage(token: token, messageContext: messageContext, message: message, destructTimer: destructTimer);
   }

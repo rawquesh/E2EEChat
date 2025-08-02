@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../backend/authentication/authentication_provider.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/notification/notification_service.dart';
@@ -233,6 +234,10 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                       final groupId = DateTime.now().millisecondsSinceEpoch.toString();
                       final receivers = selectedUsers.map((user) => user.id).toList();
                       final myUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
+                      final authProvider = context.read<AuthenticationProvider>();
+                      final sharedAvatar = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+                      final avatarUrl = sharedAvatar?.isNotEmpty == true ? sharedAvatar! : authProvider.userModel.get()?.profilePicture ?? '';
+                      MyPrint.printOnConsole('chat list screen Avatar url: $avatarUrl');
                       if (myUserId.isNotEmpty && !receivers.contains(myUserId)) {
                         receivers.add(myUserId);
                       }
@@ -244,6 +249,7 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
                         receivers: receivers,
                         lastMessage: 'Group created',
                         lastMessageTime: DateTime.now().toIso8601String(),
+                        avatar: avatarUrl,
                       );
 
                       MyPrint.printOnConsole('XXGroup created: ${group.toMap()}');

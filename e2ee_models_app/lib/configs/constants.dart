@@ -70,6 +70,7 @@ class MySharedPreferenceVariables {
   static String userId = "user_id";
   static String isCreatorMode = "is_creator_mode";
   static String currentUserId = "current_user_id";
+  static String avatarUrl = "avatar_url";
 
   // Sucurity related keys
   static String authToken = "authToken";

@@ -39,7 +39,7 @@ class ChatRepository {
     _channel = _pusher!.channel(channelName);
 
     _channel!.bind('MessageSent', (data) {
-      MyPrint.printOnConsole('[PUSHER REPO] Received MessageSent event: $data');
+      printLongText("[PUSHER REPO] Received MessageSent event: $data");
       if (data != null) {
         onMessageReceived(data);
       }
@@ -92,10 +92,7 @@ class ChatRepository {
     // Construct final body according to the new structure
     final body = jsonEncode({
       ...messageContext,
-      "message": {
-        ...innerMessagePayload,
-        ...encryptedPayload,
-      },
+      "message": {...innerMessagePayload, ...encryptedPayload},
     });
 
     printLongText('[SEND DEBUG] Final Request Body: $body');

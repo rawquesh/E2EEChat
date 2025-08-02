@@ -41,24 +41,32 @@ class MyUserController {
     final result = await _userRepository.updateProfile(token: token, name: name, profilePhoto: profilePhoto);
 
     if (result != null) {
+      final user = _authenticationProvider.userModel.get();
+
       if (name != null && name.isNotEmpty) {
         await SharedPrefManager().setString(MySharedPreferenceVariables.nickname, name);
         MyPrint.printOnConsole('New nickname saved: $name');
-        final user = _authenticationProvider.userModel.get();
         if (user != null) {
           user.displayName = name;
-          _authenticationProvider.userModel.set(value: user, isNotify: true);
         }
       }
 
-      final newAvatarUrl = result['data']?['avatar_url'];
-      if (newAvatarUrl != null) {
-        await SharedPrefManager().setString('profile_pic_url', newAvatarUrl);
+      final newAvatarUrl = result['data']?['user']?['profile_photo'];
+      if (newAvatarUrl != null && newAvatarUrl.isNotEmpty) {
+        await SharedPrefManager().setString(MySharedPreferenceVariables.avatarUrl, newAvatarUrl);
         MyPrint.printOnConsole('New avatar URL saved: $newAvatarUrl');
+        if (user != null) {
+          user.profilePicture = newAvatarUrl;
+        }
+      }
+
+      if (user != null) {
+        _authenticationProvider.userModel.set(value: user, isNotify: true);
       }
 
       return true;
     }
+
     return false;
   }
 }

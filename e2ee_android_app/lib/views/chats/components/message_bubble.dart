@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
@@ -19,8 +20,9 @@ class MessageBubble extends StatefulWidget {
   final ChatController chatController;
   final String chatId;
   final ChatRoomType chatRoomType;
+  final String avatar;
 
-  const MessageBubble({Key? key, required this.message, required this.chatController, required this.chatId, required this.chatRoomType}) : super(key: key);
+  const MessageBubble({Key? key, required this.message, required this.chatController, required this.chatId, required this.chatRoomType, required this.avatar}) : super(key: key);
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -91,6 +93,8 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
+
+    MyPrint.printOnConsole("MessageBubble build called for message check avatar: ${widget.message.message.avatar}");
 
     return DateTime.now().isBefore(widget.message.destructTimestamp)
         ? InkWell(
