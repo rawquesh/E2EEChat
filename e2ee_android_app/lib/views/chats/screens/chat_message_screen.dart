@@ -12,6 +12,7 @@ import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
+import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -47,6 +48,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   late final ChatController _chatController;
   late final ChatProvider _chatProvider;
   late final AppState _appState;
+  String? profilePicPath = '';
 
   int _loadedMessages = 0;
   final int _pageSize = 10;
@@ -123,6 +125,20 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
     _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
     _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
+  }
+
+  Future<void> getProfilePicture() async {
+    final authProvider = context.read<AuthenticationProvider>();
+    final user = authProvider.userModel.get();
+    if (user != null) {
+      profilePicPath = user.profilePicture;
+      if (profilePicPath == null || profilePicPath!.isEmpty) {
+        profilePicPath = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+      }
+      if (profilePicPath == null || profilePicPath!.isEmpty) {
+        profilePicPath = 'default_avatar.png'; // Fallback to a default avatar
+      }
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -668,11 +684,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
-                  child: Center(
-                    child: Text(
-                      widget.chatInfo.avatar,
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: widget.chatInfo.avatar.isNotEmpty
+                        ? CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover)
+                        : Center(
+                            child: Text(
+                              widget.chatInfo.nickname.isNotEmpty ? widget.chatInfo.nickname[0].toUpperCase() : 'U',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                            ),
+                          ),
                   ),
                 ),
                 if (widget.chatInfo.isOnline)
@@ -766,7 +787,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     }
                     final msgIndex = isLoadingMore ? index - 1 : index;
                     final message = msgList[msgIndex];
-                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: ,);
+                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: profilePicPath);
                   },
                 );
               },

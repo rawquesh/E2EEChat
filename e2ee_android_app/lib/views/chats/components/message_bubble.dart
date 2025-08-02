@@ -20,7 +20,7 @@ class MessageBubble extends StatefulWidget {
   final ChatController chatController;
   final String chatId;
   final ChatRoomType chatRoomType;
-  final String avatar;
+  final String? avatar;
 
   const MessageBubble({Key? key, required this.message, required this.chatController, required this.chatId, required this.chatRoomType, required this.avatar}) : super(key: key);
 
@@ -140,12 +140,17 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
                     CircleAvatar(
                       radius: 14,
                       backgroundColor: Styles.grey400,
-                      child: widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty
-                          ? CommonCachedNetworkImage(imageUrl: widget.message.message.avatar!, borderRadius: 14, height: 28, width: 28)
-                          : Text(
-                              'S', // Fallback initial
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
+                      child: () {
+                        final avatarUrl = widget.message.message.avatar;
+                        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+                          return CommonCachedNetworkImage(imageUrl: avatarUrl, borderRadius: 14, height: 28, width: 28);
+                        }
+
+                        return Text(
+                          'S',
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        );
+                      }(),
                     ),
                     SizedBox(width: 8),
                   ],
