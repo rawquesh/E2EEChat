@@ -15,11 +15,7 @@ class WebRTCService {
       {'urls': 'stun:stun.l.google.com:19302'},
       {'urls': 'stun:stun1.l.google.com:19302'},
       {'urls': 'stun:172.86.92.130.sslip.io:3478'},
-      {
-        'urls': 'turn:172.86.92.130.sslip.io:3478?transport=udp',
-        'username': 'webrtcuser',
-        'credential': 'webrtccred',
-      },
+      {'urls': 'turn:172.86.92.130.sslip.io:3478?transport=udp', 'username': 'webrtcuser', 'credential': 'webrtccred'},
     ],
   };
 
@@ -32,10 +28,7 @@ class WebRTCService {
   };
 
   /// Initializes the peer connection
-  Future<void> initPeerConnection({
-    required Function(RTCIceCandidate) onIceCandidate,
-    required Function(MediaStream stream) onAddRemoteStream,
-  }) async {
+  Future<void> initPeerConnection({required Function(RTCIceCandidate) onIceCandidate, required Function(MediaStream stream) onAddRemoteStream}) async {
     _onIceCandidateCallback = onIceCandidate;
     _onAddRemoteStreamCallback = onAddRemoteStream;
 
@@ -56,10 +49,7 @@ class WebRTCService {
 
   /// Attach microphone audio to peer
   Future<void> attachLocalAudio() async {
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': false,
-    });
+    _localStream = await navigator.mediaDevices.getUserMedia({'audio': true, 'video': false});
 
     if (_peerConnection != null && _localStream != null) {
       for (var track in _localStream!.getTracks()) {
@@ -70,32 +60,23 @@ class WebRTCService {
 
   /// Create and set local SDP offer
   Future<RTCSessionDescription> createOffer() async {
-    final offer = await _peerConnection?.createOffer({
-      'offerToReceiveAudio': 1,
-    });
+    final offer = await _peerConnection?.createOffer({'offerToReceiveAudio': 1});
     await _peerConnection?.setLocalDescription(offer!);
     return offer!;
   }
 
   /// Create and set local SDP answer
   Future<RTCSessionDescription> createAnswer() async {
-    final answer = await _peerConnection?.createAnswer({
-      'offerToReceiveAudio': 1,
-    });
+    final answer = await _peerConnection?.createAnswer({'offerToReceiveAudio': 1});
     await _peerConnection?.setLocalDescription(answer!);
     return answer!;
   }
 
   /// Set the remote peer's SDP
   Future<void> setRemoteDescription(String? sdp, String? type) async {
-    if (sdp == null ||
-        sdp.trim().isEmpty ||
-        type == null ||
-        type.trim().isEmpty) {
+    if (sdp == null || sdp.trim().isEmpty || type == null || type.trim().isEmpty) {
       print('❌ setRemoteDescription: SDP or type is null/empty.');
-      MyPrint.printOnConsole(
-        '❌ Cannot apply remote description – invalid sdp or type',
-      );
+      MyPrint.printOnConsole('❌ Cannot apply remote description – invalid sdp or type');
       MyPrint.printOnConsole('SDP: $sdp');
       MyPrint.printOnConsole('Type: $type');
       return;
@@ -103,15 +84,11 @@ class WebRTCService {
 
     try {
       final description = RTCSessionDescription(sdp, type);
-      MyPrint.printOnConsole(
-        '🎯 Applying remote SDP:\nType: $type\nSDP:\n$sdp',
-      );
+      MyPrint.printOnConsole('🎯 Applying remote SDP:\nType: $type\nSDP:\n$sdp');
       await _peerConnection?.setRemoteDescription(description);
       MyPrint.printOnConsole('✅ setRemoteDescription applied successfully.');
     } catch (e, stack) {
-      MyPrint.printOnConsole(
-        '❌ setRemoteDescription failed with error: $e\n$stack',
-      );
+      MyPrint.printOnConsole('❌ setRemoteDescription failed with error: $e\n$stack');
       rethrow; // optional: remove if you want to fail silently
     }
   }
@@ -140,6 +117,19 @@ class WebRTCService {
     _remoteStream = null;
     _onIceCandidateCallback = null;
     _onAddRemoteStreamCallback = null;
+  }
+
+  Future<void> setSpeakerphoneOn(bool enable) async {
+    final mediaConstraints = <String, dynamic>{'mandatory': {}, 'optional': []};
+    await Helper.setSpeakerphoneOn(enable);
+  }
+
+  Future<void> routeAudioToEarpiece() async {
+    await setSpeakerphoneOn(false); // false to route to earpiece
+  }
+
+  Future<void> routeAudioToSpeaker() async {
+    await setSpeakerphoneOn(true); // true to route to speaker
   }
 
   /// Optional getters if UI or logs need them

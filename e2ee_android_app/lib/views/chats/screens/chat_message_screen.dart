@@ -731,26 +731,26 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           ],
         ),
         actions: [
-          // New Call Button
-          IconButton(
-            icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
-            onPressed: () async {
-              // Get the CallController from the provider
-              final callProvider = context.read<CallProvider>();
-              final callController = callProvider.callController;
+          if (widget.chatInfo.type != ChatRoomType.Group)
+            IconButton(
+              icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
+              onPressed: () async {
+                // Get the CallController from the provider
+                final callProvider = context.read<CallProvider>();
+                final callController = callProvider.callController;
 
-              // Start the call with the current chat user's ID
-              await callController.startCall(widget.chatInfo.id, receiverName: widget.chatInfo.nickname, receiverAvatar: widget.chatInfo.avatar);
+                // Start the call with the current chat user's ID
+                await callController.startCall(widget.chatInfo.id, receiverName: widget.chatInfo.nickname, receiverAvatar: widget.chatInfo.avatar);
 
-              // Navigate to the new call screen
-              if (mounted) {
-                NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
-                  arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
-                );
-              }
-            },
-          ),
+                // Navigate to the new call screen
+                if (mounted) {
+                  NavigationController.navigateToVoiceCallScreen(
+                    navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                    arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
+                  );
+                }
+              },
+            ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
             onSelected: (value) {
