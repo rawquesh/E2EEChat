@@ -4,6 +4,7 @@ import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 
+import '../authentication/authentication_provider.dart';
 import 'chat_repository.dart';
 import 'chat_users_repository.dart';
 import 'chats_provider.dart';
@@ -14,17 +15,20 @@ class ChatController {
   late ChatRepository _chatRepository;
   late MessageRepository _messageRepository;
   late ChatUsersRepository _chatUsersRepository;
+  late AuthenticationProvider _authenticationProvider;
 
   ChatController({
     ChatProvider? chatProvider,
     ChatRepository? repository,
     MessageRepository? messageRepository,
     ChatUsersRepository? chatUsersRepository,
+    AuthenticationProvider? authenticationProvider,
   }) {
     _chatProvider = chatProvider ?? ChatProvider();
     _chatRepository = repository ?? ChatRepository();
     _messageRepository = messageRepository ?? MessageRepository();
     _chatUsersRepository = chatUsersRepository ?? ChatUsersRepository();
+    _authenticationProvider = authenticationProvider ?? AuthenticationProvider();
   }
 
   ChatProvider get chatProvider => _chatProvider;
@@ -42,17 +46,25 @@ class ChatController {
     final senderId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
     final username = await SharedPrefManager().getString(MySharedPreferenceVariables.username) ?? 'Unknown';
     final nickname = await SharedPrefManager().getString(MySharedPreferenceVariables.nickname) ?? 'UnknownName';
-    final receiverId = opponent.id;
+    String? avatarUrl = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+    avatarUrl ??= _authenticationProvider.userModel.get()?.profilePicture;
+
     if (token == null || token.isEmpty || senderId == null || senderId.isEmpty) return false;
-    return _chatRepository.sendMessage(
-      token: token,
-      senderId: senderId,
-      receiverId: receiverId,
-      message: message,
-      username: username,
-      nickname: nickname, 
-      destructTimer: destructTimer,
-    );
+
+    Map<String, dynamic> messageContext;
+
+    if (opponent.type == ChatRoomType.Group) {
+      messageContext = {'type': 'group', 'sender_id': senderId, 'group_id': opponent.id, 'group_name': opponent.groupName, 'receivers': opponent.receivers ?? []};
+    } else {
+      messageContext = {'type': 'single', 'sender_id': senderId, 'receiver_id': opponent.id};
+    }
+
+    // Add sender's info to the message data itself
+    message.username = username;
+    message.nickname = nickname;
+    message.avatar = avatarUrl;
+
+    return _chatRepository.sendMessage(token: token, messageContext: messageContext, message: message, destructTimer: destructTimer);
   }
 
   Future<void> saveMessageToHive({required String chatId, required ChatMessageModel message}) async {
@@ -120,6 +132,33 @@ class ChatController {
     }
   }
 
+  Future<void> searchUsers(String query) async {
+    MyPrint.printOnConsole("searchUsers called with query: $query");
+    _chatProvider.groupSearchState.set(value: SearchState.loading, isNotify: true);
+
+    try {
+      final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
+      MyPrint.printOnConsole("Token retrieved: $token");
+      if (token == null || token.isEmpty) {
+        _chatProvider.groupSearchState.set(value: SearchState.error, isNotify: true);
+        return;
+      }
+
+      final ChatUserModel? user = await _chatRepository.fetchChatUser(username: query, token: token);
+
+      if (user != null) {
+        _chatProvider.groupCreationSearchResults.setList(list: [user], isClear: true, isNotify: true);
+        _chatProvider.groupSearchState.set(value: SearchState.success, isNotify: true);
+      } else {
+        _chatProvider.groupCreationSearchResults.setList(list: [], isClear: true, isNotify: true);
+        _chatProvider.groupSearchState.set(value: SearchState.empty, isNotify: true);
+      }
+    } catch (e) {
+      MyPrint.printOnConsole('Error searching users: $e');
+      _chatProvider.groupSearchState.set(value: SearchState.error, isNotify: true);
+    }
+  }
+
   Future<bool> addUserToChatList(ChatUserModel user) async {
     try {
       final saved = await _chatUsersRepository.saveChatUser(user);
@@ -175,6 +214,9 @@ class ChatController {
         lastMessageTime: lastMessageTime.toIso8601String(),
         isOnline: currentUsers[userIndex].isOnline,
         unreadCount: currentUsers[userIndex].unreadCount,
+        type: currentUsers[userIndex].type,
+        groupName: currentUsers[userIndex].groupName,
+        receivers: currentUsers[userIndex].receivers,
       );
       currentUsers[userIndex] = updatedUser;
       currentUsers.sort((a, b) => DateTime.parse(b.lastMessageTime).compareTo(DateTime.parse(a.lastMessageTime)));
@@ -210,16 +252,9 @@ class ChatController {
     }
   }
 
-  Future<void> loadMessagesToProvider({
-    required String chatId,
-    required int limit,
-    required int offset,
-    required String currentUserId,
-    bool clear = false,
-  }) async {
+  Future<void> loadMessagesToProvider({required String chatId, required int limit, required int offset, required String currentUserId, bool clear = false}) async {
     try {
       final fetched = await fetchMessagesPage(chatId: chatId, limit: limit, offset: offset, currentUserId: currentUserId);
-
 
       final ordered = fetched.reversed.toList();
       _chatProvider.addMessagesFor(chatId, ordered, clear: clear);
@@ -257,9 +292,7 @@ class ChatController {
 
   Future<bool> deleteMessage(String chatId, String messageId) async {
     try {
-      final message = _chatProvider
-          .getMessagesFor(chatId)
-          .firstWhere((element) => element.id == messageId);
+      final message = _chatProvider.getMessagesFor(chatId).firstWhere((element) => element.id == messageId);
       message.destructTimestamp = DateTime.now().subtract(Duration(seconds: 1));
       await _messageRepository.addMessage(chatId: chatId, message: message);
       await _messageRepository.deleteMessage(chatId, messageId);

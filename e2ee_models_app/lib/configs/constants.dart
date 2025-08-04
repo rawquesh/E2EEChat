@@ -55,6 +55,10 @@ class PostStatus {
   static List<String> get values => [draft, published, archived];
 }
 
+enum LoginType { basic, withToken }
+
+const LoginType currentLoginType = LoginType.withToken;
+
 class MySharedPreferenceVariables {
   static String isFirst = "isfirst";
   static String lastOpenedTime = "last_opened_time";
@@ -70,17 +74,17 @@ class MySharedPreferenceVariables {
   static String userId = "user_id";
   static String isCreatorMode = "is_creator_mode";
   static String currentUserId = "current_user_id";
+  static String avatarUrl = "avatar_url";
 
   // Sucurity related keys
   static String authToken = "authToken";
-  
+
   static String myPublicKey = "my_rsa_public_key";
   static String myPrivateKey = "my_rsa_private_key";
 
-  static String getPublicKeyPath(String userId){
+  static String getPublicKeyPath(String userId) {
     return "rsa_public_key_$userId";
   }
-
 
   static const pinKey = "user_app_pin";
   static const duressPinKey = "duress_pin";

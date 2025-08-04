@@ -28,11 +28,7 @@ class CallController {
   VoidCallback? onCallConnected;
   VoidCallback? onCallEnded;
 
-  CallController({
-    CallProvider? provider,
-    WebRTCSignalingRepository? repository,
-    WebRTCService? service,
-  }) {
+  CallController({CallProvider? provider, WebRTCSignalingRepository? repository, WebRTCService? service}) {
     callProvider = provider ?? CallProvider();
     signalingRepository = repository ?? WebRTCSignalingRepository();
     webrtcService = service ?? WebRTCService();
@@ -42,47 +38,28 @@ class CallController {
     _selfId = userId;
     _token = token;
 
-    signalingRepository.initWebSocket(
-      userId: userId,
-      token: token,
-      onSignalReceived: _handleSignal,
-    );
+    signalingRepository.initWebSocket(userId: userId, token: token, onSignalReceived: _handleSignal);
   }
 
-  Future<void> startCall(
-    String receiverId, {
-    String? receiverName,
-    String? receiverAvatar,
-  }) async {
+  Future<void> startCall(String receiverId, {String? receiverName, String? receiverAvatar}) async {
     _remoteId = receiverId;
     _remoteName = receiverName;
     _remoteAvatar = receiverAvatar;
     callProvider.callState.set(value: CallState.calling);
 
-    await webrtcService.initPeerConnection(
-      onIceCandidate: _sendIceCandidate,
-      onAddRemoteStream: (stream) {},
-    );
+    await webrtcService.initPeerConnection(onIceCandidate: _sendIceCandidate, onAddRemoteStream: (stream) {});
 
     await webrtcService.attachLocalAudio();
 
     final offer = await webrtcService.createOffer();
 
-    final offerData = {
-      'sdp': base64Encode(utf8.encode(offer.sdp!)),
-      'type': offer.type,
-    };
+    final offerData = {'sdp': base64Encode(utf8.encode(offer.sdp!)), 'type': offer.type};
 
     print('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
 
     await signalingRepository.sendSignal(
       token: _token!,
-      signal: WebRTCSignalModel(
-        type: 'offer',
-        data: offerData,
-        senderId: _selfId!,
-        receiverId: receiverId,
-      ),
+      signal: WebRTCSignalModel(type: 'offer', data: offerData, senderId: _selfId!, receiverId: receiverId),
     );
 
     await _callHistoryRepository.addCall(
@@ -99,9 +76,7 @@ class CallController {
       ),
     );
 
-    print(
-      '📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}',
-    );
+    print('📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}');
   }
 
   Future<void> acceptCall() async {
@@ -112,15 +87,14 @@ class CallController {
 
     callProvider.callState.set(value: CallState.connected);
 
-    await webrtcService.initPeerConnection(
-      onIceCandidate: _sendIceCandidate,
-      onAddRemoteStream: (stream) {},
-    );
+    await webrtcService.initPeerConnection(onIceCandidate: _sendIceCandidate, onAddRemoteStream: (stream) {});
 
     await Future.delayed(Duration(milliseconds: 100));
     await webrtcService.attachLocalAudio();
     await sendAnswer(_receivedOffer!);
     _receivedOffer = null;
+
+    await webrtcService.routeAudioToEarpiece(); // <-- default to earpiece here
 
     await _callHistoryRepository.addCall(
       CallRecord(
@@ -156,20 +130,12 @@ class CallController {
 
     final answer = await webrtcService.createAnswer();
 
-    final answerData = {
-      'sdp': base64Encode(utf8.encode(answer.sdp!)),
-      'type': answer.type,
-    };
+    final answerData = {'sdp': base64Encode(utf8.encode(answer.sdp!)), 'type': answer.type};
 
     print('📤 Sending encoded answer...');
     await signalingRepository.sendSignal(
       token: _token!,
-      signal: WebRTCSignalModel(
-        type: 'answer',
-        data: answerData,
-        senderId: _selfId!,
-        receiverId: _remoteId!,
-      ),
+      signal: WebRTCSignalModel(type: 'answer', data: answerData, senderId: _selfId!, receiverId: _remoteId!),
     );
   }
 
@@ -181,9 +147,7 @@ class CallController {
 
         if (_receivedOffer != null) {
           try {
-            final decodedSdp = utf8.decode(
-              base64Decode(_receivedOffer!['sdp']),
-            );
+            final decodedSdp = utf8.decode(base64Decode(_receivedOffer!['sdp']));
             _receivedOffer!['sdp'] = decodedSdp;
 
             if (!_receivedOffer!.containsKey('type')) {
@@ -214,7 +178,9 @@ class CallController {
           await webrtcService.setRemoteDescription(sdp, type);
 
           callProvider.callState.set(value: CallState.connected);
-          Helper.setSpeakerphoneOn(true);
+
+          await webrtcService.routeAudioToEarpiece(); // <-- default to earpiece here
+
           onCallConnected?.call();
         } catch (e) {
           print('❌ Error decoding ANSWER SDP: $e');
@@ -223,11 +189,7 @@ class CallController {
 
       case 'ice-candidate':
         if (signal.data == null) return;
-        final candidate = RTCIceCandidate(
-          signal.data!['candidate'],
-          signal.data!['sdpMid'],
-          signal.data!['sdpMLineIndex'],
-        );
+        final candidate = RTCIceCandidate(signal.data!['candidate'], signal.data!['sdpMid'], signal.data!['sdpMLineIndex']);
         await webrtcService.addIceCandidate(candidate);
         break;
 
@@ -237,19 +199,13 @@ class CallController {
     }
   }
 
-  bool get _isReadyForSignaling =>
-      _token != null && _selfId != null && _remoteId?.isNotEmpty == true;
+  bool get _isReadyForSignaling => _token != null && _selfId != null && _remoteId?.isNotEmpty == true;
 
   Future<void> endCall({bool sendSignal = true}) async {
     if (sendSignal && _isReadyForSignaling) {
       await signalingRepository.sendSignal(
         token: _token!,
-        signal: WebRTCSignalModel(
-          type: 'hangup',
-          senderId: _selfId!,
-          receiverId: _remoteId!,
-          data: {'sdp': '', 'type': ''},
-        ),
+        signal: WebRTCSignalModel(type: 'hangup', senderId: _selfId!, receiverId: _remoteId!, data: {'sdp': '', 'type': ''}),
       );
     }
 
@@ -270,11 +226,7 @@ class CallController {
       token: _token!,
       signal: WebRTCSignalModel(
         type: 'ice-candidate',
-        data: {
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-        },
+        data: {'candidate': candidate.candidate, 'sdpMid': candidate.sdpMid, 'sdpMLineIndex': candidate.sdpMLineIndex},
         senderId: _selfId!,
         receiverId: _remoteId!,
       ),

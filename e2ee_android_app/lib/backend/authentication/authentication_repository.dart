@@ -6,9 +6,8 @@ import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
-
+import 'package:http/http.dart' as http;
 
 class AuthenticationRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
@@ -16,11 +15,7 @@ class AuthenticationRepository {
   Future<Map<String, dynamic>?> registerNewUserFromPayload(Map<String, dynamic> payload) async {
     try {
       final url = '$baseUrl/auth/register';
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(payload),
-      );
+      final response = await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
 
       MyPrint.printOnConsole("Register response code: ${response.statusCode}");
       MyPrint.printOnConsole("Register response body: ${response.body}");
@@ -38,9 +33,28 @@ class AuthenticationRepository {
     }
   }
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  Future<Map<String, dynamic>?> registerNewUserFromPayloadWithToken(Map<String, dynamic> payload) async {
+    try {
+      final url = '$baseUrl/auth/register2';
+      final response = await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
+
+      MyPrint.printOnConsole("Register with token response code: ${response.statusCode}");
+      MyPrint.printOnConsole("Register with token response body: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        return responseData;
+      } else {
+        MyPrint.printOnConsole("Registration with token failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      MyPrint.printOnConsole("Error in registerNewUserFromPayloadWithToken: $e");
+      return null;
+    }
+  }
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   Future<Map<String, dynamic>?> signInWithGoogle({required BuildContext context}) async {
     MyPrint.printOnConsole("AuthenticationRepository().signInWithGoogle() called");
@@ -60,13 +74,7 @@ class AuthenticationRepository {
       MyPrint.printOnConsole("Access token retrieved: $accessToken");
 
       MyPrint.printOnConsole("Sending access token to backend...");
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/google/mobile'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'accessToken': accessToken,
-        }),
-      );
+      final response = await http.post(Uri.parse('$baseUrl/auth/google/mobile'), headers: {'Content-Type': 'application/json'}, body: json.encode({'accessToken': accessToken}));
 
       MyPrint.printOnConsole("Backend response code: ${response.statusCode}");
       MyPrint.printOnConsole("Backend response body: ${response.body}");
@@ -95,12 +103,7 @@ class AuthenticationRepository {
       if (userData == null) {
         MyPrint.printOnConsole("User data not in response, fetching separately");
 
-        final userResponse = await http.get(
-          Uri.parse('$baseUrl/auth/me'),
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
+        final userResponse = await http.get(Uri.parse('$baseUrl/auth/me'), headers: {'Authorization': 'Bearer $token'});
 
         MyPrint.printOnConsole("User info response code: ${userResponse.statusCode}");
         MyPrint.printOnConsole("User info response body: ${userResponse.body}");
@@ -110,18 +113,12 @@ class AuthenticationRepository {
           return null;
         }
 
-        return {
-          'token': token,
-          'userData': json.decode(userResponse.body),
-        };
+        return {'token': token, 'userData': json.decode(userResponse.body)};
       }
 
       MyPrint.printOnConsole("User data received from backend response: $userData");
 
-      return {
-        'token': token,
-        'userData': userData,
-      };
+      return {'token': token, 'userData': userData};
     } catch (e, stackTrace) {
       MyPrint.printOnConsole("Error during Google sign-in: $e");
       MyPrint.printOnConsole("StackTrace: $stackTrace");
@@ -134,9 +131,7 @@ class AuthenticationRepository {
 
     try {
       final encodedEmail = Uri.encodeComponent(email.toLowerCase());
-      final response = await http.get(
-        Uri.parse('$baseUrl/auth/check-email/$encodedEmail'),
-      );
+      final response = await http.get(Uri.parse('$baseUrl/auth/check-email/$encodedEmail'));
 
       MyPrint.printOnConsole("Email check response status: ${response.statusCode}");
       MyPrint.printOnConsole("Email check response body: ${response.body}");
@@ -144,10 +139,7 @@ class AuthenticationRepository {
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse the response which should contain isInUse and passwordSet
         final responseData = json.decode(response.body);
-        return {
-          'isInUse': responseData['isInUse'] ?? false,
-          'passwordSet': responseData['passwordSet'] ?? false,
-        };
+        return {'isInUse': responseData['isInUse'] ?? false, 'passwordSet': responseData['passwordSet'] ?? false};
       } else {
         MyPrint.printOnConsole("Failed to check email: ${response.statusCode}");
         return null;
@@ -158,21 +150,11 @@ class AuthenticationRepository {
     }
   }
 
-  Future<Map<String, dynamic>?> signInWithEmail({
-    required String email,
-    required String password,
-  }) async {
+  Future<Map<String, dynamic>?> signInWithEmail({required String email, required String password}) async {
     MyPrint.printOnConsole("AuthenticationRepository().signInWithEmail() called");
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
-      );
+      final response = await http.post(Uri.parse('$baseUrl/auth/login'), headers: {'Content-Type': 'application/json'}, body: json.encode({'email': email, 'password': password}));
 
       MyPrint.printOnConsole("Login response status: ${response.statusCode}");
       MyPrint.printOnConsole("Login response body: ${response.body}");
@@ -187,10 +169,7 @@ class AuthenticationRepository {
           MyPrint.printOnConsole("Received authToken: $token");
           await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
           MyPrint.printOnConsole("Stored authToken: $token");
-          return {
-            'token': token,
-            'userData': userData,
-          };
+          return {'token': token, 'userData': userData};
         } else {
           MyPrint.printOnConsole("Token is null in response");
         }
@@ -215,11 +194,7 @@ class AuthenticationRepository {
     try {
       MyPrint.printOnConsole("Register Request Payload: ${json.encode(userModel.toMap())}");
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(userModel.toMap()),
-      );
+      final response = await http.post(Uri.parse('$baseUrl/auth/register'), headers: {'Content-Type': 'application/json'}, body: json.encode(userModel.toMap()));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> responseData = json.decode(response.body);
@@ -262,12 +237,7 @@ class AuthenticationRepository {
 
   Future<UserModel?> getUserFromToken(String token) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/auth/user'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await http.get(Uri.parse('$baseUrl/auth/user'), headers: {'Authorization': 'Bearer $token'});
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> userData = json.decode(response.body);

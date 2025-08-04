@@ -7,7 +7,6 @@ import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:pointycastle/export.dart';
 import 'package:asn1lib/asn1lib.dart';
-import 'package:uuid/uuid.dart'; // Import for Uuid
 
 class EncryptionService {
   static final EncryptionService _instance = EncryptionService._internal();
@@ -42,6 +41,7 @@ class EncryptionService {
     await _secureStorage.setString(MySharedPreferenceVariables.myPrivateKey, _encodePrivateKeyToPem(_myPrivateKey!));
   }
 
+  // This method fetches the public key for a user, either from local storage or by making a network request .
   Future<String?> fetchPublicKey(String userId, String token) async {
     var localKey = _recipientPublicKeys.containsKey(userId)
         ? _recipientPublicKeys[userId]
@@ -55,22 +55,46 @@ class EncryptionService {
     return localKey;
   }
 
-  Map<String, String> encryptMessagePayload({required Map<String, dynamic> payload, required String recipientPublicKeyPem}) {
+  Future<Map<String, dynamic>?> encryptPayload({
+    required Map<String, dynamic> payload,
+    required List<String> recipientIds,
+    required String token,
+  }) async {
+    if (recipientIds.isEmpty) {
+      MyPrint.printOnConsole("XXEN Encryption failed: Recipient list is empty.");
+      return null;
+    }
+
+    // 1. Encrypt the message content ONCE
     final aesKey = _generateRandomBytes(32);
     final iv = _generateRandomBytes(12);
-
     final payloadBytes = utf8.encode(jsonEncode(payload));
     final encryptedPayload = _aesGcmEncrypt(payloadBytes, aesKey, iv);
 
-    final recipientPublicKey = _parsePublicKeyFromPem(recipientPublicKeyPem);
-    final encryptedAesKey = _rsaEncrypt(aesKey, recipientPublicKey);
+    // 2. Encrypt the AES key for EACH recipient in the list
+    final Map<String, String> encryptedKeys = {};
+    for (String userId in recipientIds) {
+      final recipientPublicKeyPem = await fetchPublicKey(userId, token);
+      if (recipientPublicKeyPem != null) {
+        final recipientPublicKey = _parsePublicKeyFromPem(recipientPublicKeyPem);
+        final encryptedAesKey = _rsaEncrypt(aesKey, recipientPublicKey);
+        encryptedKeys[userId] = base64Encode(encryptedAesKey);
+      } else {
+        MyPrint.printOnConsole("XXEN Could not fetch public key for user: $userId. Skipping.");
+      }
+    }
 
-    MyPrint.printOnConsole("XXEN Encrypted payload: ${base64Encode(encryptedPayload)}");
+    // If no keys could be encrypted, the message can't be sent securely.
+    if (encryptedKeys.isEmpty) return null;
 
-    return {'key': base64Encode(encryptedAesKey), 'iv': base64Encode(iv), 'payload': base64Encode(encryptedPayload)};
+    // 3. Return the final payload
+    return {'iv': base64Encode(iv), 'payload': base64Encode(encryptedPayload), 'keys': encryptedKeys};
   }
 
-  Future<Map<String, dynamic>?> decryptMessagePayload(Map<String, dynamic> encryptedData) async {
+  Future<Map<String, dynamic>?> decryptMessagePayload({
+    required Map<String, dynamic> encryptedData,
+    required String myUserId, // The ID of the current user is now needed
+  }) async {
     if (_myPrivateKey == null) await init();
     if (_myPrivateKey == null) {
       MyPrint.printOnConsole("XXEN Error: Private key not available for decryption.");
@@ -78,7 +102,24 @@ class EncryptionService {
     }
 
     try {
-      final encryptedAesKey = base64Decode(encryptedData['key']);
+      String? encryptedAesKeyBase64;
+
+      // Check if it's a group message or single message
+      if (encryptedData.containsKey('keys')) {
+        // GROUP CHAT: Find the key intended for me
+        final keysMap = encryptedData['keys'] as Map<String, dynamic>;
+        encryptedAesKeyBase64 = keysMap[myUserId];
+      } else if (encryptedData.containsKey('key')) {
+        // SINGLE CHAT: Use the single key
+        encryptedAesKeyBase64 = encryptedData['key'];
+      }
+
+      if (encryptedAesKeyBase64 == null) {
+        MyPrint.printOnConsole("XXEN Decryption failed: No encrypted key found for user $myUserId.");
+        return null;
+      }
+
+      final encryptedAesKey = base64Decode(encryptedAesKeyBase64);
       final iv = base64Decode(encryptedData['iv']);
       final encryptedPayload = base64Decode(encryptedData['payload']);
 
@@ -195,12 +236,4 @@ class EncryptionService {
       (topLevelSeq.elements[5] as ASN1Integer).valueAsBigInteger,
     );
   }
-
-  // Static methods
-
-  // static Future<String?> getMyPublicKeyPem() async {
-  //   // This reads the public key directly from secure storage.
-  //   // It's reliable since init() is called in main().
-  //   return await _secureStorage.getString(MySharedPreferenceVariables.myPublicKey);
-  // }
 }

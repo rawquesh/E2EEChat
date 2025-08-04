@@ -27,6 +27,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
   bool _isDialogShowing = false;
   Timer? _callDurationTimer;
   int _callDurationInSeconds = 0;
+  bool isSpeakerOn = false;
 
   @override
   void initState() {
@@ -163,11 +164,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
           // Background
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2c3e50), Color(0xFF34495e)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: LinearGradient(colors: [Color(0xFF2c3e50), Color(0xFF34495e)], begin: Alignment.topLeft, end: Alignment.bottomRight),
             ),
           ),
           // Blur Effect
@@ -176,11 +173,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
             child: Container(color: Colors.black.withOpacity(0.3)),
           ),
           // Hidden video renderer for audio stream
-          SizedBox(
-            width: 1,
-            height: 1,
-            child: RTCVideoView(_remoteRenderer, mirror: false),
-          ),
+          SizedBox(width: 1, height: 1, child: RTCVideoView(_remoteRenderer, mirror: false)),
           // UI Content
           SafeArea(
             child: Padding(
@@ -231,39 +224,22 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
             shape: BoxShape.circle,
             color: Colors.white.withOpacity(0.2),
             border: Border.all(color: Colors.white.withOpacity(0.5), width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, spreadRadius: 5)],
           ),
           child: Center(
             child: Text(
               user.avatar,
-              style: const TextStyle(
-                fontSize: 60,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         ),
         const SizedBox(height: 24),
         Text(
           user.nickname,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 8),
-        Text(
-          statusText,
-          style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.8)),
-        ),
+        Text(statusText, style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.8))),
       ],
     );
   }
@@ -274,20 +250,13 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
+        _buildControlButton(icon: isMuted ? Icons.mic_off : Icons.mic, onTap: () => _controller.mute(!isMuted), backgroundColor: Colors.white.withOpacity(0.2)),
+        _buildControlButton(icon: Icons.call_end, onTap: () => _controller.endCall(), backgroundColor: Colors.red),
         _buildControlButton(
-          icon: isMuted ? Icons.mic_off : Icons.mic,
-          onTap: () => _controller.mute(!isMuted),
-          backgroundColor: Colors.white.withOpacity(0.2),
-        ),
-        _buildControlButton(
-          icon: Icons.call_end,
-          onTap: () => _controller.endCall(),
-          backgroundColor: Colors.red,
-        ),
-        _buildControlButton(
-          icon: Icons.volume_up,
+          icon: isSpeakerOn ? Icons.volume_up : Icons.hearing,
           onTap: () {
-            // Implement speaker toggle
+            setState(() => isSpeakerOn = !isSpeakerOn);
+            _controller.webrtcService.setSpeakerphoneOn(isSpeakerOn);
           },
           backgroundColor: Colors.white.withOpacity(0.2),
         ),
@@ -295,11 +264,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
     );
   }
 
-  Widget _buildControlButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required Color backgroundColor,
-  }) {
+  Widget _buildControlButton({required IconData icon, required VoidCallback onTap, required Color backgroundColor}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(40),
@@ -309,9 +274,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)],
         ),
         child: Icon(icon, color: Colors.white, size: 30),
       ),
