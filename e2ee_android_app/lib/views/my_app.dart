@@ -1,11 +1,9 @@
 import 'package:e2ee_android_app/backend/authentication/authentication_provider.dart';
 import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
-import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
-import 'package:responsive_builder/responsive_builder.dart';
 
 import '../backend/app_init_controller.dart';
 import '../backend/chats/chats_provider.dart';
@@ -21,71 +19,58 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    MyPrint.printOnConsole("MyApp Build Called");
-
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AppThemeProvider>.value(
-          value: DependencyInjection.appThemeProvider,
-        ),
-        ChangeNotifierProvider<AuthenticationProvider>.value(
-          value: DependencyInjection.authenticationProvider,
-        ),
-        ChangeNotifierProvider<ChatProvider>.value(
-          value: DependencyInjection.chatProvider,
-        ),
-        ChangeNotifierProvider<AppState>.value(
-          value: DependencyInjection.appState,
-        ),
-        ChangeNotifierProvider<CallProvider>.value(
-          value: DependencyInjection.callProvider,
-        ),
+        ChangeNotifierProvider<AppThemeProvider>.value(value: DependencyInjection.appThemeProvider),
+        ChangeNotifierProvider<AuthenticationProvider>.value(value: DependencyInjection.authenticationProvider),
+        ChangeNotifierProvider<ChatProvider>.value(value: DependencyInjection.chatProvider),
+        ChangeNotifierProvider<AppState>.value(value: DependencyInjection.appState),
+        ChangeNotifierProvider<CallProvider>.value(value: DependencyInjection.callProvider),
       ],
       child: const MainApp(),
     );
   }
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    MyPrint.printOnConsole("MainApp Build Called");
+  State<MainApp> createState() => _MainAppState();
+}
 
+class _MainAppState extends State<MainApp> {
+  final AppInitController _controller = AppInitController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.performInitialAppOpeningOperations(context: context, isNavigatedToOnBoardingScreen: AppInitController.isNavigateToObBoardingScreen);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return OverlaySupport.global(
       child: Consumer<AppThemeProvider>(
-        builder:
-            (
-              BuildContext context,
-              AppThemeProvider appThemeProvider,
-              Widget? child,
-            ) {
-              return ResponsiveBuilder(
-                builder: (context, sizingInformation) {
-                  return MaterialApp(
-                    debugShowCheckedModeBanner: false,
-                    navigatorKey: NavigationController.mainScreenNavigator,
-                    title: "DarkCrypt Chat",
-                    theme: appThemeProvider.getDarkThemeData(),
-                    initialRoute: AppInitController.isNavigateToObBoardingScreen
-                        ? SplashScreen.routeName
-                        : null,
-                    onGenerateRoute:
-                        NavigationController.onMainAppGeneratedRoutes,
-                    builder: (BuildContext context, Widget? child) {
-                      return ScrollConfiguration(
-                        behavior: const MyScrollBehavior(),
-                        child: AnnotatedRegion(
-                          value: SystemUiOverlayStyle.dark,
-                          child: child ?? const SizedBox(),
-                        ),
-                      );
-                    },
-                  );
-                },
+        builder: (context, appThemeProvider, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            navigatorKey: NavigationController.mainScreenNavigator,
+            title: "DarkCrypt Chat",
+            theme: appThemeProvider.getDarkThemeData(),
+            initialRoute: AppInitController.isNavigateToObBoardingScreen ? SplashScreen.routeName : null,
+            onGenerateRoute: NavigationController.onMainAppGeneratedRoutes,
+            builder: (context, child) {
+              return ScrollConfiguration(
+                behavior: const MyScrollBehavior(),
+                child: AnnotatedRegion<SystemUiOverlayStyle>(value: SystemUiOverlayStyle.dark, child: child ?? const SizedBox()),
               );
             },
+          );
+        },
       ),
     );
   }
