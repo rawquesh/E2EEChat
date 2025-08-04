@@ -29,7 +29,6 @@ import '../../backend/common/app_state.dart';
 // import '../../backend/common/dependency_injection.dart';
 import '../../backend/navigation/navigation_arguments.dart';
 import '../../backend/navigation/navigation_controller.dart';
-import '../../backend/notification/notification_service.dart';
 import '../../backend/self_destruct/self_destruct_service.dart';
 import '../common/components/flashy_tab_bar.dart';
 import '../tab_state.dart';
@@ -256,9 +255,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
           if (_appState.currentChattingWithUserId != chatId) {
             _appState.showCustomNotification('New message from $notificationTitle', notificationBody);
           }
-        } else if (_appState.lifecycleState == AppLifecycleState.paused) {
-          NotificationService().showSystemNotification(DateTime.now().millisecondsSinceEpoch.remainder(100000), 'New message from $notificationTitle', messageData.type);
         }
+        // else if (_appState.lifecycleState == AppLifecycleState.paused) {
+        //   NotificationService().showSystemNotification(DateTime.now().millisecondsSinceEpoch.remainder(100000), 'New message from $notificationTitle', messageData.text);
+        // }
       }
     } catch (e, s) {
       MyPrint.printOnConsole("Error in _handleIncomingMessage: $e\n$s");

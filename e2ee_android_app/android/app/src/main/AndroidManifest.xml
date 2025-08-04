@@ -46,6 +46,9 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data
+            android:name="com.onesignal.notifications.AppId"
+            android:value="2b0ded98-42f4-47fa-92a5-4c01713f053d" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

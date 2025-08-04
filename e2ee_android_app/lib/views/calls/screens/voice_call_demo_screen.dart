@@ -59,9 +59,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     _callProvider.removeListener(_handleProviderChange);
     _remoteRenderer.dispose();
     _callDurationTimer?.cancel();
-
-    // If the screen is being disposed because the call has ended,
-    // reset the global call state back to idle for the next call.
+    
     if (_callProvider.callState.get() == CallState.ended) {
       _callProvider.callState.set(value: CallState.idle);
     }

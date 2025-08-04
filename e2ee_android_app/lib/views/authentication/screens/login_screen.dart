@@ -1,4 +1,5 @@
 // import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
+import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,6 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   bool passwordVisible = false;
   bool isBiometricAvailable = true;
   int failedAttempts = 0;
-  bool _loginWithToken = false;
 
   @override
   void initState() {
@@ -116,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     final token = tokenController.text.trim();
     final usernameValid = RegExp(r'^[a-z0-9]+$').hasMatch(username);
 
-    if (_loginWithToken) {
+    if (currentLoginType == LoginType.withToken) {
       return username.isNotEmpty && password.length >= 6 && usernameValid && token.isNotEmpty;
     } else {
       return username.isNotEmpty && password.length >= 6 && usernameValid;
@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   Future<void> _login() async {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
-    final token = _loginWithToken ? tokenController.text.trim() : null;
+    final token = tokenController.text.trim();
 
     if (!RegExp(r'^[a-z0-9]+$').hasMatch(username)) {
       MyToast.showError(context: context, msg: "Username must be lowercase and alphanumeric.");
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
       return;
     }
 
-    if (_loginWithToken && (token == null || token.isEmpty)) {
+    if (currentLoginType == LoginType.withToken && token.isEmpty) {
       MyToast.showError(context: context, msg: "Token is required.");
       return;
     }
@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     setState(() => isLoading = true);
 
     try {
-      final success = await authenticationController.loginWithUsernamePassword(context, username, password, token: token);
+      final success = await authenticationController.loginWithUsernamePassword(context, username, password, token: currentLoginType == LoginType.withToken ? token : null);
 
       if (!success) {
         failedAttempts++;
@@ -237,19 +237,8 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              CheckboxListTile(
-                title: const Text("Login with token"),
-                value: _loginWithToken,
-                onChanged: (newValue) {
-                  setState(() {
-                    _loginWithToken = newValue!;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              if (_loginWithToken) const SizedBox(height: 20),
-              if (_loginWithToken)
+              if (currentLoginType == LoginType.withToken) const SizedBox(height: 20),
+              if (currentLoginType == LoginType.withToken)
                 TextField(
                   controller: tokenController,
                   focusNode: tokenFocusNode,

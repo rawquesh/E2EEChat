@@ -33,6 +33,7 @@ import '../../../backend/navigation/navigation_arguments.dart';
 import '../../../backend/navigation/navigation_controller.dart';
 import '../../../backend/webrtc/call_provider.dart';
 import '../../../configs/constants.dart';
+import '../components/group_details_bottom_sheet.dart';
 import '../components/message_bubble.dart';
 
 class ChatMessageScreen extends StatefulWidget {
@@ -121,6 +122,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         }
       });
     });
+  }
+
+  void _showGroupDetails() {
+    if (widget.chatInfo.type == ChatRoomType.Group) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (context) => GroupDetailsBottomSheet(groupInfo: widget.chatInfo),
+      );
+    }
   }
 
   void _initializeAnimations() {
@@ -696,44 +707,47 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
             icon: Icon(Icons.chevron_left, color: themeData.colorScheme.onSurface, size: 32),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Row(
-            children: [
-              Stack(
-                children: [
-                  CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover, borderRadius: 20),
-                  if (widget.chatInfo.isOnline)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Styles.grey400,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.white, width: 1.5),
+          title: GestureDetector(
+            onTap: _showGroupDetails,
+            child: Row(
+              children: [
+                Stack(
+                  children: [
+                    CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover, borderRadius: 20),
+                    if (widget.chatInfo.isOnline)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Styles.grey400,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
-                    ),
-                    if (widget.chatInfo.type == ChatRoomType.Group)
-                      Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
-                    else
-                      Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                   ],
                 ),
-              ),
-            ],
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
+                      ),
+                      if (widget.chatInfo.type == ChatRoomType.Group)
+                        Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
+                      else
+                        Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             if (widget.chatInfo.type != ChatRoomType.Group)

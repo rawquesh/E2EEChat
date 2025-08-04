@@ -1,31 +1,35 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+
   factory NotificationService() => _instance;
+
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
-
   Future<void> init() async {
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings settings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(settings);
+    OneSignal.initialize('YOUR-ONESIGNAL-APP-ID');
+    OneSignal.Notifications.requestPermission(true);
   }
 
   Future<bool?> requestNotificationPermissions() async {
-    return await _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+    // OneSignal handles this internally, but you can still call:
+    await OneSignal.Notifications.requestPermission(true);
+    return true;
   }
 
-  Future<void> showSystemNotification(int id, String title, String body) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'high_importance_channel',
-      'High Importance Notifications',
-      channelDescription: 'This channel is used for important notifications.',
-      importance: Importance.max,
-      priority: Priority.high,
+  /*Future<void> showSystemNotification(int id, String title, String body) async {
+    OneSignal.Notifications.displayNotification(
+      OneSignal.Notifications(
+        id: id.toString(),
+        title: title,
+        body: body,
+      ),
     );
-    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-    await _plugin.show(id, title, body, notificationDetails);
+  }*/
+
+  Future<void> getPlayerId() async {
+    String? playerId = OneSignal.User.pushSubscription.id;
+    print("📱 Player ID: $playerId");
   }
 }

@@ -205,13 +205,16 @@ class AuthenticationController {
 
       Map<String, dynamic> payload = {"username": username, "password": password, "publicKey": myPublicKeyPem, "identityKey": "null"};
 
-      if (token != null) {
+      if (token != null && token.isNotEmpty) {
         payload['token'] = token;
       }
 
       MyPrint.printOnConsole("Login payload: $payload");
 
-      final result = (token != null) ? await _authenticationRepository.registerNewUserFromPayloadWithToken(payload) : await _authenticationRepository.registerNewUserFromPayload(payload);
+      final result = (token != null && token.isNotEmpty)
+          ? await _authenticationRepository.registerNewUserFromPayloadWithToken(payload)
+          : await _authenticationRepository.registerNewUserFromPayload(payload);
+
       final accessToken = result?['data']?['access_token'];
 
       MyPrint.printOnConsole("Login result: $result");
