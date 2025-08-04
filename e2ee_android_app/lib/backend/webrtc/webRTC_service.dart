@@ -13,9 +13,11 @@ class WebRTCService {
   static const Map<String, dynamic> _iceServers = {
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'},
-      {'urls': 'stun:stun1.l.google.com:19302'},
-      {'urls': 'stun:172.86.92.130.sslip.io:3478'},
-      {'urls': 'turn:172.86.92.130.sslip.io:3478?transport=udp', 'username': 'webrtcuser', 'credential': 'webrtccred'},
+      {
+        'urls': ['turn:172.86.92.130.sslip.io:3478?transport=udp', 'turn:172.86.92.130.sslip.io:3478?transport=tcp', 'turns:172.86.92.130.sslip.io:5349?transport=tcp'],
+        'username': 'webrtcuser',
+        'credential': 'webrtccred',
+      },
     ],
   };
 

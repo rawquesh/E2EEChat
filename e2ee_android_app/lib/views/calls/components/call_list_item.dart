@@ -8,12 +8,7 @@ class CallListItem extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onRedial;
 
-  const CallListItem({
-    Key? key,
-    required this.call,
-    required this.onTap,
-    required this.onRedial,
-  }) : super(key: key);
+  const CallListItem({Key? key, required this.call, required this.onTap, required this.onRedial}) : super(key: key);
 
   @override
   State<CallListItem> createState() => _CallListItemState();
@@ -77,13 +72,7 @@ class _CallListItemState extends State<CallListItem> with MySafeState {
       decoration: BoxDecoration(
         color: themeData.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: Offset(0, 2))],
       ),
       child: ListTile(
         onTap: widget.onTap,
@@ -91,18 +80,11 @@ class _CallListItemState extends State<CallListItem> with MySafeState {
         leading: Container(
           width: 50,
           height: 50,
-          decoration: BoxDecoration(
-            color: Color(0xFFE6A532),
-            borderRadius: BorderRadius.circular(25),
-          ),
+          decoration: BoxDecoration(color: themeData.primaryColor, borderRadius: BorderRadius.circular(25)),
           child: Center(
             child: Text(
               widget.call.avatar,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -111,50 +93,21 @@ class _CallListItemState extends State<CallListItem> with MySafeState {
             Expanded(
               child: Text(
                 widget.call.contactName,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: widget.call.callStatus == CallStatus.missed
-                      ? Color(0xFFE53E3E)
-                      : themeData.colorScheme.onSurface,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: widget.call.callStatus == CallStatus.missed ? Color(0xFFE53E3E) : themeData.colorScheme.onSurface),
               ),
             ),
           ],
         ),
         subtitle: Row(
           children: [
-            Icon(
-              _getStatusIcon(),
-              size: 14,
-              color: _getStatusColor(),
-            ),
+            Icon(_getStatusIcon(), size: 14, color: _getStatusColor()),
             SizedBox(width: 4),
-            Text(
-              _formatCallTime(widget.call.timestamp),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            if (widget.call.duration > 0) ...[
-              SizedBox(width: 8),
-              Text(
-                '• ${_formatDuration(widget.call.duration)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
+            Text(_formatCallTime(widget.call.timestamp), style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            if (widget.call.duration > 0) ...[SizedBox(width: 8), Text('• ${_formatDuration(widget.call.duration)}', style: TextStyle(fontSize: 12, color: Colors.grey[600]))],
           ],
         ),
         trailing: IconButton(
-          icon: Icon(
-            Icons.phone,
-            color: Color(0xFFE6A532),
-            size: 24,
-          ),
+          icon: Icon(Icons.phone, color: themeData.primaryColor, size: 24),
           onPressed: widget.onRedial,
         ),
       ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
+import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -20,7 +21,7 @@ class VoiceCallScreen extends StatefulWidget {
   State<VoiceCallScreen> createState() => _VoiceCallScreenState();
 }
 
-class _VoiceCallScreenState extends State<VoiceCallScreen> {
+class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
   late CallController _controller;
   late CallProvider _callProvider;
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
@@ -47,7 +48,6 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       }
     };
 
-    // If we navigate here after starting a call, the state is already 'calling'
     if (_callProvider.callState.get() == CallState.calling) {
       // The UI will show "Calling..."
     }
@@ -88,14 +88,16 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
       }
     }
 
-    setState(() {}); // This will update the status text
+    mySetState();
   }
 
   void _startCallTimer() {
     _callDurationTimer?.cancel(); // Ensure no multiple timers
     _callDurationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        setState(() => _callDurationInSeconds++);
+        _callDurationInSeconds++;
+
+        mySetState();
       }
     });
   }
@@ -154,6 +156,8 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.pageBuild();
+
     final callState = _callProvider.callState.get();
     final isMuted = _callProvider.isMuted.get();
     final ChatUserModel user = widget.arguments.user;

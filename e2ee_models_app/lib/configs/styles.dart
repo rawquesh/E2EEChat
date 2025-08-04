@@ -8,16 +8,16 @@ class Styles {
   factory Styles() => _instance;
 
   // Grey color palette based on Material Design colors
-  static const Color grey50 = Color.fromARGB(255, 207, 207, 207);    // very light grey
-  static const Color grey100 = Color.fromARGB(255, 189, 189, 189);   // light grey
-  static const Color grey200 = Color.fromARGB(255, 165, 165, 165);   // soft warm grey
-  static const Color grey300 = Color.fromARGB(255, 168, 168, 168);   // mild highlight grey
-  static const Color grey400 = Color.fromARGB(255, 173, 173, 173);   // primary action grey
-  static const Color grey500 = Color.fromARGB(255, 168, 168, 168);   // main button grey
-  static const Color grey600 = Color.fromARGB(255, 167, 167, 167);   // hover grey
-  static const Color grey700 = Color.fromARGB(255, 165, 165, 165);   // pressed grey
-  static const Color grey800 = Color.fromARGB(255, 142, 142, 142);   // accent grey
-  static const Color grey900 = Color.fromARGB(255, 136, 136, 136);   // deep warning grey
+  static const Color grey50 = Color.fromARGB(255, 207, 207, 207); // very light grey
+  static const Color grey100 = Color.fromARGB(255, 189, 189, 189); // light grey
+  static const Color grey200 = Color.fromARGB(255, 165, 165, 165); // soft warm grey
+  static const Color grey300 = Color.fromARGB(255, 168, 168, 168); // mild highlight grey
+  static const Color grey400 = Color.fromARGB(255, 173, 173, 173); // primary action grey
+  static const Color grey500 = Color.fromARGB(255, 168, 168, 168); // main button grey
+  static const Color grey600 = Color.fromARGB(255, 167, 167, 167); // hover grey
+  static const Color grey700 = Color(0xff808080);
+  static const Color grey800 = Color(0xff808080);
+  static const Color grey900 = Color.fromARGB(255, 136, 136, 136); // deep warning grey
 
   // Light and Dark Themes using the new Grey palette
   Color lightPrimaryColor = grey700;
@@ -57,11 +57,7 @@ class Styles {
   Color darkFocusedTextFormFieldColor = grey500.withOpacity(0.5);
 
   // Gradients
-  static const LinearGradient gradientBackground = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [grey500, grey800],
-  );
+  static const LinearGradient gradientBackground = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [grey500, grey800]);
 
   // Common UI Elements
   Color cardColor = Colors.white;

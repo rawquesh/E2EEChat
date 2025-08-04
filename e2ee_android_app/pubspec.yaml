@@ -80,6 +80,9 @@ dev_dependencies:
   #webrtc
   flutter_webrtc: ^0.14.2
 
+  #One Signal Notification
+  onesignal_flutter: ^5.3.4
+
 flutter_icons:
   android: true
   ios: true
