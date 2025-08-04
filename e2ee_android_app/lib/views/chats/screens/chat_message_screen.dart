@@ -14,6 +14,7 @@ import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:e2ee_models_app/view/common/components/loading_widget.dart';
+import 'package:e2ee_models_app/view/common/components/modal_progress_hud.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ import '../../../backend/authentication/authentication_provider.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
 import '../../../backend/common/app_state.dart';
+import '../../../backend/files_and_media/media_compression.dart';
 import '../../../backend/navigation/navigation_arguments.dart';
 import '../../../backend/navigation/navigation_controller.dart';
 import '../../../backend/webrtc/call_provider.dart';
@@ -49,6 +51,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   late final ChatProvider _chatProvider;
   late final AppState _appState;
   String? profilePicPath = '';
+  bool isLoading = false;
 
   int _loadedMessages = 0;
   final int _pageSize = 10;
@@ -650,15 +653,30 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   prepareForSendMessage(bool isImage) async {
     if (image != null) {
-      final Uint8List bytes = await image!.readAsBytes();
-      final fileName = image!.name;
       setState(() {
-        fileBytes = bytes;
-        if (isImage) {
-          _sendMessage(type: ChatMessageType.Image, fileBytes: fileBytes, fileName: fileName);
-        } else {
-          _sendMessage(type: ChatMessageType.Video, fileBytes: fileBytes, fileName: fileName);
+        isLoading = true; // Show a loading indicator
+      });
+
+      Uint8List? compressedBytes;
+      String fileName = image!.name;
+
+      if (isImage) {
+        compressedBytes = await MediaCompression.compressImage(File(image!.path));
+      } else {
+        final mediaInfo = await MediaCompression.compressVideo(File(image!.path));
+        if (mediaInfo != null && mediaInfo.file != null) {
+          compressedBytes = await mediaInfo.file!.readAsBytes();
+          fileName = mediaInfo.path!.split('/').last;
         }
+      }
+
+      if (compressedBytes != null) {
+        _sendMessage(type: isImage ? ChatMessageType.Image : ChatMessageType.Video, fileBytes: compressedBytes, fileName: fileName);
+      }
+
+      setState(() {
+        isLoading = false; // Hide loading indicator
+        image = null; // Reset the image
       });
     }
   }
@@ -668,255 +686,258 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     super.pageBuild();
     MyPrint.printOnConsole("Chat Message Screen build called for message check avatar: ${widget.chatInfo.avatar}");
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: themeData.colorScheme.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.chevron_left, color: themeData.colorScheme.onSurface, size: 32),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: widget.chatInfo.avatar.isNotEmpty
-                        ? CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover)
-                        : Center(
-                            child: Text(
-                              widget.chatInfo.nickname.isNotEmpty ? widget.chatInfo.nickname[0].toUpperCase() : 'U',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+    return ModalProgressHUD(
+      inAsyncCall: isLoading,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: themeData.colorScheme.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.chevron_left, color: themeData.colorScheme.onSurface, size: 32),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: widget.chatInfo.avatar.isNotEmpty
+                          ? CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover)
+                          : Center(
+                              child: Text(
+                                widget.chatInfo.nickname.isNotEmpty ? widget.chatInfo.nickname[0].toUpperCase() : 'U',
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
                             ),
-                          ),
-                  ),
-                ),
-                if (widget.chatInfo.isOnline)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Styles.grey400,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
                     ),
                   ),
-              ],
+                  if (widget.chatInfo.isOnline)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Styles.grey400,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
+                    ),
+                    if (widget.chatInfo.type == ChatRoomType.Group)
+                      Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
+                    else
+                      Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (widget.chatInfo.type != ChatRoomType.Group)
+              IconButton(
+                icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
+                onPressed: () async {
+                  // Get the CallController from the provider
+                  final callProvider = context.read<CallProvider>();
+                  final callController = callProvider.callController;
+
+                  // Start the call with the current chat user's ID
+                  await callController.startCall(widget.chatInfo.id, receiverName: widget.chatInfo.nickname, receiverAvatar: widget.chatInfo.avatar);
+
+                  // Navigate to the new call screen
+                  if (mounted) {
+                    NavigationController.navigateToVoiceCallScreen(
+                      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                      arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
+                    );
+                  }
+                },
+              ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
+              onSelected: (value) {
+                if (value == 'clear') {
+                  _showClearChatDialog();
+                } else if (value == 'delete') {
+                  _showDeleteChatDialog();
+                }
+              },
+              itemBuilder: (context) => const [PopupMenuItem(value: 'clear', child: Text('Clear Chat')), PopupMenuItem(value: 'delete', child: Text('Delete Chat'))],
             ),
-            SizedBox(width: 12),
+          ],
+        ),
+        body: Column(
+          children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Consumer<ChatProvider>(
+                builder: (context, chatProvider, child) {
+                  final msgList = chatProvider.getMessagesFor(widget.chatInfo.id);
+                  final isLoadingMore = _isLoadingMore;
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    reverse: false,
+                    // latest message at bottom
+                    itemCount: msgList.length + (isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (isLoadingMore && index == 0) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Center(heightFactor: 1, child: LoadingWidget()),
+                        );
+                      }
+                      final msgIndex = isLoadingMore ? index - 1 : index;
+                      final message = msgList[msgIndex];
+                      return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: profilePicPath);
+                    },
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(color: themeData.colorScheme.surface),
+              child: Row(
                 children: [
-                  Text(
-                    widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
+                  // Media attachment button
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.add, color: Colors.grey[600], size: 30),
+                    onPressed: _showMediaOptions,
                   ),
-                  if (widget.chatInfo.type == ChatRoomType.Group)
-                    Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
-                  else
-                    Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  SizedBox(width: 2),
+                  AnimatedBuilder(
+                    animation: _widthAnimation,
+                    builder: (context, child) {
+                      final baseWidth = MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
+                      final compactWidth = baseWidth * 1;
+                      final expandedWidth = baseWidth;
+
+                      final currentWidth = compactWidth + (_widthAnimation.value * (expandedWidth - compactWidth));
+
+                      return SizedBox(
+                        height: 50,
+                        width: currentWidth,
+                        child: TextField(
+                          controller: _messageController,
+                          style: TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Type a message...',
+                            hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(color: themeData.colorScheme.primary, width: 1),
+                            ),
+                            suffixIcon: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                IconButton(
+                                  icon: Icon(CupertinoIcons.flame_fill, color: themeData.primaryColor),
+                                  onPressed: () async {
+                                    final selectedTime = await showTimeSelectionDialog(context);
+                                    if (selectedTime != null) {
+                                      print("User selected: $selectedTimeForDestruct");
+                                      setState(() {}); // Add setState to rebuild the widget
+                                    }
+                                  },
+                                ),
+                                selectedTimeForDestruct == 0
+                                    ? SizedBox()
+                                    : InkWell(
+                                        onTap: () async {
+                                          final selectedTime = await showTimeSelectionDialog(context);
+                                          if (selectedTime != null) {
+                                            print("User selected: $selectedTimeForDestruct");
+                                            setState(() {}); // Add setState to rebuild the widget
+                                          }
+                                        },
+                                        child: Container(
+                                          height: 18,
+                                          // Increased size for better readability
+                                          width: 18,
+                                          // Increased size for better readability
+                                          margin: EdgeInsets.only(top: 5),
+                                          decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
+                                          child: Center(
+                                            child: Text(
+                                              _formatDestructTime(selectedTimeForDestruct),
+                                              // Use the new formatting function
+                                              style: TextStyle(
+                                                fontSize: 8, // Adjusted font size
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                              ],
+                            ),
+                          ),
+                          onSubmitted: (_) {
+                            _hasText ? _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim()) : null;
+                            _messageController.clear();
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(width: 8),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(22)),
+                    child: AnimatedBuilder(
+                      animation: _iconAnimation,
+                      builder: (context, child) {
+                        return IconButton(
+                          icon: AnimatedSwitcher(
+                            duration: Duration(milliseconds: 200),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return ScaleTransition(
+                                scale: animation,
+                                child: FadeTransition(opacity: animation, child: child),
+                              );
+                            },
+                            child: _hasText ? Icon(Icons.send, key: ValueKey('send'), color: Colors.white, size: 20) : Icon(Icons.mic, key: ValueKey('mic'), color: Colors.white, size: 20),
+                          ),
+                          onPressed: _onButtonPressed,
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
-        actions: [
-          if (widget.chatInfo.type != ChatRoomType.Group)
-            IconButton(
-              icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
-              onPressed: () async {
-                // Get the CallController from the provider
-                final callProvider = context.read<CallProvider>();
-                final callController = callProvider.callController;
-
-                // Start the call with the current chat user's ID
-                await callController.startCall(widget.chatInfo.id, receiverName: widget.chatInfo.nickname, receiverAvatar: widget.chatInfo.avatar);
-
-                // Navigate to the new call screen
-                if (mounted) {
-                  NavigationController.navigateToVoiceCallScreen(
-                    navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
-                    arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
-                  );
-                }
-              },
-            ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
-            onSelected: (value) {
-              if (value == 'clear') {
-                _showClearChatDialog();
-              } else if (value == 'delete') {
-                _showDeleteChatDialog();
-              }
-            },
-            itemBuilder: (context) => const [PopupMenuItem(value: 'clear', child: Text('Clear Chat')), PopupMenuItem(value: 'delete', child: Text('Delete Chat'))],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Consumer<ChatProvider>(
-              builder: (context, chatProvider, child) {
-                final msgList = chatProvider.getMessagesFor(widget.chatInfo.id);
-                final isLoadingMore = _isLoadingMore;
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  reverse: false,
-                  // latest message at bottom
-                  itemCount: msgList.length + (isLoadingMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (isLoadingMore && index == 0) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Center(heightFactor: 1, child: LoadingWidget()),
-                      );
-                    }
-                    final msgIndex = isLoadingMore ? index - 1 : index;
-                    final message = msgList[msgIndex];
-                    return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: profilePicPath);
-                  },
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(color: themeData.colorScheme.surface),
-            child: Row(
-              children: [
-                // Media attachment button
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  icon: Icon(Icons.add, color: Colors.grey[600], size: 30),
-                  onPressed: _showMediaOptions,
-                ),
-                SizedBox(width: 2),
-                AnimatedBuilder(
-                  animation: _widthAnimation,
-                  builder: (context, child) {
-                    final baseWidth = MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
-                    final compactWidth = baseWidth * 1;
-                    final expandedWidth = baseWidth;
-
-                    final currentWidth = compactWidth + (_widthAnimation.value * (expandedWidth - compactWidth));
-
-                    return SizedBox(
-                      height: 50,
-                      width: currentWidth,
-                      child: TextField(
-                        controller: _messageController,
-                        style: TextStyle(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(22),
-                            borderSide: BorderSide(color: themeData.colorScheme.primary, width: 1),
-                          ),
-                          suffixIcon: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              IconButton(
-                                icon: Icon(CupertinoIcons.flame_fill, color: themeData.primaryColor),
-                                onPressed: () async {
-                                  final selectedTime = await showTimeSelectionDialog(context);
-                                  if (selectedTime != null) {
-                                    print("User selected: $selectedTimeForDestruct");
-                                    setState(() {}); // Add setState to rebuild the widget
-                                  }
-                                },
-                              ),
-                              selectedTimeForDestruct == 0
-                                  ? SizedBox()
-                                  : InkWell(
-                                      onTap: () async {
-                                        final selectedTime = await showTimeSelectionDialog(context);
-                                        if (selectedTime != null) {
-                                          print("User selected: $selectedTimeForDestruct");
-                                          setState(() {}); // Add setState to rebuild the widget
-                                        }
-                                      },
-                                      child: Container(
-                                        height: 18,
-                                        // Increased size for better readability
-                                        width: 18,
-                                        // Increased size for better readability
-                                        margin: EdgeInsets.only(top: 5),
-                                        decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
-                                        child: Center(
-                                          child: Text(
-                                            _formatDestructTime(selectedTimeForDestruct),
-                                            // Use the new formatting function
-                                            style: TextStyle(
-                                              fontSize: 8, // Adjusted font size
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                            ],
-                          ),
-                        ),
-                        onSubmitted: (_) {
-                          _hasText ? _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim()) : null;
-                          _messageController.clear();
-                        },
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(width: 8),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(22)),
-                  child: AnimatedBuilder(
-                    animation: _iconAnimation,
-                    builder: (context, child) {
-                      return IconButton(
-                        icon: AnimatedSwitcher(
-                          duration: Duration(milliseconds: 200),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
-                            return ScaleTransition(
-                              scale: animation,
-                              child: FadeTransition(opacity: animation, child: child),
-                            );
-                          },
-                          child: _hasText ? Icon(Icons.send, key: ValueKey('send'), color: Colors.white, size: 20) : Icon(Icons.mic, key: ValueKey('mic'), color: Colors.white, size: 20),
-                        ),
-                        onPressed: _onButtonPressed,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
