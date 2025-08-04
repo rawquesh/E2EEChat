@@ -43,11 +43,9 @@ class WebRTCService {
       }
     };
 
-    _peerConnection?.onTrack = (RTCTrackEvent event) {
-      if (event.streams.isNotEmpty) {
-        _remoteStream = event.streams[0];
-        _onAddRemoteStreamCallback?.call(event.streams[0]);
-      }
+    _peerConnection?.onAddStream = (stream) {
+      _remoteStream = stream;
+      _onAddRemoteStreamCallback?.call(stream);
     };
   }
 

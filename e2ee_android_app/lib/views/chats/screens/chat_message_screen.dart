@@ -700,22 +700,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
             children: [
               Stack(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(20)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: widget.chatInfo.avatar.isNotEmpty
-                          ? CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover)
-                          : Center(
-                              child: Text(
-                                widget.chatInfo.nickname.isNotEmpty ? widget.chatInfo.nickname[0].toUpperCase() : 'U',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                    ),
-                  ),
+                  CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover, borderRadius: 20),
                   if (widget.chatInfo.isOnline)
                     Positioned(
                       right: 0,
