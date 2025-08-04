@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/views/my_app.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
@@ -31,7 +30,8 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
 
       OneSignal.Notifications.requestPermission(true);
 
-      NotificationService().getPlayerId();
+      final playerId = await OneSignal.User.getOnesignalId();
+      print("📱 OneSignal Player ID: $playerId");
 
       runApp(const MyApp());
 
