@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../../backend/authentication/authentication_controller.dart';
 import '../../../backend/authentication/authentication_provider.dart';
+import '../../../backend/authentication/auth_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String routeName = "/LoginScreen";
@@ -95,19 +96,10 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   }
 
   Future<void> _triggerDataWipe() async {
-    // Implement data wipe functionality
-    try {
-      // Clear all user data, keys, messages, etc.
-      // final storage = FlutterSecureStorage();
-      // await storage.deleteAll();
-
-      MyToast.showError(context: context, msg: "Security breach detected. All data has been wiped.");
-
-      // Navigate to setup screen or exit app
-      Navigator.pushNamedAndRemoveUntil(context, "/SetupScreen", (route) => false);
-    } catch (e) {
-      // Handle error
-    }
+    await AuthUtils.handleUnauthorized(
+      context: context,
+      message: "Security breach detected. All data has been wiped.",
+    );
   }
 
   bool get isFormValid {

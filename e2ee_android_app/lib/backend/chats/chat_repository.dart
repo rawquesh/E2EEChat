@@ -7,6 +7,8 @@ import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 
+import '../authentication/auth_utils.dart';
+
 class ChatRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
   PusherClient? _pusher;
@@ -104,6 +106,9 @@ class ChatRepository {
     try {
       final response = await http.post(url, headers: {"Content-Type": "application/json", "Authorization": "Bearer $token"}, body: body);
       MyPrint.printOnConsole('[SEND DEBUG] Status: ${response.statusCode}');
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+      }
       return response.statusCode == 200;
     } catch (e) {
       MyPrint.printOnConsole('[SEND DEBUG] Error sending message: $e');
@@ -129,6 +134,10 @@ class ChatRepository {
     final body = jsonEncode(bodyMap);
     final response = await http.post(url, headers: {"Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer $token"}, body: body);
 
+    if (response.statusCode == 401) {
+      await AuthUtils.handleUnauthorized();
+    }
+
     if (response.statusCode == 200) {
       final dynamic data = json.decode(response.body)['data'];
       return ChatUserModel.fromMap(data);
@@ -150,6 +159,10 @@ class ChatRepository {
       final response = await http.get(url, headers: {"Accept": "application/json", "Authorization": "Bearer $token"});
 
       MyPrint.printOnConsole("Response status for user $userId: ${response.statusCode}");
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+      }
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);

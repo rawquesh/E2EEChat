@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
 
+import '../authentication/auth_utils.dart';
+
 class UserRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
 
@@ -12,6 +14,9 @@ class UserRepository {
     try {
       final response = await http.post(url, headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode({'name': name}));
       MyPrint.printOnConsole('Update profile status: ${response.statusCode}');
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+      }
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       }
@@ -40,6 +45,10 @@ class UserRepository {
       final responseBody = await response.stream.bytesToString();
       MyPrint.printOnConsole('Update profile status: ${response.statusCode}');
       MyPrint.printOnConsole('Update profile response: $responseBody');
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(responseBody);

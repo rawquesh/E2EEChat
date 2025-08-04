@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
+import 'auth_utils.dart';
+
 class AuthenticationRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
 
@@ -19,6 +21,11 @@ class AuthenticationRepository {
 
       MyPrint.printOnConsole("Register response code: ${response.statusCode}");
       MyPrint.printOnConsole("Register response body: ${response.body}");
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
@@ -40,6 +47,11 @@ class AuthenticationRepository {
 
       MyPrint.printOnConsole("Register with token response code: ${response.statusCode}");
       MyPrint.printOnConsole("Register with token response body: ${response.body}");
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
@@ -79,6 +91,11 @@ class AuthenticationRepository {
       MyPrint.printOnConsole("Backend response code: ${response.statusCode}");
       MyPrint.printOnConsole("Backend response body: ${response.body}");
 
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
+
       if (response.statusCode != 200 && response.statusCode != 201) {
         MyPrint.printOnConsole("Failed to authenticate with backend");
         return null;
@@ -108,6 +125,11 @@ class AuthenticationRepository {
         MyPrint.printOnConsole("User info response code: ${userResponse.statusCode}");
         MyPrint.printOnConsole("User info response body: ${userResponse.body}");
 
+        if (userResponse.statusCode == 401) {
+          await AuthUtils.handleUnauthorized();
+          return null;
+        }
+
         if (userResponse.statusCode != 200 && userResponse.statusCode != 201) {
           MyPrint.printOnConsole("Failed to get user data");
           return null;
@@ -135,6 +157,11 @@ class AuthenticationRepository {
 
       MyPrint.printOnConsole("Email check response status: ${response.statusCode}");
       MyPrint.printOnConsole("Email check response body: ${response.body}");
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse the response which should contain isInUse and passwordSet
@@ -196,6 +223,11 @@ class AuthenticationRepository {
 
       final response = await http.post(Uri.parse('$baseUrl/auth/register'), headers: {'Content-Type': 'application/json'}, body: json.encode(userModel.toMap()));
 
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         return responseData;
@@ -238,6 +270,11 @@ class AuthenticationRepository {
   Future<UserModel?> getUserFromToken(String token) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/auth/user'), headers: {'Authorization': 'Bearer $token'});
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return null;
+      }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> userData = json.decode(response.body);

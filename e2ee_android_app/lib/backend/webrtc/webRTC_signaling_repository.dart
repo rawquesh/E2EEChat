@@ -5,6 +5,8 @@ import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 
+import '../authentication/auth_utils.dart';
+
 class WebRTCSignalingRepository {
   final String baseUrl = 'https://172.86.92.130.sslip.io/api';
 
@@ -81,7 +83,10 @@ class WebRTCSignalingRepository {
       );
       MyPrint.printOnConsole(
         '[WEBRTC REPO] Signal sent with status: ${response.statusCode}',
-      ); // And this one
+      );
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+      }
       return response.statusCode == 200;
     } catch (e) {
       MyPrint.printOnConsole('[WEBRTC REPO] Error sending signal: $e');
