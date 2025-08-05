@@ -18,7 +18,6 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
 
       await EncryptionService().init();
 
-      NotificationService.init();
 
       AppInitController appInitController = AppInitController();
       await appInitController.initApp(appFlavor: appFlavor);

@@ -1,5 +1,7 @@
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'dart:developer';
+import 'package:permission_handler/permission_handler.dart';
+
 
 class NotificationService {
   // Use a private constructor to prevent instantiation
@@ -13,13 +15,22 @@ class NotificationService {
     _registerListeners();
   }
 
+  /// Requests notification permission using permission_handler.
+  static Future<void> requestPermission() async {
+    // final status = await Permission.notification.request();
+    // log('Notification permission status: $status');
+
+    // if (status.isPermanentlyDenied) {
+    //   log('Notification permission permanently denied. Opening app settings.');
+    //   await openAppSettings();
+    // }
+  }
+
   static void _registerListeners() {
     // Listener for when a notification is displayed in the foreground
     OneSignal.Notifications.addForegroundWillDisplayListener((OSNotificationWillDisplayEvent event) {
       log("FOREGROUND NOTIFICATION WILL DISPLAY: \n${event.notification.jsonRepresentation()}");
       // Complete the event to allow the notification to be displayed
-
-
 
       event.notification.display();
     });

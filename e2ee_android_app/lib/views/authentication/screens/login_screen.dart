@@ -1,4 +1,5 @@
 // import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
+import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
@@ -50,6 +51,9 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     tokenController.addListener(_onTokenChanged);
     // _checkBiometricAvailability();
     _loadFailedAttempts();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      NotificationService.init();
+    });
   }
 
   @override
@@ -96,10 +100,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
   }
 
   Future<void> _triggerDataWipe() async {
-    await AuthUtils.handleUnauthorized(
-      context: context,
-      message: "Security breach detected. All data has been wiped.",
-    );
+    await AuthUtils.handleUnauthorized(context: context, message: "Security breach detected. All data has been wiped.");
   }
 
   bool get isFormValid {
@@ -138,7 +139,12 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     setState(() => isLoading = true);
 
     try {
-      final success = await authenticationController.loginWithUsernamePassword(context, username, password, token: currentLoginType == LoginType.withToken ? token : null);
+      final success = await authenticationController.loginWithUsernamePassword(
+        context,
+        username,
+        password,
+        token: currentLoginType == LoginType.withToken ? token : null,
+      );
 
       if (!success) {
         failedAttempts++;
@@ -264,7 +270,13 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radius)),
                   ),
                   onPressed: isFormValid && !isLoading ? _login : null,
-                  icon: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.login),
+                  icon: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.login),
                   label: Text(isLoading ? "Please wait..." : "Authenticate"),
                 ),
               ),
