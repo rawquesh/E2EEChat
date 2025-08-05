@@ -27,13 +27,9 @@ class AuthenticationRepository {
         return null;
       }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        return responseData;
-      } else {
-        MyPrint.printOnConsole("Registration failed: ${response.body}");
-        return null;
-      }
+      final responseData = json.decode(response.body);
+
+      return responseData;
     } catch (e) {
       MyPrint.printOnConsole("Error in registerNewUserFromPayload: $e");
       return null;
@@ -53,13 +49,12 @@ class AuthenticationRepository {
         return null;
       }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        return responseData;
-      } else {
-        MyPrint.printOnConsole("Registration with token failed: ${response.body}");
-        return null;
-      }
+      final responseData = json.decode(response.body);
+      // if (response.statusCode == 200 || response.statusCode == 201) {
+      // } else {
+      //   MyPrint.printOnConsole("Registration with token failed: ${response.body}");
+      // }
+      return responseData;
     } catch (e) {
       MyPrint.printOnConsole("Error in registerNewUserFromPayloadWithToken: $e");
       return null;
@@ -86,7 +81,11 @@ class AuthenticationRepository {
       MyPrint.printOnConsole("Access token retrieved: $accessToken");
 
       MyPrint.printOnConsole("Sending access token to backend...");
-      final response = await http.post(Uri.parse('$baseUrl/auth/google/mobile'), headers: {'Content-Type': 'application/json'}, body: json.encode({'accessToken': accessToken}));
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/google/mobile'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'accessToken': accessToken}),
+      );
 
       MyPrint.printOnConsole("Backend response code: ${response.statusCode}");
       MyPrint.printOnConsole("Backend response body: ${response.body}");
@@ -181,7 +180,11 @@ class AuthenticationRepository {
     MyPrint.printOnConsole("AuthenticationRepository().signInWithEmail() called");
 
     try {
-      final response = await http.post(Uri.parse('$baseUrl/auth/login'), headers: {'Content-Type': 'application/json'}, body: json.encode({'email': email, 'password': password}));
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
+      );
 
       MyPrint.printOnConsole("Login response status: ${response.statusCode}");
       MyPrint.printOnConsole("Login response body: ${response.body}");
@@ -221,7 +224,11 @@ class AuthenticationRepository {
     try {
       MyPrint.printOnConsole("Register Request Payload: ${json.encode(userModel.toMap())}");
 
-      final response = await http.post(Uri.parse('$baseUrl/auth/register'), headers: {'Content-Type': 'application/json'}, body: json.encode(userModel.toMap()));
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(userModel.toMap()),
+      );
 
       if (response.statusCode == 401) {
         await AuthUtils.handleUnauthorized();

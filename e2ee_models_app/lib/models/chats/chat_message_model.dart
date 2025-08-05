@@ -40,7 +40,7 @@ class ChatMessageData {
       base64String: ParsingHelper.parseStringMethod(map['base64String']),
       text: ParsingHelper.parseStringMethod(map['text']),
       fileName: ParsingHelper.parseStringMethod(map['fileName']),
-      nickname: ParsingHelper.parseStringMethod(map['nickname']) ?? ParsingHelper.parseStringMethod(map['sender_nickname']) ?? '',
+      nickname: ParsingHelper.parseStringMethod(map['nickname']),
       senderNickname: ParsingHelper.parseStringMethod(map['sender_nickname']),
       username: ParsingHelper.parseStringMethod(map['username']),
       avatar: map['avatar'] != null ? ParsingHelper.parseStringMethod(map['avatar']) : null,

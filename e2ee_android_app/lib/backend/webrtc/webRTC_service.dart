@@ -122,7 +122,7 @@ class WebRTCService {
   }
 
   Future<void> setSpeakerphoneOn(bool enable) async {
-    final mediaConstraints = <String, dynamic>{'mandatory': {}, 'optional': []};
+    // final mediaConstraints = <String, dynamic>{'mandatory': {}, 'optional': []};
     await Helper.setSpeakerphoneOn(enable);
   }
 

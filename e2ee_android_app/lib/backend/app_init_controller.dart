@@ -17,7 +17,6 @@ import 'common/app_theme/app_theme_provider.dart';
 import 'common/dependency_injection.dart';
 import 'navigation/navigation_arguments.dart';
 import 'navigation/navigation_controller.dart';
-import 'notification/notification_service.dart';
 
 class AppInitController {
   static bool isNavigateToObBoardingScreen = false;
@@ -43,7 +42,7 @@ class AppInitController {
     return isNavigateToObBoardingScreen;
   }
 
-Future<void> initApp({required String appFlavor}) async {
+  Future<void> initApp({required String appFlavor}) async {
     String tag = MyUtils.getNewId();
     MyPrint.printOnConsole("AppInitController().initApp() called", tag: tag);
 
@@ -54,17 +53,13 @@ Future<void> initApp({required String appFlavor}) async {
 
     futures.add(SharedPrefManager().init());
 
-    futures.add(
-      SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-        DeviceOrientation.portraitUp,
-      ]),
-    );
+    futures.add(SystemChrome.setPreferredOrientations(<DeviceOrientation>[DeviceOrientation.portraitUp]));
+    // (SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(statusBarBrightness: Brightness.dark)));
 
     AppThemeProvider themeProvider = DependencyInjection.appThemeProvider;
-    AppThemeController themeController =
-    AppThemeController(appThemeProvider: themeProvider);
+    AppThemeController themeController = AppThemeController(appThemeProvider: themeProvider);
     futures.add(themeController.init());
-    futures.add(NotificationService().init());
+    // futures.add(NotificationService().init());
 
     await Future.wait(futures);
 
@@ -76,9 +71,7 @@ Future<void> initApp({required String appFlavor}) async {
     String tag = MyUtils.getNewId();
     MyPrint.printOnConsole("AppInitController().getAllAppData() called", tag: tag);
 
-    await Future.wait([
-      loadAssetImages(context: context),
-    ]);
+    await Future.wait([loadAssetImages(context: context)]);
 
     MyPrint.printOnConsole("All Data Getting Completed", tag: tag);
   }
@@ -95,9 +88,7 @@ Future<void> initApp({required String appFlavor}) async {
     }
 
     AuthenticationProvider authenticationProvider = DependencyInjection.authenticationProvider;
-    AuthenticationController authenticationController = AuthenticationController(
-      authenticationProvider: authenticationProvider,
-    );
+    AuthenticationController authenticationController = AuthenticationController(authenticationProvider: authenticationProvider);
 
     // 1. Check for stored auth token
     String? authToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
@@ -126,9 +117,7 @@ Future<void> initApp({required String appFlavor}) async {
           context: context,
           navigationType: NavigationType.pushNamedAndRemoveUntil,
         ),
-        arguments: PinEntryScreenNavigationArguments(
-          mode: PinScreenMode.verify,
-        ),
+        arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.verify),
       );
       return;
     }
@@ -140,9 +129,7 @@ Future<void> initApp({required String appFlavor}) async {
         context: context,
         navigationType: NavigationType.pushNamedAndRemoveUntil,
       ),
-      arguments: PinEntryScreenNavigationArguments(
-        mode: PinScreenMode.set,
-      ),
+      arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
     );
     return;
 
@@ -174,7 +161,6 @@ Future<void> initApp({required String appFlavor}) async {
   );
   */
   }
-
 
   Future<void> loadAssetImages({required BuildContext context}) async {
     String tag = MyUtils.getNewId();

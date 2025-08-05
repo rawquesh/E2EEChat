@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
+import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
@@ -57,7 +58,10 @@ class AuthenticationController {
 
   Future<bool> authenticateWithBiometric() async {
     if (!await isBiometricEnabled()) return false;
-    return await _auth.authenticate(localizedReason: "Unlock with fingerprint or Face ID", options: const AuthenticationOptions(biometricOnly: true));
+    return await _auth.authenticate(
+      localizedReason: "Unlock with fingerprint or Face ID",
+      options: const AuthenticationOptions(biometricOnly: true),
+    );
   }
 
   // Future<bool> signUpWithUsernamePassword(BuildContext context, String username, String password) async {
@@ -180,6 +184,8 @@ class AuthenticationController {
       MyPrint.printOnConsole("User model retrieved: ${userInfo.toMap()}");
       SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, userInfo.id);
 
+      NotificationService.login(userId: userInfo.id);
+
       if (userInfo.nickname.isNotEmpty) {
         SharedPrefManager().setString(MySharedPreferenceVariables.nickname, userInfo.nickname);
 
@@ -203,7 +209,12 @@ class AuthenticationController {
 
       MyPrint.printOnConsole("XXEN My public key: $myPublicKeyPem");
 
-      Map<String, dynamic> payload = {"username": username, "password": password, "publicKey": myPublicKeyPem, "identityKey": "null"};
+      Map<String, dynamic> payload = {
+        "username": username,
+        "password": password,
+        "publicKey": myPublicKeyPem,
+        "identityKey": "null",
+      };
 
       if (token != null && token.isNotEmpty) {
         payload['token'] = token;
@@ -222,17 +233,15 @@ class AuthenticationController {
       if (result != null && accessToken != null && accessToken.isNotEmpty) {
         await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, accessToken);
 
-        // await _authenticationRepository.uploadKeyBundle(token: accessToken, keyBundle: keyBundle);
-
-        // Save current user id here!
-        // await saveCurrentUserId(username: username, accessToken: accessToken);
-
         if (!(await _isNickNameAvailable(accessToken, username))) {
           await _handleNicknameUpdate(context, authenticationProvider);
         }
 
         NavigationController.navigateToPinEntryScreen(
-          navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+          navigationOperationParameters: NavigationOperationParameters(
+            context: context,
+            navigationType: NavigationType.pushNamedAndRemoveUntil,
+          ),
           arguments: PinEntryScreenNavigationArguments(mode: PinScreenMode.set),
         );
         SharedPrefManager().setString(MySharedPreferenceVariables.username, username);
@@ -242,7 +251,8 @@ class AuthenticationController {
         MyToast.showSuccess(context: context, msg: successMsg);
         return true;
       } else {
-        String errorMsg = result?['message'] ?? "Login failed. Please try again.";
+        MyPrint.printOnConsole("result data: ${result}");
+        String errorMsg = result?['message'] ?? "Login ffailed. Please try again.";
         MyToast.showError(context: context, msg: errorMsg);
         return false;
       }
@@ -271,7 +281,10 @@ class AuthenticationController {
       }
 
       // Save the PIN securely
-      await SecureStorageManager().setString(isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey, pin);
+      await SecureStorageManager().setString(
+        isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey,
+        pin,
+      );
 
       MyPrint.printOnConsole("PIN saved successfully");
       return true;
@@ -301,7 +314,9 @@ class AuthenticationController {
   }
 
   Future<bool> verifyPin(String pin, {bool isVaultPin = false}) async {
-    final storedPin = await SecureStorageManager().getString(isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey);
+    final storedPin = await SecureStorageManager().getString(
+      isVaultPin ? MySharedPreferenceVariables.mediaPinKey : MySharedPreferenceVariables.pinKey,
+    );
     final storedDuressPin = await SecureStorageManager().getString(MySharedPreferenceVariables.duressPinKey);
 
     MyPrint.printOnConsole("XX Verifying current PIN: $pin");
@@ -337,6 +352,8 @@ class AuthenticationController {
     await SecureStorageManager().delete(key: MySharedPreferenceVariables.pinKey);
     await SecureStorageManager().delete(key: MySharedPreferenceVariables.biometricKey);
     await SecureStorageManager().delete(key: MySharedPreferenceVariables.mediaPinKey);
+
+    NotificationService.logut();
 
     //start code for delete all chat data
     Box? box = await HiveManager().openBox(boxName: "chat_users");
@@ -416,7 +433,11 @@ class AuthenticationController {
   //   }
   // }
 
-  Future<void> onLoginSuccess({required BuildContext context, required UserModel userModel, String authenticationMode = ""}) async {
+  Future<void> onLoginSuccess({
+    required BuildContext context,
+    required UserModel userModel,
+    String authenticationMode = "",
+  }) async {
     MyPrint.printOnConsole("called onLoginSuccess");
 
     if (userModel.email.isEmpty) {
@@ -437,13 +458,20 @@ class AuthenticationController {
 
     if (context.checkMounted() && context.mounted) {
       if (authenticationMode == AuthenticationModes.google) {
-        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(userId: userModel.userId, authenticationMode: authenticationMode, email: userModel.email);
+        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
+          userId: userModel.userId,
+          authenticationMode: authenticationMode,
+          email: userModel.email,
+        );
 
         if (!isUserExist) {
           // New user, navigate to sign-up
           MyPrint.printOnConsole("New Google user, navigating to sign-up");
           await NavigationController.navigateToSignUpScreen(
-            navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+            navigationOperationParameters: NavigationOperationParameters(
+              context: context,
+              navigationType: NavigationType.pushNamedAndRemoveUntil,
+            ),
             arguments: SignUpScreenNavigationArguments(userModel: userModel),
           );
           return;
@@ -451,7 +479,10 @@ class AuthenticationController {
           // Existing user, navigate to main screen
           MyPrint.printOnConsole("Existing Google user, navigating to main screen");
           NavigationController.navigateToMainScreen(
-            navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+            navigationOperationParameters: NavigationOperationParameters(
+              context: context,
+              navigationType: NavigationType.pushNamedAndRemoveUntil,
+            ),
           );
           return;
         }
@@ -459,12 +490,19 @@ class AuthenticationController {
 
       // For non-Google authentication
       NavigationController.navigateToMainScreen(
-        navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamedAndRemoveUntil),
+        navigationOperationParameters: NavigationOperationParameters(
+          context: context,
+          navigationType: NavigationType.pushNamedAndRemoveUntil,
+        ),
       );
     }
   }
 
-  Future<bool> checkUserWithIdExistOrNotAndIfNotExistThenCreate({required String userId, String? authenticationMode, required String email}) async {
+  Future<bool> checkUserWithIdExistOrNotAndIfNotExistThenCreate({
+    required String userId,
+    String? authenticationMode,
+    required String email,
+  }) async {
     if (userId.isEmpty || email.isEmpty) return false;
 
     try {
@@ -505,7 +543,12 @@ class AuthenticationController {
     }
   }
 
-  Future<bool> logout({bool isShowConfirmationDialog = false, bool isNavigateToLogin = false, bool isForceLogout = false, String forceLogoutMessage = ""}) async {
+  Future<bool> logout({
+    bool isShowConfirmationDialog = false,
+    bool isNavigateToLogin = false,
+    bool isForceLogout = false,
+    String forceLogoutMessage = "",
+  }) async {
     MyPrint.printOnConsole("AuthenticationController().logout() called");
 
     await _authenticationRepository.signOut();
@@ -514,6 +557,7 @@ class AuthenticationController {
     // Clears stored credentials from SharedPreferences
     await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.userId, "");
+    await SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, "");
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, "");
     await SharedPrefManager().setBool(MySharedPreferenceVariables.isCreatorMode, false);
 

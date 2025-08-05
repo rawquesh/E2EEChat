@@ -12,7 +12,6 @@ import 'package:provider/provider.dart';
 import '../../../backend/authentication/authentication_provider.dart';
 import '../../../backend/chats/chats_controller.dart';
 import '../../../backend/chats/chats_provider.dart';
-import '../../../backend/notification/notification_service.dart';
 import '../../../utils/storage_manager.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
@@ -37,7 +36,6 @@ class _ChatListScreenState extends State<ChatListScreen> with MySafeState {
     _chatProvider = context.read<ChatProvider>();
     _chatController = ChatController(chatProvider: _chatProvider);
     _chatController.loadStoredChatUsers();
-    NotificationService().requestNotificationPermissions();
 
     _searchController.addListener(() {
       if (mounted) setState(() {});

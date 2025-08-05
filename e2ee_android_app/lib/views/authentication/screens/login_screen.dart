@@ -162,6 +162,7 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
+      appBar: AppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
