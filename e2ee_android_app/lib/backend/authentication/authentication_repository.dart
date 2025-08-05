@@ -5,8 +5,6 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/user/data_model/user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
-import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_utils.dart';
@@ -61,91 +59,91 @@ class AuthenticationRepository {
     }
   }
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  // final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
-  Future<Map<String, dynamic>?> signInWithGoogle({required BuildContext context}) async {
-    MyPrint.printOnConsole("AuthenticationRepository().signInWithGoogle() called");
+  // Future<Map<String, dynamic>?> signInWithGoogle({required BuildContext context}) async {
+  //   MyPrint.printOnConsole("AuthenticationRepository().signInWithGoogle() called");
 
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+  //   try {
+  //     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      if (googleUser == null) {
-        MyPrint.printOnConsole("Google Sign In cancelled by user");
-        return null;
-      }
+  //     if (googleUser == null) {
+  //       MyPrint.printOnConsole("Google Sign In cancelled by user");
+  //       return null;
+  //     }
 
-      MyPrint.printOnConsole("Google user signed in: ${googleUser.email}");
+  //     MyPrint.printOnConsole("Google user signed in: ${googleUser.email}");
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final String accessToken = googleAuth.accessToken!;
-      MyPrint.printOnConsole("Access token retrieved: $accessToken");
+  //     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+  //     final String accessToken = googleAuth.accessToken!;
+  //     MyPrint.printOnConsole("Access token retrieved: $accessToken");
 
-      MyPrint.printOnConsole("Sending access token to backend...");
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/google/mobile'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'accessToken': accessToken}),
-      );
+  //     MyPrint.printOnConsole("Sending access token to backend...");
+  //     final response = await http.post(
+  //       Uri.parse('$baseUrl/auth/google/mobile'),
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: json.encode({'accessToken': accessToken}),
+  //     );
 
-      MyPrint.printOnConsole("Backend response code: ${response.statusCode}");
-      MyPrint.printOnConsole("Backend response body: ${response.body}");
+  //     MyPrint.printOnConsole("Backend response code: ${response.statusCode}");
+  //     MyPrint.printOnConsole("Backend response body: ${response.body}");
 
-      if (response.statusCode == 401) {
-        await AuthUtils.handleUnauthorized();
-        return null;
-      }
+  //     if (response.statusCode == 401) {
+  //       await AuthUtils.handleUnauthorized();
+  //       return null;
+  //     }
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        MyPrint.printOnConsole("Failed to authenticate with backend");
-        return null;
-      }
+  //     if (response.statusCode != 200 && response.statusCode != 201) {
+  //       MyPrint.printOnConsole("Failed to authenticate with backend");
+  //       return null;
+  //     }
 
-      // Parse response from your backend
-      final responseData = json.decode(response.body);
-      MyPrint.printOnConsole("Decoded backend response: $responseData");
+  //     // Parse response from your backend
+  //     final responseData = json.decode(response.body);
+  //     MyPrint.printOnConsole("Decoded backend response: $responseData");
 
-      final String? token = responseData['token'];
-      if (token == null || token.isEmpty) {
-        MyPrint.printOnConsole("No token received from backend");
-        return null;
-      }
+  //     final String? token = responseData['token'];
+  //     if (token == null || token.isEmpty) {
+  //       MyPrint.printOnConsole("No token received from backend");
+  //       return null;
+  //     }
 
-      MyPrint.printOnConsole("Token received: $token");
+  //     MyPrint.printOnConsole("Token received: $token");
 
-      await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
-      MyPrint.printOnConsole("Token stored in shared preferences");
+  //     await SecureStorageManager().setString(MySharedPreferenceVariables.authToken, token);
+  //     MyPrint.printOnConsole("Token stored in shared preferences");
 
-      final userData = responseData['user'];
-      if (userData == null) {
-        MyPrint.printOnConsole("User data not in response, fetching separately");
+  //     final userData = responseData['user'];
+  //     if (userData == null) {
+  //       MyPrint.printOnConsole("User data not in response, fetching separately");
 
-        final userResponse = await http.get(Uri.parse('$baseUrl/auth/me'), headers: {'Authorization': 'Bearer $token'});
+  //       final userResponse = await http.get(Uri.parse('$baseUrl/auth/me'), headers: {'Authorization': 'Bearer $token'});
 
-        MyPrint.printOnConsole("User info response code: ${userResponse.statusCode}");
-        MyPrint.printOnConsole("User info response body: ${userResponse.body}");
+  //       MyPrint.printOnConsole("User info response code: ${userResponse.statusCode}");
+  //       MyPrint.printOnConsole("User info response body: ${userResponse.body}");
 
-        if (userResponse.statusCode == 401) {
-          await AuthUtils.handleUnauthorized();
-          return null;
-        }
+  //       if (userResponse.statusCode == 401) {
+  //         await AuthUtils.handleUnauthorized();
+  //         return null;
+  //       }
 
-        if (userResponse.statusCode != 200 && userResponse.statusCode != 201) {
-          MyPrint.printOnConsole("Failed to get user data");
-          return null;
-        }
+  //       if (userResponse.statusCode != 200 && userResponse.statusCode != 201) {
+  //         MyPrint.printOnConsole("Failed to get user data");
+  //         return null;
+  //       }
 
-        return {'token': token, 'userData': json.decode(userResponse.body)};
-      }
+  //       return {'token': token, 'userData': json.decode(userResponse.body)};
+  //     }
 
-      MyPrint.printOnConsole("User data received from backend response: $userData");
+  //     MyPrint.printOnConsole("User data received from backend response: $userData");
 
-      return {'token': token, 'userData': userData};
-    } catch (e, stackTrace) {
-      MyPrint.printOnConsole("Error during Google sign-in: $e");
-      MyPrint.printOnConsole("StackTrace: $stackTrace");
-      return null;
-    }
-  }
+  //     return {'token': token, 'userData': userData};
+  //   } catch (e, stackTrace) {
+  //     MyPrint.printOnConsole("Error during Google sign-in: $e");
+  //     MyPrint.printOnConsole("StackTrace: $stackTrace");
+  //     return null;
+  //   }
+  // }
 
   Future<Map<String, dynamic>?> checkEmailExists(String email) async {
     MyPrint.printOnConsole("AuthenticationRepository().checkEmailExists() called for $email");
@@ -301,7 +299,7 @@ class AuthenticationRepository {
 
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
+      // await _googleSignIn.signOut();
     } catch (e) {
       MyPrint.printOnConsole("Error signing out from Google: $e");
     }

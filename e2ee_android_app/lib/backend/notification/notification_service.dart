@@ -1,6 +1,5 @@
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'dart:developer';
-import 'package:permission_handler/permission_handler.dart';
 
 
 class NotificationService {
