@@ -43,10 +43,20 @@ class WebRTCService {
       }
     };
 
-    _peerConnection?.onAddStream = (stream) {
-      _remoteStream = stream;
-      _onAddRemoteStreamCallback?.call(stream);
+    // 💥 REPLACE onAddStream with onTrack
+    _peerConnection?.onTrack = (RTCTrackEvent event) {
+      print('🛤️ Track received: ${event.track.kind}');
+      if (event.streams.isNotEmpty) {
+        _remoteStream = event.streams[0];
+        _onAddRemoteStreamCallback?.call(_remoteStream!);
+      }
     };
+
+    // 🗑️ REMOVE this old callback
+    // _peerConnection?.onAddStream = (stream) {
+    //   _remoteStream = stream;
+    //   _onAddRemoteStreamCallback?.call(stream);
+    // };
   }
 
   /// Attach microphone audio to peer

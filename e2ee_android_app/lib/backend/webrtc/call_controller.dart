@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ui';
 
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
@@ -53,7 +52,7 @@ class CallController {
 
     final offer = await webrtcService.createOffer();
 
-    final offerData = {'sdp': base64Encode(utf8.encode(offer.sdp!)), 'type': offer.type};
+    final offerData = {'sdp': offer.sdp, 'type': offer.type};
 
     print('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
 
@@ -130,7 +129,7 @@ class CallController {
 
     final answer = await webrtcService.createAnswer();
 
-    final answerData = {'sdp': base64Encode(utf8.encode(answer.sdp!)), 'type': answer.type};
+    final answerData = {'sdp': answer.sdp, 'type': answer.type};
 
     print('📤 Sending encoded answer...');
     await signalingRepository.sendSignal(
@@ -146,20 +145,14 @@ class CallController {
         _receivedOffer = signal.data;
 
         if (_receivedOffer != null) {
-          try {
-            final decodedSdp = utf8.decode(base64Decode(_receivedOffer!['sdp']));
-            _receivedOffer!['sdp'] = decodedSdp;
-
-            if (!_receivedOffer!.containsKey('type')) {
-              _receivedOffer!['type'] = 'offer';
-            }
-
-            callProvider.callState.set(value: CallState.ringing);
-            callProvider.currentCallerId.set(value: signal.senderId);
-            onIncomingCall?.call(signal.senderId);
-          } catch (e) {
-            print('❌ Error decoding OFFER SDP: $e');
+          // 💥 REMOVE decoding logic. The data is now plain text.
+          if (!_receivedOffer!.containsKey('type')) {
+            _receivedOffer!['type'] = 'offer';
           }
+
+          callProvider.callState.set(value: CallState.ringing);
+          callProvider.currentCallerId.set(value: signal.senderId);
+          onIncomingCall?.call(signal.senderId);
         } else {
           print('❌ Received offer with null data.');
         }
@@ -171,19 +164,18 @@ class CallController {
           return;
         }
         try {
-          final sdp = utf8.decode(base64Decode(signal.data!['sdp']));
+          // 💥 REMOVE decoding logic.
+          final sdp = signal.data!['sdp'];
           final type = signal.data!['type'];
 
-          print('✅ Received and decoded answer. Applying...');
+          print('✅ Received answer. Applying...');
           await webrtcService.setRemoteDescription(sdp, type);
 
           callProvider.callState.set(value: CallState.connected);
-
-          await webrtcService.routeAudioToEarpiece(); // <-- default to earpiece here
-
+          await webrtcService.routeAudioToEarpiece();
           onCallConnected?.call();
         } catch (e) {
-          print('❌ Error decoding ANSWER SDP: $e');
+          print('❌ Error applying ANSWER: $e');
         }
         break;
 
