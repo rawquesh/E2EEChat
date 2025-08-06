@@ -11,8 +11,6 @@ class ChatUserModel {
   String lastMessageTime;
   bool isOnline;
   int unreadCount;
-
-  // Group chat fields
   final ChatRoomType type;
   final String? groupName;
   final List<String>? receivers;
@@ -32,27 +30,30 @@ class ChatUserModel {
   });
 
   factory ChatUserModel.fromMap(Map<String, dynamic> map) {
+    // First, try to get the nickname from 'name', then 'username'.
+    final nickname = ParsingHelper.parseStringMethod(map['name'] ?? map['username']);
+    // Then, try to get the avatar URL from the 'avatar' field.
+    final avatarUrl = ParsingHelper.parseStringMethod(map['avatar']);
+
     return ChatUserModel(
       id: ParsingHelper.parseStringMethod(map['id']),
-      nickname: map['name'] ?? map['username'] ?? '',
+      nickname: nickname,
       username: ParsingHelper.parseStringMethod(map['username']),
-      avatar: (map['username'] ?? map['name'] ?? '')
-          .toString()
-          .isNotEmpty
-          ? (map['username'] ?? map['name'])[0].toUpperCase()
-          : '',
+      avatar: (avatarUrl.isNotEmpty)
+          ? avatarUrl
+          : (nickname.isNotEmpty ? nickname[0].toUpperCase() : ''),
       lastMessage: ParsingHelper.parseStringMethod(map['last_message']),
       lastMessageTime:
       ParsingHelper.parseStringMethod(map['last_message_time']),
       isOnline: ParsingHelper.parseBoolMethod(map['is_online']),
       unreadCount: ParsingHelper.parseIntMethod(map['unread_count']),
-      type: (ParsingHelper.parseStringMethod(map['type']).toLowerCase()) == "group"
+      type: (ParsingHelper.parseStringMethod(map['type']).toLowerCase()) ==
+          "group"
           ? ChatRoomType.Group
           : ChatRoomType.Single,
       groupName: ParsingHelper.parseStringMethod(map['group_name']),
-      receivers: map['receivers'] == null
-          ? []
-          : List<String>.from(map['receivers']),
+      receivers:
+      map['receivers'] == null ? [] : List<String>.from(map['receivers']),
     );
   }
 

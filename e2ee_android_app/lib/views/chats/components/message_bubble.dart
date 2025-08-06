@@ -7,7 +7,6 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
-import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
@@ -120,7 +119,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   Widget build(BuildContext context) {
     super.pageBuild();
 
-    MyPrint.printOnConsole("MessageBubble build called for message check avatar: ${widget.message.message.avatar}");
+    // MyPrint.printOnConsole("MessageBubble build called for message check avatar: ${widget.message.message.avatar}");
 
     return DateTime.now().isBefore(widget.message.destructTimestamp)
         ? InkWell(

@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -59,7 +60,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     _callProvider.removeListener(_handleProviderChange);
     _remoteRenderer.dispose();
     _callDurationTimer?.cancel();
-    
+
     if (_callProvider.callState.get() == CallState.ended) {
       _callProvider.callState.set(value: CallState.idle);
     }
@@ -219,22 +220,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     return Column(
       children: [
         const SizedBox(height: 60),
-        Container(
-          width: 140,
-          height: 140,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.2),
-            border: Border.all(color: Colors.white.withOpacity(0.5), width: 3),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, spreadRadius: 5)],
-          ),
-          child: Center(
-            child: Text(
-              user.avatar,
-              style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
-        ),
+        CommonCachedNetworkImage(imageUrl: user.avatar, height: 140, width: 140, borderRadius: 80),
         const SizedBox(height: 24),
         Text(
           user.nickname,

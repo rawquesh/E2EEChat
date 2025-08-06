@@ -82,7 +82,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _chatController = ChatController(chatProvider: _chatProvider, authenticationProvider: authProvider);
 
     _appState = context.read<AppState>();
-    // add below method in postcallbacks to ensure it runs after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _appState.setCurrentChattingWithUserId(widget.chatInfo.id);
     });
@@ -116,7 +115,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 1000), () {
+      Future.delayed(const Duration(milliseconds: 200), () {
         if (_scrollController.hasClients) {
           _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 1000), curve: Curves.easeOut);
         }
@@ -311,6 +310,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     } else {
       _startVoiceRecording();
     }
+    FocusScope.of(context).unfocus();
   }
 
   void _showClearChatDialog() {

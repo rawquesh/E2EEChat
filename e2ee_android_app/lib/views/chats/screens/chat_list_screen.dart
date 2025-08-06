@@ -1,5 +1,3 @@
-// import 'package:e2ee_android_app/utils/storage_manager.dart';
-// import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
@@ -15,9 +13,7 @@ import '../../../backend/chats/chats_provider.dart';
 import '../../../utils/storage_manager.dart';
 import '../components/chat_list_item.dart';
 import 'chat_message_screen.dart';
-// import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 
-// Main Chat List Screen
 class ChatListScreen extends StatefulWidget {
   @override
   _ChatListScreenState createState() => _ChatListScreenState();

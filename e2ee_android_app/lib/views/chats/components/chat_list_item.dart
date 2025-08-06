@@ -1,5 +1,6 @@
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
+import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:flutter/material.dart';
 
 class ChatListItem extends StatefulWidget {
@@ -7,19 +8,13 @@ class ChatListItem extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
-  const ChatListItem({
-    Key? key,
-    required this.user,
-    required this.onTap,
-    this.onLongPress,
-  }) : super(key: key);
+  const ChatListItem({Key? key, required this.user, required this.onTap, this.onLongPress}) : super(key: key);
 
   @override
   State<ChatListItem> createState() => _ChatListItemState();
 }
 
-class _ChatListItemState extends State<ChatListItem>
-    with MySafeState, TickerProviderStateMixin {
+class _ChatListItemState extends State<ChatListItem> with MySafeState, TickerProviderStateMixin {
   bool _isPressed = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -27,13 +22,8 @@ class _ChatListItemState extends State<ChatListItem>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+    _animationController = AnimationController(duration: Duration(milliseconds: 150), vsync: this);
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
   }
 
   String _formatTime(String timeString) {
@@ -52,13 +42,7 @@ class _ChatListItemState extends State<ChatListItem>
           if (timeString.contains(':') && timeString.length <= 5) {
             final parts = timeString.split(':');
             final now = DateTime.now();
-            dateTime = DateTime(
-              now.year,
-              now.month,
-              now.day,
-              int.parse(parts[0]),
-              int.parse(parts[1]),
-            );
+            dateTime = DateTime(now.year, now.month, now.day, int.parse(parts[0]), int.parse(parts[1]));
           }
         } catch (e) {
           return timeString; // Return original if all parsing fails
@@ -71,9 +55,7 @@ class _ChatListItemState extends State<ChatListItem>
       final difference = now.difference(dateTime);
 
       // Same day - show time
-      if (dateTime.day == now.day &&
-          dateTime.month == now.month &&
-          dateTime.year == now.year) {
+      if (dateTime.day == now.day && dateTime.month == now.month && dateTime.year == now.year) {
         final hour = dateTime.hour;
         final minute = dateTime.minute.toString().padLeft(2, '0');
         final period = hour >= 12 ? 'PM' : 'AM';
@@ -83,9 +65,7 @@ class _ChatListItemState extends State<ChatListItem>
 
       // Yesterday
       final yesterday = now.subtract(Duration(days: 1));
-      if (dateTime.day == yesterday.day &&
-          dateTime.month == yesterday.month &&
-          dateTime.year == yesterday.year) {
+      if (dateTime.day == yesterday.day && dateTime.month == yesterday.month && dateTime.year == yesterday.year) {
         return 'Yesterday';
       }
 
@@ -97,38 +77,12 @@ class _ChatListItemState extends State<ChatListItem>
 
       // Within current year - show date without year
       if (dateTime.year == now.year) {
-        final months = [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec',
-        ];
+        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return '${months[dateTime.month - 1]} ${dateTime.day}';
       }
 
       // Older than current year - show full date
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${months[dateTime.month - 1]} ${dateTime.day}, ${dateTime.year}';
     } catch (e) {
       // If all parsing fails, return the original string
@@ -176,27 +130,12 @@ class _ChatListItemState extends State<ChatListItem>
               margin: EdgeInsets.symmetric(vertical: 4),
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _isPressed
-                    ? Theme.of(context).colorScheme.surface.withOpacity(0.8)
-                    : Theme.of(context).colorScheme.surface,
+                color: _isPressed ? Theme.of(context).colorScheme.surface.withOpacity(0.8) : Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.05),
-                  width: 1,
-                ),
+                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05), width: 1),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: Offset(0, 2)),
+                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 16, offset: Offset(0, 8)),
                 ],
               ),
               child: Row(
@@ -215,14 +154,7 @@ class _ChatListItemState extends State<ChatListItem>
                             Expanded(
                               child: Text(
                                 widget.user.type == ChatRoomType.Group ? widget.user.groupName ?? '' : widget.user.nickname,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                  letterSpacing: -0.2,
-                                ),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, letterSpacing: -0.2),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -236,14 +168,7 @@ class _ChatListItemState extends State<ChatListItem>
                             Expanded(
                               child: Text(
                                 widget.user.lastMessage,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.7),
-                                  height: 1.3,
-                                ),
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), height: 1.3),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -257,19 +182,12 @@ class _ChatListItemState extends State<ChatListItem>
                                     Container(
                                       width: 6,
                                       height: 6,
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFF00E676),
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
+                                      decoration: BoxDecoration(color: Color(0xFF00E676), borderRadius: BorderRadius.circular(3)),
                                     ),
                                     SizedBox(width: 4),
                                     Text(
                                       'Online',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF00E676),
-                                      ),
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF00E676)),
                                     ),
                                   ],
                                 ),
@@ -291,44 +209,7 @@ class _ChatListItemState extends State<ChatListItem>
   Widget _buildModernAvatar() {
     return Stack(
       children: [
-        // Main avatar container
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: widget.user.type == ChatRoomType.Group
-                ? Icon(Icons.group, color: Colors.white, size: 28)
-                : Text(
-                    widget.user.avatar,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-          ),
-        ),
-
-        // Online status indicator
+        CommonCachedNetworkImage(imageUrl: widget.user.avatar, borderRadius: 30, height: 55, width: 55),
         if (widget.user.isOnline)
           Positioned(
             right: 2,
@@ -339,17 +220,8 @@ class _ChatListItemState extends State<ChatListItem>
               decoration: BoxDecoration(
                 color: Color(0xFF00E676),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.surface,
-                  width: 2.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFF00E676).withOpacity(0.4),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2.5),
+                boxShadow: [BoxShadow(color: Color(0xFF00E676).withOpacity(0.4), blurRadius: 4, offset: Offset(0, 2))],
               ),
             ),
           ),
@@ -363,11 +235,7 @@ class _ChatListItemState extends State<ChatListItem>
       children: [
         Text(
           _formatTime(widget.user.lastMessageTime),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          ),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
         ),
         if (widget.user.unreadCount > 0) ...[
           SizedBox(height: 4),
@@ -375,27 +243,13 @@ class _ChatListItemState extends State<ChatListItem>
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             constraints: BoxConstraints(minWidth: 20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFF6B6B), Color(0xFFFF5252)],
-              ),
+              gradient: LinearGradient(colors: [Color(0xFFFF6B6B), Color(0xFFFF5252)]),
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFFFF5252).withOpacity(0.3),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Color(0xFFFF5252).withOpacity(0.3), blurRadius: 4, offset: Offset(0, 2))],
             ),
             child: Text(
-              widget.user.unreadCount > 99
-                  ? '99+'
-                  : widget.user.unreadCount.toString(),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
+              widget.user.unreadCount > 99 ? '99+' : widget.user.unreadCount.toString(),
+              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
           ),

@@ -1,16 +1,19 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:asn1lib/asn1lib.dart';
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:pointycastle/export.dart';
-import 'package:asn1lib/asn1lib.dart';
 
 class EncryptionService {
   static final EncryptionService _instance = EncryptionService._internal();
+
   factory EncryptionService() => _instance;
+
   EncryptionService._internal();
 
   final SecureStorageManager _secureStorage = SecureStorageManager();
@@ -43,9 +46,7 @@ class EncryptionService {
 
   // This method fetches the public key for a user, either from local storage or by making a network request .
   Future<String?> fetchPublicKey(String userId, String token) async {
-    var localKey = _recipientPublicKeys.containsKey(userId)
-        ? _recipientPublicKeys[userId]
-        : await ChatRepository().fetchPublicKey(token: token, userId: userId);
+    var localKey = _recipientPublicKeys.containsKey(userId) ? _recipientPublicKeys[userId] : await ChatRepository().fetchPublicKey(token: token, userId: userId);
 
     if (localKey != null) {
       _recipientPublicKeys[userId] = localKey;
@@ -55,11 +56,43 @@ class EncryptionService {
     return localKey;
   }
 
-  Future<Map<String, dynamic>?> encryptPayload({
-    required Map<String, dynamic> payload,
-    required List<String> recipientIds,
-    required String token,
-  }) async {
+  Future<Map<String, dynamic>?> encryptPayload({required Map<String, dynamic> payload, required List<String> recipientIds, required String token}) async {
+    if (recipientIds.isEmpty) {
+      MyPrint.printOnConsole("XXEN Encryption failed: Recipient list is empty.");
+      return null;
+    }
+
+    // 1. Encrypt the message content ONCE
+    final aesKey = _generateRandomBytes(32);
+    final iv = _generateRandomBytes(12);
+    final payloadBytes = utf8.encode(jsonEncode(payload));
+    final encryptedPayload = _aesGcmEncrypt(payloadBytes, aesKey, iv);
+
+    // 2. Encrypt the AES key for EACH recipient in the list
+    final Map<String, String> encryptedKeys = {};
+    for (String userId in recipientIds) {
+      final recipientPublicKeyPem = await fetchPublicKey(userId, token);
+      if (recipientPublicKeyPem != null) {
+        try {
+          final recipientPublicKey = _parsePublicKeyFromPem(recipientPublicKeyPem);
+          final encryptedAesKey = _rsaEncrypt(aesKey, recipientPublicKey);
+          encryptedKeys[userId] = base64Encode(encryptedAesKey);
+        } catch (e) {
+          MyPrint.printOnConsole("Could not encrypt for user $userId due to invalid key. Skipping.");
+        }
+      } else {
+        MyPrint.printOnConsole("XXEN Could not fetch public key for user: $userId. Skipping.");
+      }
+    }
+
+    // If no keys could be encrypted, the message can't be sent securely.
+    if (encryptedKeys.isEmpty) return null;
+
+    // 3. Return the final payload
+    return {'iv': base64Encode(iv), 'payload': base64Encode(encryptedPayload), 'keys': encryptedKeys};
+  }
+
+  /*Future<Map<String, dynamic>?> encryptPayload({required Map<String, dynamic> payload, required List<String> recipientIds, required String token}) async {
     if (recipientIds.isEmpty) {
       MyPrint.printOnConsole("XXEN Encryption failed: Recipient list is empty.");
       return null;
@@ -89,7 +122,7 @@ class EncryptionService {
 
     // 3. Return the final payload
     return {'iv': base64Encode(iv), 'payload': base64Encode(encryptedPayload), 'keys': encryptedKeys};
-  }
+  }*/
 
   Future<Map<String, dynamic>?> decryptMessagePayload({
     required Map<String, dynamic> encryptedData,
@@ -150,13 +183,7 @@ class EncryptionService {
 
   // FIX: Explicitly cast the generated key pair to the required RSA types.
   AsymmetricKeyPair<RSAPublicKey, RSAPrivateKey> _generateRsaKeyPair() {
-    final keyGen = RSAKeyGenerator()
-      ..init(
-        ParametersWithRandom(
-          RSAKeyGeneratorParameters(BigInt.from(65537), 2048, 64),
-          FortunaRandom()..seed(KeyParameter(_generateRandomBytes(32))),
-        ),
-      );
+    final keyGen = RSAKeyGenerator()..init(ParametersWithRandom(RSAKeyGeneratorParameters(BigInt.from(65537), 2048, 64), FortunaRandom()..seed(KeyParameter(_generateRandomBytes(32)))));
 
     final keyPair = keyGen.generateKeyPair();
 
@@ -213,7 +240,25 @@ class EncryptionService {
     return """-----BEGIN RSA PRIVATE KEY-----\n${base64.encode(privateKeySequence.encodedBytes)}\n-----END RSA PRIVATE KEY-----""";
   }
 
+  /*RSAPublicKey _parsePublicKeyFromPem(String pem) {
+    final bytes = base64.decode(pem.replaceAll(RegExp(r'-----(BEGIN|END) PUBLIC KEY-----|\n'), ''));
+    var asn1Parser = ASN1Parser(bytes);
+    var topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;
+    var publicKeyBitString = topLevelSeq.elements[1] as ASN1BitString;
+    var publicKeyAsn = ASN1Parser(publicKeyBitString.contentBytes());
+    var publicKeySeq = publicKeyAsn.nextObject() as ASN1Sequence;
+    var modulus = publicKeySeq.elements[0] as ASN1Integer;
+    var exponent = publicKeySeq.elements[1] as ASN1Integer;
+    return RSAPublicKey(modulus.valueAsBigInteger, exponent.valueAsBigInteger);
+  }
+*/
+
   RSAPublicKey _parsePublicKeyFromPem(String pem) {
+    if (!pem.startsWith('-----BEGIN PUBLIC KEY-----') || !pem.endsWith('-----END PUBLIC KEY-----')) {
+      MyPrint.printOnConsole("Invalid PEM format for public key: $pem");
+      throw Exception("Invalid PEM format");
+    }
+
     final bytes = base64.decode(pem.replaceAll(RegExp(r'-----(BEGIN|END) PUBLIC KEY-----|\n'), ''));
     var asn1Parser = ASN1Parser(bytes);
     var topLevelSeq = asn1Parser.nextObject() as ASN1Sequence;
