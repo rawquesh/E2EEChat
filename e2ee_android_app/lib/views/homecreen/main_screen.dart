@@ -4,6 +4,7 @@ import 'package:e2ee_android_app/backend/webrtc/call_controller.dart';
 import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
 import 'package:e2ee_android_app/configs/constants.dart';
 import 'package:e2ee_android_app/configs/font_manager.dart';
+import 'package:e2ee_android_app/utils/battery.dart';
 import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/views/calls/screens/calls_screen.dart';
 import 'package:e2ee_android_app/views/chats/screens/chat_list_screen.dart';
@@ -21,6 +22,7 @@ import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:disable_battery_optimization/disable_battery_optimization.dart';
 
 import '../../backend/chats/chat_repository.dart';
 import '../../backend/chats/chats_controller.dart';
@@ -281,9 +283,38 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     }
   }
 
+  /// Checks if battery optimization is enabled and if we should show the dialog.
+  Future<void> _checkAndShowBatteryOptimizationDialog() async {
+    // We use a flag to ensure we only ask the user once.
+    bool alreadyRequested =
+        (await SharedPrefManager().getBool(MySharedPreferenceVariables.batteryOptimizationRequested)) ?? false;
+
+    if (alreadyRequested) {
+      return;
+    }
+
+    bool? isBatteryOptimizationDisabled = await DisableBatteryOptimization.isBatteryOptimizationDisabled;
+
+    if (isBatteryOptimizationDisabled == false) {
+      if (mounted) {
+        // Ensure the widget is still in the tree
+        showDialog(
+          context: context,
+          barrierDismissible: false, // User must interact with the dialog
+          builder: (BuildContext context) {
+            return const BatteryOptimizationDialog();
+          },
+        );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowBatteryOptimizationDialog();
+    });
     WidgetsBinding.instance.addObserver(this);
     _chatProvider = context.read<ChatProvider>();
     _appState = context.read<AppState>();

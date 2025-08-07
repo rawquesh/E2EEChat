@@ -201,6 +201,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.3+hotfix.3"
+  disable_battery_optimization:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: "3bd744d"
+      resolved-ref: "3bd744d03c416859bbaedecd61c1c11fc022ed75"
+      url: "https://github.com/pvsvamsi/Disable-Battery-Optimizations"
+    source: git
+    version: "1.1.1"
   e2ee_models_app:
     dependency: "direct main"
     description:

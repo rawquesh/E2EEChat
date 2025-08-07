@@ -1,11 +1,10 @@
 import 'dart:async';
+import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/views/my_app.dart';
 import 'package:e2ee_models_app/utils/extensions.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:flutter/material.dart';
-
-
 
 import 'backend/app_init_controller.dart';
 import 'backend/navigation/navigation_controller.dart';
@@ -16,8 +15,8 @@ Future<void>? runErrorSafeApp({required String appFlavor}) {
       WidgetsFlutterBinding.ensureInitialized();
 
       await EncryptionService().init();
-
-
+      NotificationService.init();
+      
       AppInitController appInitController = AppInitController();
       await appInitController.initApp(appFlavor: appFlavor);
 

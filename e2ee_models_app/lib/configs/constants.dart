@@ -76,6 +76,9 @@ class MySharedPreferenceVariables {
   static String currentUserId = "current_user_id";
   static String avatarUrl = "avatar_url";
 
+  static String batteryOptimizationRequested = "battery_optimization_requested";
+
+
   // Sucurity related keys
   static String authToken = "authToken";
 
