@@ -27,8 +27,12 @@ class _GroupDetailsBottomSheetState extends State<GroupDetailsBottomSheet> with 
   Future<List<ChatUserModel>> _fetchGroupMembers() async {
     final List<ChatUserModel> members = [];
     final token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    final currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId);
+
     if (widget.groupInfo.receivers != null) {
       for (final userId in widget.groupInfo.receivers!) {
+        if (userId == currentUserId) continue;
+
         final user = await ChatRepository().fetchChatUser(userId: userId, token: token);
         if (user != null) {
           members.add(user);

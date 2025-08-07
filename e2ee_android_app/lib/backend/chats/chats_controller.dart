@@ -55,7 +55,16 @@ class ChatController {
     Map<String, dynamic> messageContext;
 
     if (opponent.type == ChatRoomType.Group) {
-      messageContext = {'type': 'group', 'sender_id': senderId, 'group_id': opponent.id, 'group_name': opponent.groupName, 'receivers': opponent.receivers ?? []};
+      // FIX: Exclude the sender's ID from the receivers list
+      final receivers = opponent.receivers?.where((id) => id != senderId).toList() ?? [];
+
+      messageContext = {
+        'type': 'group',
+        'sender_id': senderId,
+        'group_id': opponent.id,
+        'group_name': opponent.groupName,
+        'receivers': receivers // Use the filtered list
+      };
     } else {
       messageContext = {'type': 'single', 'sender_id': senderId, 'receiver_id': opponent.id};
     }
