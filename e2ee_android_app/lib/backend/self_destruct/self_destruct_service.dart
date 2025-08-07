@@ -8,13 +8,9 @@ import 'package:hive/hive.dart';
 class SelfDestructService {
   Timer? _timer;
   bool _isRunning = false;
-  Function(String chatId, List<ChatMessageModel> deletedMessages)?
-  onMessagesDeleted;
+  Function(String chatId, List<ChatMessageModel> deletedMessages)? onMessagesDeleted;
 
-  void start({
-    required Function(String, List<ChatMessageModel>)?
-    onMessagesDeletedCallback,
-  }) {
+  void start({required Function(String, List<ChatMessageModel>)? onMessagesDeletedCallback}) {
     if (_isRunning) return;
 
     MyPrint.printOnConsole('[SelfDestructService] Starting...');
@@ -36,7 +32,7 @@ class SelfDestructService {
   }
 
   Future<void> _checkForExpiredMessages() async {
-   /* MyPrint.printOnConsole(
+    /*MyPrint.printOnConsole(
       '[SelfDestructService] Checking for expired messages...',
     );*/
 
@@ -59,10 +55,7 @@ class SelfDestructService {
         for (final key in allMessageKeys) {
           try {
             final messageMap = Map<String, dynamic>.from(messageBox.get(key));
-            final message = ChatMessageModel.fromMap(
-              messageMap,
-              currentUserId: '',
-            );
+            final message = ChatMessageModel.fromMap(messageMap, currentUserId: '');
 
             if (now.isAfter(message.destructTimestamp)) {
               if (message.message.base64String.isNotEmpty) {
@@ -76,17 +69,13 @@ class SelfDestructService {
               deletedMessages.add(message);
             }
           } catch (e) {
-            MyPrint.printOnConsole(
-              '[SelfDestructService] Error processing message $key in box messages_$chatId: $e',
-            );
+            MyPrint.printOnConsole('[SelfDestructService] Error processing message $key in box messages_$chatId: $e');
           }
         }
 
         if (keysToDelete.isNotEmpty) {
           await messageBox.deleteAll(keysToDelete);
-          MyPrint.printOnConsole(
-            '[SelfDestructService] Deleted ${keysToDelete.length} messages from chat: $chatId',
-          );
+          MyPrint.printOnConsole('[SelfDestructService] Deleted ${keysToDelete.length} messages from chat: $chatId');
 
           onMessagesDeleted?.call(chatId, deletedMessages);
         }
