@@ -36,9 +36,9 @@ class SelfDestructService {
   }
 
   Future<void> _checkForExpiredMessages() async {
-    MyPrint.printOnConsole(
+   /* MyPrint.printOnConsole(
       '[SelfDestructService] Checking for expired messages...',
-    );
+    );*/
 
     try {
       final chatUsersBox = await Hive.openBox('chat_users');
@@ -65,7 +65,7 @@ class SelfDestructService {
             );
 
             if (now.isAfter(message.destructTimestamp)) {
-              if (message.message.base64String.isNotEmpty)   {
+              if (message.message.base64String.isNotEmpty) {
                 final filePath = message.message.base64String;
                 final file = File(filePath);
                 if (await file.exists()) {

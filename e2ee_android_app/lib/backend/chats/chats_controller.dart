@@ -4,6 +4,7 @@ import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/storage_manager.dart';
 
+import '../../configs/constants.dart';
 import '../authentication/authentication_provider.dart';
 import 'chat_repository.dart';
 import 'chat_users_repository.dart';
@@ -293,10 +294,36 @@ class ChatController {
   Future<bool> deleteMessage(String chatId, String messageId) async {
     try {
       final message = _chatProvider.getMessagesFor(chatId).firstWhere((element) => element.id == messageId);
-      message.destructTimestamp = DateTime.now().subtract(Duration(seconds: 1));
+      message.destructTimestamp = DateTime.now().subtract(const Duration(seconds: 1));
       await _messageRepository.addMessage(chatId: chatId, message: message);
       await _messageRepository.deleteMessage(chatId, messageId);
       _chatProvider.removeMessage(chatId, messageId);
+
+      // New logic to update the last message
+      final remainingMessages = await _messageRepository.getMessagesPage(
+        chatId: chatId,
+        limit: 1,
+        offset: 0,
+        currentUserId: await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '',
+      );
+
+      if (remainingMessages.isNotEmpty) {
+        final newLastMessage = remainingMessages.first;
+        await updateUserLastMessage(
+          userId: chatId,
+          lastMessage: newLastMessage.message.type == ChatMessageType.Text.name
+              ? newLastMessage.message.text
+              : newLastMessage.message.type,
+          lastMessageTime: newLastMessage.timestamp,
+        );
+      } else {
+        await updateUserLastMessage(
+          userId: chatId,
+          lastMessage: '',
+          lastMessageTime: DateTime.now(),
+        );
+      }
+
       return true;
     } catch (e) {
       MyPrint.printOnConsole('Error deleting message $messageId: $e');

@@ -289,7 +289,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
-    // _appState.setCurrentChattingWithUserId(null);
+    _appState.setCurrentChattingWithUserId(null);
     _chatProvider.removeListener(_onProviderChange);
     super.dispose();
   }
@@ -601,59 +601,59 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
             children: [
               isCamera
                   ? ListTile(
-                      leading: Icon(Icons.photo_camera, color: Colors.white),
-                      title: Text("Capture Image", style: TextStyle(color: Colors.white)),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final images = await _picker.pickImage(source: ImageSource.camera);
-                        setState(() {
-                          image = images;
-                          prepareForSendMessage(true);
-                        });
-                      },
-                    )
+                leading: Icon(Icons.photo_camera, color: Colors.white),
+                title: Text("Capture Image", style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final images = await _picker.pickImage(source: ImageSource.camera);
+                  setState(() {
+                    image = images;
+                    prepareForSendMessage(true);
+                  });
+                },
+              )
                   : SizedBox(),
               isCamera
                   ? ListTile(
-                      leading: Icon(Icons.videocam, color: Colors.white),
-                      title: Text("Capture Video", style: TextStyle(color: Colors.white)),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final video = await _picker.pickVideo(source: ImageSource.camera);
-                        setState(() {
-                          image = video;
-                          prepareForSendMessage(false);
-                        });
-                      },
-                    )
+                leading: Icon(Icons.videocam, color: Colors.white),
+                title: Text("Capture Video", style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final video = await _picker.pickVideo(source: ImageSource.camera);
+                  setState(() {
+                    image = video;
+                    prepareForSendMessage(false);
+                  });
+                },
+              )
                   : SizedBox(),
               !isCamera
                   ? ListTile(
-                      leading: Icon(Icons.image, color: Colors.white),
-                      title: Text("Choose Image", style: TextStyle(color: Colors.white)),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final images = await _picker.pickImage(source: ImageSource.gallery);
-                        setState(() {
-                          image = images;
-                          prepareForSendMessage(true);
-                        });
-                      },
-                    )
+                leading: Icon(Icons.image, color: Colors.white),
+                title: Text("Choose Image", style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final images = await _picker.pickImage(source: ImageSource.gallery);
+                  setState(() {
+                    image = images;
+                    prepareForSendMessage(true);
+                  });
+                },
+              )
                   : SizedBox(),
               !isCamera
                   ? ListTile(
-                      leading: Icon(Icons.video_library, color: Colors.white),
-                      title: Text("Choose Video", style: TextStyle(color: Colors.white)),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final video = await _picker.pickVideo(source: ImageSource.gallery);
-                        setState(() {
-                          image = video;
-                          prepareForSendMessage(false);
-                        });
-                      },
-                    )
+                leading: Icon(Icons.video_library, color: Colors.white),
+                title: Text("Choose Video", style: TextStyle(color: Colors.white)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final video = await _picker.pickVideo(source: ImageSource.gallery);
+                  setState(() {
+                    image = video;
+                    prepareForSendMessage(false);
+                  });
+                },
+              )
                   : SizedBox(),
             ],
           ),
@@ -870,33 +870,33 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                                 selectedTimeForDestruct == 0
                                     ? SizedBox()
                                     : InkWell(
-                                        onTap: () async {
-                                          final selectedTime = await showTimeSelectionDialog(context);
-                                          if (selectedTime != null) {
-                                            print("User selected: $selectedTimeForDestruct");
-                                            setState(() {}); // Add setState to rebuild the widget
-                                          }
-                                        },
-                                        child: Container(
-                                          height: 18,
-                                          // Increased size for better readability
-                                          width: 18,
-                                          // Increased size for better readability
-                                          margin: EdgeInsets.only(top: 5),
-                                          decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
-                                          child: Center(
-                                            child: Text(
-                                              _formatDestructTime(selectedTimeForDestruct),
-                                              // Use the new formatting function
-                                              style: TextStyle(
-                                                fontSize: 8, // Adjusted font size
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
+                                  onTap: () async {
+                                    final selectedTime = await showTimeSelectionDialog(context);
+                                    if (selectedTime != null) {
+                                      print("User selected: $selectedTimeForDestruct");
+                                      setState(() {}); // Add setState to rebuild the widget
+                                    }
+                                  },
+                                  child: Container(
+                                    height: 18,
+                                    // Increased size for better readability
+                                    width: 18,
+                                    // Increased size for better readability
+                                    margin: EdgeInsets.only(top: 5),
+                                    decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
+                                    child: Center(
+                                      child: Text(
+                                        _formatDestructTime(selectedTimeForDestruct),
+                                        // Use the new formatting function
+                                        style: TextStyle(
+                                          fontSize: 8, // Adjusted font size
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -968,41 +968,41 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children:
-                [
-                  {'label': 'None', 'value': 0},
-                  {'label': '1 minute', 'value': 1},
-                  {'label': '5 minutes', 'value': 5},
-                  {'label': '10 minutes', 'value': 10},
-                  {'label': '15 minutes', 'value': 15},
-                  {'label': '24 hours', 'value': 1440},
-                  {'label': '7 days', 'value': 10080},
-                ].map((time) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 7),
-                    child: InkWell(
-                      onTap: () {
-                        selectedTimeForDestruct = time['value'] as int;
-                        Navigator.pop(context, selectedTimeForDestruct);
-                        setState(() {});
-                      },
-                      child: Row(
-                        children: [
-                          Container(
-                            height: 15,
-                            width: 15,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black, width: 2),
-                              borderRadius: BorderRadius.circular(3),
-                              color: selectedTimeForDestruct == (time['value'] as int) ? Colors.black : Colors.transparent,
-                            ),
-                          ),
-                          SizedBox(width: 7),
-                          Text('${time['label']}', style: TextStyle(color: Colors.black)),
-                        ],
+            [
+              {'label': 'None', 'value': 0},
+              {'label': '1 minute', 'value': 1},
+              {'label': '5 minutes', 'value': 5},
+              {'label': '10 minutes', 'value': 10},
+              {'label': '15 minutes', 'value': 15},
+              {'label': '24 hours', 'value': 1440},
+              {'label': '7 days', 'value': 10080},
+            ].map((time) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: InkWell(
+                  onTap: () {
+                    selectedTimeForDestruct = time['value'] as int;
+                    Navigator.pop(context, selectedTimeForDestruct);
+                    setState(() {});
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 15,
+                        width: 15,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 2),
+                          borderRadius: BorderRadius.circular(3),
+                          color: selectedTimeForDestruct == (time['value'] as int) ? Colors.black : Colors.transparent,
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                      SizedBox(width: 7),
+                      Text('${time['label']}', style: TextStyle(color: Colors.black)),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         );
       },

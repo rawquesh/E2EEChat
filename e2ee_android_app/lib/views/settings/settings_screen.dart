@@ -14,6 +14,7 @@ import 'package:e2ee_models_app/utils/storage_manager.dart';
 import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -41,13 +42,56 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _profileImage = File(image.path);
-      });
-      // Immediately try to upload the new image
-      await _uploadProfilePicture();
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      preferredCameraDevice: CameraDevice.front,
+    );
+
+    if (image != null &&
+        (image.path.endsWith('.jpg') || image.path.endsWith('.jpeg') || image.path.endsWith('.png'))) {
+      final originalFile = File(image.path);
+      final compressedFile = await compressAndValidateImage(originalFile);
+
+      if (compressedFile != null) {
+        _profileImage = compressedFile;
+        await _uploadProfilePicture();
+      }
+    } else {
+      MyToast.showError(context: context, msg: 'Unsupported image format');
+    }
+  }
+
+  Future<File?> compressAndValidateImage(File originalFile) async {
+    try {
+      // Read and decode image
+      final bytes = await originalFile.readAsBytes();
+      final image = img.decodeImage(bytes);
+
+      if (image == null) {
+        MyToast.showError(context: context, msg: "Invalid image file.");
+        return null;
+      }
+
+      // Compress the image (85% quality)
+      final compressedBytes = img.encodeJpg(image, quality: 85);
+
+      // Save to temp file
+      final tempDir = Directory.systemTemp;
+      final compressedFile = File('${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await compressedFile.writeAsBytes(compressedBytes);
+
+      // Check file size (limit = 1MB = 1 * 1024 * 1024 bytes)
+      final compressedSize = await compressedFile.length();
+      if (compressedSize > 1 * 1024 * 1024) {
+        MyToast.showError(context: context, msg: "Image size must be less than 1MB");
+        return null;
+      }
+
+      return compressedFile;
+    } catch (e) {
+      MyToast.showError(context: context, msg: "Failed to compress image.");
+      print("Image compression error: $e");
+      return null;
     }
   }
 
