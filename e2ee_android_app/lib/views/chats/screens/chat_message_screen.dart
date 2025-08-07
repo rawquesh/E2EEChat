@@ -170,8 +170,6 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         _loadMoreMessages();
       }
     });
-
-    // The global handler in main_screen.dart will manage all incoming messages.
   }
 
   Future<void> _loadInitialMessages() async {

@@ -38,7 +38,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     _callProvider = context.read<CallProvider>();
     _controller = _callProvider.callController;
 
-    _controller.onIncomingCall = _showIncomingCallDialog;
+    // _controller.onIncomingCall = _showIncomingCallDialog;
     _callProvider.addListener(_handleProviderChange);
 
     _controller.onCallConnected = () {
@@ -55,11 +55,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
 
   @override
   void dispose() {
-    _controller.onIncomingCall = null;
+    // _controller.onIncomingCall = null;
     _callProvider.removeListener(_handleProviderChange);
     _remoteRenderer.dispose();
     _callDurationTimer?.cancel();
-    
+
     if (_callProvider.callState.get() == CallState.ended) {
       _callProvider.callState.set(value: CallState.idle);
     }
@@ -113,37 +113,37 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     return "$minutes:$seconds";
   }
 
-  void _showIncomingCallDialog(String callerId) {
-    if (_isDialogShowing) return;
-    _isDialogShowing = true;
+  // void _showIncomingCallDialog(String callerId) {
+  //   if (_isDialogShowing) return;
+  //   _isDialogShowing = true;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Incoming Call 📞'),
-          content: Text('Call from: $callerId'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                _controller.endCall();
-                _dismissCallDialog();
-              },
-              child: const Text('Decline'),
-            ),
-            TextButton(
-              onPressed: () {
-                _controller.acceptCall();
-                _dismissCallDialog();
-              },
-              child: const Text('Accept'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         title: const Text('Incoming Call 📞'),
+  //         content: Text('Call from: $callerId'),
+  //         actions: <Widget>[
+  //           TextButton(
+  //             onPressed: () {
+  //               _controller.endCall();
+  //               _dismissCallDialog();
+  //             },
+  //             child: const Text('Decline'),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               _controller.acceptCall();
+  //               _dismissCallDialog();
+  //             },
+  //             child: const Text('Accept'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   void _dismissCallDialog() {
     if (_isDialogShowing) {
@@ -166,7 +166,11 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
           // Background
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF2c3e50), Color(0xFF34495e)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              gradient: LinearGradient(
+                colors: [Color(0xFF2c3e50), Color(0xFF34495e)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
           // Blur Effect
@@ -204,7 +208,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
         statusText = 'Calling...';
         break;
       case CallState.ringing:
-        statusText = 'Ringing...';
+        statusText = 'Connecting...';
         break;
       case CallState.connected:
         statusText = _formatDuration(_callDurationInSeconds);
@@ -252,21 +256,31 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildControlButton(icon: isMuted ? Icons.mic_off : Icons.mic, onTap: () => _controller.mute(!isMuted), backgroundColor: Colors.white.withOpacity(0.2)),
+        _buildControlButton(
+          icon: isMuted ? Icons.mic_off : Icons.mic,
+          onTap: () => _controller.mute(!isMuted),
+          backgroundColor: Colors.white.withOpacity(0.2),
+        ),
         _buildControlButton(icon: Icons.call_end, onTap: () => _controller.endCall(), backgroundColor: Colors.red),
         _buildControlButton(
-          icon: isSpeakerOn ? Icons.volume_up : Icons.hearing,
+          icon:  Icons.volume_up,
           onTap: () {
             setState(() => isSpeakerOn = !isSpeakerOn);
             _controller.webrtcService.setSpeakerphoneOn(isSpeakerOn);
           },
-          backgroundColor: Colors.white.withOpacity(0.2),
+          backgroundColor: isSpeakerOn ? Colors.white : Colors.white.withOpacity(0.2),
+          iconColor: isSpeakerOn ? Colors.black : Colors.white,
         ),
       ],
     );
   }
 
-  Widget _buildControlButton({required IconData icon, required VoidCallback onTap, required Color backgroundColor}) {
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required Color backgroundColor,
+    Color iconColor = Colors.white,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(40),
@@ -278,7 +292,7 @@ class _VoiceCallScreenState extends State<VoiceCallScreen> with MySafeState {
           color: backgroundColor,
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)],
         ),
-        child: Icon(icon, color: Colors.white, size: 30),
+        child: Icon(icon, color: iconColor, size: 30),
       ),
     );
   }
