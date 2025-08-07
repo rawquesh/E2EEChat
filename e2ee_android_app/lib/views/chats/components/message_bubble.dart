@@ -120,7 +120,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   Widget build(BuildContext context) {
     super.pageBuild();
 
-    MyPrint.printOnConsole("MessageBubble build called for message check avatar: ${widget.message.message.avatar}");
+    // MyPrint.printOnConsole("MessageBubble build called for message check avatar: ${widget.message.message.avatar}");
 
     return DateTime.now().isBefore(widget.message.destructTimestamp)
         ? InkWell(

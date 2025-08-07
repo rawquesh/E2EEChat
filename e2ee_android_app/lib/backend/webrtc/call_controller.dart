@@ -46,11 +46,26 @@ class CallController {
     _remoteAvatar = receiverAvatar;
     callProvider.callState.set(value: CallState.calling);
 
-    await webrtcService.initPeerConnection(onIceCandidate: _sendIceCandidate, onAddRemoteStream: (stream) {});
-
+    await webrtcService.initPeerConnection(
+      onIceCandidate: _sendIceCandidate,
+      onAddRemoteStream: (stream) {},
+      onConnectionState: _handleConnectionStateChange,
+    );
     await webrtcService.attachLocalAudio();
 
     final offer = await webrtcService.createOffer();
+
+    // 💥 ADD THIS DEBUG PRINT
+    print("--- SENDER: CREATED OFFER ---");
+    print("SDP is null or empty: ${offer.sdp == null || offer.sdp!.isEmpty}");
+    print("SDP value: ${offer.sdp}");
+    print("-----------------------------");
+
+    // This check will stop an invalid offer from being sent.
+    if (offer.sdp == null || offer.sdp!.isEmpty) {
+      print("❌ ERROR: Created an empty SDP offer. Aborting call.");
+      return;
+    }
 
     final offerData = {'sdp': offer.sdp, 'type': offer.type};
 
@@ -75,7 +90,21 @@ class CallController {
       ),
     );
 
-    print('📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}');
+    print(
+      '📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}',
+    );
+  }
+
+  // ✨ ADD A NEW HELPER FUNCTION
+  void _handleConnectionStateChange(RTCPeerConnectionState state) {
+    if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+      // This is the true "connected" moment for both caller and receiver
+      if (callProvider.callState.get() != CallState.connected) {
+        print('🎉 CALL IS FULLY CONNECTED! 🎉');
+        callProvider.callState.set(value: CallState.connected);
+        onCallConnected?.call();
+      }
+    }
   }
 
   Future<void> acceptCall() async {
@@ -84,9 +113,13 @@ class CallController {
       return;
     }
 
-    callProvider.callState.set(value: CallState.connected);
+    // callProvider.callState.set(value: CallState.connected);
 
-    await webrtcService.initPeerConnection(onIceCandidate: _sendIceCandidate, onAddRemoteStream: (stream) {});
+    await webrtcService.initPeerConnection(
+      onIceCandidate: _sendIceCandidate,
+      onAddRemoteStream: (stream) {},
+      onConnectionState: _handleConnectionStateChange,
+    );
 
     await Future.delayed(Duration(milliseconds: 100));
     await webrtcService.attachLocalAudio();
@@ -111,8 +144,9 @@ class CallController {
   }
 
   Future<void> sendAnswer(Map<String, dynamic> offer) async {
-    final sdp = offer['sdp'];
-    final type = offer['type'];
+    // 'offer' is now the clean _receivedOffer map: {'sdp': '...', 'type': 'offer'}
+    final sdp = offer['sdp']; // This is now a String, as expected
+    final type = offer['type']; // This is now "offer", as expected
 
     if (sdp == null || type == null) {
       print('❌ sendAnswer: Missing sdp or type in offer');
@@ -120,13 +154,13 @@ class CallController {
     }
 
     try {
+      // This will now succeed
       await webrtcService.setRemoteDescription(sdp, type);
       print('✅ Remote offer SDP applied successfully by receiver.');
     } catch (e) {
       print('❌ Receiver failed to set remote description: $e');
       return;
     }
-
     final answer = await webrtcService.createAnswer();
 
     final answerData = {'sdp': answer.sdp, 'type': answer.type};
@@ -141,20 +175,34 @@ class CallController {
   Future<void> _handleSignal(WebRTCSignalModel signal) async {
     switch (signal.type) {
       case 'offer':
+        // 💥 ADD THIS DEBUG PRINT
+        print("--- RECEIVER: GOT OFFER SIGNAL ---");
+        print("Full data received: ${signal.data}");
+        print("----------------------------------");
+
         _remoteId = signal.senderId;
-        _receivedOffer = signal.data;
 
-        if (_receivedOffer != null) {
-          // 💥 REMOVE decoding logic. The data is now plain text.
-          if (!_receivedOffer!.containsKey('type')) {
-            _receivedOffer!['type'] = 'offer';
+        if (signal.data != null && signal.data!['sdp'] != null) {
+          try {
+            // 1. 💥 Get the SDP STRING from the data payload.
+            final String sdpString = signal.data!['sdp'] as String;
+
+            // 2. 💥 Get the description TYPE from the signal type itself ("offer").
+            final String sdpType = signal.type;
+
+            // 3. Store a clean, correctly structured offer object.
+            _receivedOffer = {'sdp': sdpString, 'type': sdpType};
+
+            print('✅ Parsed remote offer successfully.');
+
+            callProvider.callState.set(value: CallState.ringing);
+            callProvider.currentCallerId.set(value: signal.senderId);
+            onIncomingCall?.call(signal.senderId);
+          } catch (e) {
+            print('❌ Error processing OFFER payload: $e');
           }
-
-          callProvider.callState.set(value: CallState.ringing);
-          callProvider.currentCallerId.set(value: signal.senderId);
-          onIncomingCall?.call(signal.senderId);
         } else {
-          print('❌ Received offer with null data.');
+          print('❌ Received offer with null or invalid data payload.');
         }
         break;
 
@@ -171,7 +219,7 @@ class CallController {
           print('✅ Received answer. Applying...');
           await webrtcService.setRemoteDescription(sdp, type);
 
-          callProvider.callState.set(value: CallState.connected);
+          // callProvider.callState.set(value: CallState.connected);
           await webrtcService.routeAudioToEarpiece();
           onCallConnected?.call();
         } catch (e) {

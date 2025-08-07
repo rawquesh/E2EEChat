@@ -14,7 +14,11 @@ class WebRTCService {
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'},
       {
-        'urls': ['turn:172.86.92.130.sslip.io:3478?transport=udp', 'turn:172.86.92.130.sslip.io:3478?transport=tcp', 'turns:172.86.92.130.sslip.io:5349?transport=tcp'],
+        'urls': [
+          'turn:172.86.92.130.sslip.io:3478?transport=udp',
+          'turn:172.86.92.130.sslip.io:3478?transport=tcp',
+          'turns:172.86.92.130.sslip.io:5349?transport=tcp',
+        ],
         'username': 'webrtcuser',
         'credential': 'webrtccred',
       },
@@ -29,13 +33,33 @@ class WebRTCService {
     ],
   };
 
+  Function(RTCPeerConnectionState)? _onConnectionStateCallback;
+
+  final List<RTCIceCandidate> _iceCandidateQueue = [];
+
   /// Initializes the peer connection
-  Future<void> initPeerConnection({required Function(RTCIceCandidate) onIceCandidate, required Function(MediaStream stream) onAddRemoteStream}) async {
+  Future<void> initPeerConnection({
+    required Function(RTCIceCandidate) onIceCandidate,
+    required Function(MediaStream stream) onAddRemoteStream,
+    // ✨ ADD THIS NEW PARAMETER
+    required Function(RTCPeerConnectionState state) onConnectionState,
+  }) async {
+    if (_peerConnection != null) {
+      await dispose();
+    }
+
     _onIceCandidateCallback = onIceCandidate;
     _onAddRemoteStreamCallback = onAddRemoteStream;
+    // ✨ STORE THE NEW CALLBACK
+    _onConnectionStateCallback = onConnectionState;
 
     _peerConnection = await createPeerConnection(_iceServers, _constraints);
-    print('✅ PeerConnection created: $_peerConnection');
+
+    // ✨ LISTEN FOR THE CONNECTION STATE
+    _peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
+      print('♻️ Connection State Changed: $state');
+      _onConnectionStateCallback?.call(state);
+    };
 
     _peerConnection?.onIceCandidate = (candidate) {
       if (candidate.candidate != null) {
@@ -95,10 +119,26 @@ class WebRTCService {
     }
 
     try {
-      final description = RTCSessionDescription(sdp, type);
+      // 💥 THE FIX: Ensure the SDP string is properly terminated.
+      String formattedSdp = sdp;
+      if (!formattedSdp.endsWith('\r\n')) {
+        formattedSdp += '\r\n';
+      }
+
+      // Pass the correctly formatted SDP to the constructor.
+      final description = RTCSessionDescription(formattedSdp, type);
       MyPrint.printOnConsole('🎯 Applying remote SDP:\nType: $type\nSDP:\n$sdp');
       await _peerConnection?.setRemoteDescription(description);
       MyPrint.printOnConsole('✅ setRemoteDescription applied successfully.');
+
+      // ✨ 2. Drain the queue AFTER the remote description is set
+      if (_iceCandidateQueue.isNotEmpty) {
+        print('Applying ${_iceCandidateQueue.length} queued ICE candidates...');
+        for (final candidate in _iceCandidateQueue) {
+          await _peerConnection?.addCandidate(candidate);
+        }
+        _iceCandidateQueue.clear();
+      }
     } catch (e, stack) {
       MyPrint.printOnConsole('❌ setRemoteDescription failed with error: $e\n$stack');
       rethrow; // optional: remove if you want to fail silently
@@ -107,6 +147,11 @@ class WebRTCService {
 
   /// Add an incoming ICE candidate
   Future<void> addIceCandidate(RTCIceCandidate candidate) async {
+    if (_peerConnection == null || (await _peerConnection?.getRemoteDescription()) == null) {
+      print('Peer not ready, queueing ICE candidate.');
+      _iceCandidateQueue.add(candidate);
+      return;
+    }
     await _peerConnection?.addCandidate(candidate);
   }
 
@@ -123,6 +168,7 @@ class WebRTCService {
     await _peerConnection?.close();
     await _localStream?.dispose();
     await _remoteStream?.dispose();
+    _iceCandidateQueue.clear(); // Clear the queue
 
     _peerConnection = null;
     _localStream = null;

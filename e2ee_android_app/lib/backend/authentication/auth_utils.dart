@@ -23,6 +23,7 @@ class AuthUtils {
           navigationType: NavigationType.pushNamedAndRemoveUntil,
         ),
       );
+
     }
   }
 }
