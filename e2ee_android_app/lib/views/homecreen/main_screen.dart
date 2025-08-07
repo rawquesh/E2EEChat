@@ -79,7 +79,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     if (_isCallDialogShowing) return;
     _isCallDialogShowing = true;
 
-    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
+    ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
+      (u) => u.id == callerId,
+      orElse: () => ChatUserModel(id: callerId),
+    );
     if (user.nickname.isEmpty) {
       final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
       if (fetched != null) user = fetched;
@@ -109,20 +112,31 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
             ),
             TextButton(
               onPressed: () async {
-                await callProvider.callController.acceptCall();
+                // ✨ CORRECTED FLOW
+
+                // 1. Get the user model first (you already do this)
+                ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere(
+                  (u) => u.id == callerId,
+                  orElse: () => ChatUserModel(id: callerId),
+                );
+                // NOTE: You can combine your two user-fetching blocks into one here.
+
+                // 2. Dismiss the dialog
                 _dismissCallDialog();
 
-                ChatUserModel? user = _chatProvider.chatUsers.getList().firstWhere((u) => u.id == callerId, orElse: () => ChatUserModel(id: callerId));
-                if (user.nickname.isEmpty) {
-                  final fetched = await _chatRepository.fetchChatUser(userId: callerId, token: _currentUserToken);
-                  if (fetched != null) user = fetched;
-                }
-
+                // 3. Navigate to the call screen immediately
                 if (!mounted) return;
                 NavigationController.navigateToVoiceCallScreen(
-                  navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
+                  navigationOperationParameters: NavigationOperationParameters(
+                    context: context,
+                    navigationType: NavigationType.pushNamed,
+                  ),
                   arguments: VoiceCallScreenNavigationArguments(user: user),
                 );
+
+                // 4. THEN accept the call in the background.
+                // Use the provider's controller directly.
+                context.read<CallProvider>().callController.acceptCall();
               },
               child: const Text('Accept'),
             ),
@@ -151,7 +165,10 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
       if (isMe) return;
 
       var encryptedMessagePayload = payloadData['message'];
-      Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(encryptedData: Map<String, dynamic>.from(encryptedMessagePayload), myUserId: _currentUserId);
+      Map<String, dynamic>? decryptedPayload = await EncryptionService().decryptMessagePayload(
+        encryptedData: Map<String, dynamic>.from(encryptedMessagePayload),
+        myUserId: _currentUserId,
+      );
 
       if (decryptedPayload == null) {
         MyPrint.printOnConsole("Error: Failed to decrypt incoming message payload.");
@@ -361,7 +378,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.chat_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Chats',
-                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -370,7 +389,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.call_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Calls & Contacts',
-                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -379,7 +400,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.files_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Files & Media',
-                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
@@ -388,7 +411,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
               icon: Image.asset(AppAssets.settings_icon, height: 26, width: 26, color: themeData.primaryColor),
               title: Text(
                 'Settings',
-                style: themeData.textTheme.labelSmall?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold).withEpilogue,
+                style: themeData.textTheme.labelSmall
+                    ?.copyWith(fontSize: 10, color: themeData.colorScheme.onSurface, fontWeight: FontWeight.bold)
+                    .withEpilogue,
               ),
               activeColor: themeData.primaryColor,
               inactiveColor: themeData.primaryColor.withValues(alpha: 0.4),
