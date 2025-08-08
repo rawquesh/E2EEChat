@@ -15,3 +15,9 @@
 # Rules for permission_handler
 -keep class com.baseflow.permissionhandler.** { *; }
 -keep class io.flutter.plugins.permissionhandler.** { *; }
+
+
+# Flutter WebRTC
+-keep class com.cloudwebrtc.webrtc.** { *; }
+-keep class org.webrtc.** { *; }
+-keep class org.jni_zero.** { *; }
