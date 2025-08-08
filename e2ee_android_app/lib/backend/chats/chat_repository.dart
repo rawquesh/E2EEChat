@@ -120,7 +120,7 @@ class ChatRepository {
     const int chunkSize = 800;
     for (var i = 0; i < text.length; i += chunkSize) {
       final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
-      print(text.substring(i, end));
+      MyPrint.printOnConsole(text.substring(i, end));
     }
   }
 

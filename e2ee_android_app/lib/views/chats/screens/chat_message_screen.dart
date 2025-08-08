@@ -387,7 +387,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
 
   void _startVoiceRecording() {
     showAudioDialog(context, (filePath) async {
-      print("Send this to API or chat: $filePath");
+      MyPrint.printOnConsole("Send this to API or chat: $filePath");
       final file = File(filePath);
       final bytes = await file.readAsBytes();
       final fileName = filePath.split('/').last;
@@ -1175,7 +1175,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                     final selectedTime =
                                         await showTimeSelectionDialog(context);
                                     if (selectedTime != null) {
-                                      print(
+                                      MyPrint.printOnConsole(
                                         "User selected: $selectedTimeForDestruct",
                                       );
                                       setState(
@@ -1193,7 +1193,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen>
                                                 context,
                                               );
                                           if (selectedTime != null) {
-                                            print(
+                                            MyPrint.printOnConsole(
                                               "User selected: $selectedTimeForDestruct",
                                             );
                                             setState(

@@ -343,9 +343,9 @@ class AuthenticationController {
 
   //   if (chatUser != null && chatUser.id.isNotEmpty) {
   //     await SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, chatUser.id);
-  //     print('[DEBUG] Saved current user id: ${chatUser.id}');
+  //     MyPrint.printOnConsole('[DEBUG] Saved current user id: ${chatUser.id}');
   //   } else {
-  //     print('[ERROR] Could not fetch or save user id!');
+  //     MyPrint.printOnConsole('[ERROR] Could not fetch or save user id!');
   //   }
   // }
 

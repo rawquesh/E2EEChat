@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
 import 'package:e2ee_models_app/models/calling/web_rtc_signal_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -56,20 +57,20 @@ class CallController {
     final offer = await webrtcService.createOffer();
 
     // 💥 ADD THIS DEBUG PRINT
-    print("--- SENDER: CREATED OFFER ---");
-    print("SDP is null or empty: ${offer.sdp == null || offer.sdp!.isEmpty}");
-    print("SDP value: ${offer.sdp}");
-    print("-----------------------------");
+    MyPrint.printOnConsole("--- SENDER: CREATED OFFER ---");
+    MyPrint.printOnConsole("SDP is null or empty: ${offer.sdp == null || offer.sdp!.isEmpty}");
+    MyPrint.printOnConsole("SDP value: ${offer.sdp}");
+    MyPrint.printOnConsole("-----------------------------");
 
     // This check will stop an invalid offer from being sent.
     if (offer.sdp == null || offer.sdp!.isEmpty) {
-      print("❌ ERROR: Created an empty SDP offer. Aborting call.");
+      MyPrint.printOnConsole("❌ ERROR: Created an empty SDP offer. Aborting call.");
       return;
     }
 
     final offerData = {'sdp': offer.sdp, 'type': offer.type};
 
-    print('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
+    MyPrint.printOnConsole('📤 Sending offer: ${offer.sdp}, type: ${offer.type}');
 
     await signalingRepository.sendSignal(
       token: _token!,
@@ -90,7 +91,7 @@ class CallController {
       ),
     );
 
-    print(
+    MyPrint.printOnConsole(
       '📦 Sent signal payload: ${WebRTCSignalModel(type: 'offer', data: {'sdp': offer.sdp, 'type': offer.type}, senderId: _selfId!, receiverId: receiverId).toMap()}',
     );
   }
@@ -100,7 +101,7 @@ class CallController {
     if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
       // This is the true "connected" moment for both caller and receiver
       if (callProvider.callState.get() != CallState.connected) {
-        print('🎉 CALL IS FULLY CONNECTED! 🎉');
+        MyPrint.printOnConsole('🎉 CALL IS FULLY CONNECTED! 🎉');
         callProvider.callState.set(value: CallState.connected);
         onCallConnected?.call();
       }
@@ -109,7 +110,7 @@ class CallController {
 
   Future<void> acceptCall() async {
     if (_remoteId == null || _receivedOffer == null) {
-      print('❌ Cannot accept call: No valid offer has been received.');
+      MyPrint.printOnConsole('❌ Cannot accept call: No valid offer has been received.');
       return;
     }
 
@@ -149,23 +150,23 @@ class CallController {
     final type = offer['type']; // This is now "offer", as expected
 
     if (sdp == null || type == null) {
-      print('❌ sendAnswer: Missing sdp or type in offer');
+      MyPrint.printOnConsole('❌ sendAnswer: Missing sdp or type in offer');
       return;
     }
 
     try {
       // This will now succeed
       await webrtcService.setRemoteDescription(sdp, type);
-      print('✅ Remote offer SDP applied successfully by receiver.');
+      MyPrint.printOnConsole('✅ Remote offer SDP applied successfully by receiver.');
     } catch (e) {
-      print('❌ Receiver failed to set remote description: $e');
+      MyPrint.printOnConsole('❌ Receiver failed to set remote description: $e');
       return;
     }
     final answer = await webrtcService.createAnswer();
 
     final answerData = {'sdp': answer.sdp, 'type': answer.type};
 
-    print('📤 Sending encoded answer...');
+    MyPrint.printOnConsole('📤 Sending encoded answer...');
     await signalingRepository.sendSignal(
       token: _token!,
       signal: WebRTCSignalModel(type: 'answer', data: answerData, senderId: _selfId!, receiverId: _remoteId!),
@@ -176,9 +177,9 @@ class CallController {
     switch (signal.type) {
       case 'offer':
         // 💥 ADD THIS DEBUG PRINT
-        print("--- RECEIVER: GOT OFFER SIGNAL ---");
-        print("Full data received: ${signal.data}");
-        print("----------------------------------");
+        MyPrint.printOnConsole("--- RECEIVER: GOT OFFER SIGNAL ---");
+        MyPrint.printOnConsole("Full data received: ${signal.data}");
+        MyPrint.printOnConsole("----------------------------------");
 
         _remoteId = signal.senderId;
 
@@ -193,22 +194,22 @@ class CallController {
             // 3. Store a clean, correctly structured offer object.
             _receivedOffer = {'sdp': sdpString, 'type': sdpType};
 
-            print('✅ Parsed remote offer successfully.');
+            MyPrint.printOnConsole('✅ Parsed remote offer successfully.');
 
             callProvider.callState.set(value: CallState.ringing);
             callProvider.currentCallerId.set(value: signal.senderId);
             onIncomingCall?.call(signal.senderId);
           } catch (e) {
-            print('❌ Error processing OFFER payload: $e');
+            MyPrint.printOnConsole('❌ Error processing OFFER payload: $e');
           }
         } else {
-          print('❌ Received offer with null or invalid data payload.');
+          MyPrint.printOnConsole('❌ Received offer with null or invalid data payload.');
         }
         break;
 
       case 'answer':
         if (signal.data == null) {
-          print('❌ Received answer with null data.');
+          MyPrint.printOnConsole('❌ Received answer with null data.');
           return;
         }
         try {
@@ -216,14 +217,14 @@ class CallController {
           final sdp = signal.data!['sdp'];
           final type = signal.data!['type'];
 
-          print('✅ Received answer. Applying...');
+          MyPrint.printOnConsole('✅ Received answer. Applying...');
           await webrtcService.setRemoteDescription(sdp, type);
 
           // callProvider.callState.set(value: CallState.connected);
           await webrtcService.routeAudioToEarpiece();
           onCallConnected?.call();
         } catch (e) {
-          print('❌ Error applying ANSWER: $e');
+          MyPrint.printOnConsole('❌ Error applying ANSWER: $e');
         }
         break;
 

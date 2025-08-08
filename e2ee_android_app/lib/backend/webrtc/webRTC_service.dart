@@ -57,7 +57,7 @@ class WebRTCService {
 
     // ✨ LISTEN FOR THE CONNECTION STATE
     _peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
-      print('♻️ Connection State Changed: $state');
+      MyPrint.printOnConsole('♻️ Connection State Changed: $state');
       _onConnectionStateCallback?.call(state);
     };
 
@@ -69,7 +69,7 @@ class WebRTCService {
 
     // 💥 REPLACE onAddStream with onTrack
     _peerConnection?.onTrack = (RTCTrackEvent event) {
-      print('🛤️ Track received: ${event.track.kind}');
+      MyPrint.printOnConsole('🛤️ Track received: ${event.track.kind}');
       if (event.streams.isNotEmpty) {
         _remoteStream = event.streams[0];
         _onAddRemoteStreamCallback?.call(_remoteStream!);
@@ -111,7 +111,7 @@ class WebRTCService {
   /// Set the remote peer's SDP
   Future<void> setRemoteDescription(String? sdp, String? type) async {
     if (sdp == null || sdp.trim().isEmpty || type == null || type.trim().isEmpty) {
-      print('❌ setRemoteDescription: SDP or type is null/empty.');
+      MyPrint.printOnConsole('❌ setRemoteDescription: SDP or type is null/empty.');
       MyPrint.printOnConsole('❌ Cannot apply remote description – invalid sdp or type');
       MyPrint.printOnConsole('SDP: $sdp');
       MyPrint.printOnConsole('Type: $type');
@@ -133,7 +133,7 @@ class WebRTCService {
 
       // ✨ 2. Drain the queue AFTER the remote description is set
       if (_iceCandidateQueue.isNotEmpty) {
-        print('Applying ${_iceCandidateQueue.length} queued ICE candidates...');
+        MyPrint.printOnConsole('Applying ${_iceCandidateQueue.length} queued ICE candidates...');
         for (final candidate in _iceCandidateQueue) {
           await _peerConnection?.addCandidate(candidate);
         }
@@ -148,7 +148,7 @@ class WebRTCService {
   /// Add an incoming ICE candidate
   Future<void> addIceCandidate(RTCIceCandidate candidate) async {
     if (_peerConnection == null || (await _peerConnection?.getRemoteDescription()) == null) {
-      print('Peer not ready, queueing ICE candidate.');
+      MyPrint.printOnConsole('Peer not ready, queueing ICE candidate.');
       _iceCandidateQueue.add(candidate);
       return;
     }

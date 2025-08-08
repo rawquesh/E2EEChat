@@ -90,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> with MySafeState {
       return compressedFile;
     } catch (e) {
       MyToast.showError(context: context, msg: "Failed to compress image.");
-      print("Image compression error: $e");
+      MyPrint.printOnConsole("Image compression error: $e");
       return null;
     }
   }
