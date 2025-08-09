@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../authentication/auth_utils.dart';
 
@@ -38,8 +40,31 @@ class UserRepository {
       }
 
       if (profilePhoto != null) {
-        request.files.add(await http.MultipartFile.fromPath('profile_photo', profilePhoto.path));
+        MyPrint.printOnConsole('Selected image path: ${profilePhoto.path}');
+
+        // Determine MIME type (e.g., image/jpeg)
+        final mimeType = lookupMimeType(profilePhoto.path);
+        MediaType? mediaType;
+
+        if (mimeType != null) {
+          final parts = mimeType.split('/');
+          if (parts.length == 2) {
+            mediaType = MediaType(parts[0], parts[1]);
+          }
+        }
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_photo',
+            profilePhoto.path,
+            contentType: mediaType, // Correct MIME type
+          ),
+        );
       }
+
+      // 🧾 Print full form-data fields and files before sending
+      MyPrint.printOnConsole('Fields: ${request.fields}');
+      MyPrint.printOnConsole('Files: ${request.files.map((f) => '${f.field} => ${f.filename} (${f.contentType})').toList()}');
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
