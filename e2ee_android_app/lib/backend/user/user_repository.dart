@@ -28,59 +28,73 @@ class UserRepository {
     return false;
   }
 
-  Future<Map<String, dynamic>?> updateProfile({required String token, String? name, File? profilePhoto}) async {
+  Future<Map<String, dynamic>?> updateProfile({
+    required String token,
+    String? name,
+    File? profilePhoto
+  }) async {
     final url = Uri.parse('$baseUrl/update-profile');
+
     try {
+      MyPrint.printOnConsole('Starting profile update - Name: $name, Photo: ${profilePhoto?.path}');
+
       var request = http.MultipartRequest('POST', url)
         ..headers['Authorization'] = 'Bearer $token'
         ..headers['Accept'] = 'application/json';
 
+      // Debug print for headers
+      MyPrint.printOnConsole('Request Headers: ${request.headers}');
+
       if (name != null && name.isNotEmpty) {
         request.fields['name'] = name;
+        MyPrint.printOnConsole('Added name field: $name');
       }
 
       if (profilePhoto != null) {
-        MyPrint.printOnConsole('Selected image path: ${profilePhoto.path}');
-
-        // Determine MIME type (e.g., image/jpeg)
-        final mimeType = lookupMimeType(profilePhoto.path);
-        MediaType? mediaType;
-
-        if (mimeType != null) {
-          final parts = mimeType.split('/');
-          if (parts.length == 2) {
-            mediaType = MediaType(parts[0], parts[1]);
-          }
-        }
-
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'profile_photo',
-            profilePhoto.path,
-            contentType: mediaType, // Correct MIME type
-          ),
-        );
+        MyPrint.printOnConsole('Adding profile photo from path: ${profilePhoto.path}');
+        request.files.add(await http.MultipartFile.fromPath(
+          'profile_photo',
+          profilePhoto.path,
+          contentType: MediaType('image', 'jpeg'), // Or png
+        ));
+        MyPrint.printOnConsole('Profile photo added successfully');
       }
 
-      // 🧾 Print full form-data fields and files before sending
-      MyPrint.printOnConsole('Fields: ${request.fields}');
-      MyPrint.printOnConsole('Files: ${request.files.map((f) => '${f.field} => ${f.filename} (${f.contentType})').toList()}');
+      // Debug print for request fields/files before sending
+      MyPrint.printOnConsole('Request Fields: ${request.fields}');
+      // MyPrint.printOnConsole('Request Files: ${request.files.map((f) => f.field + ': ' + f.filename).toList()}');
 
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
-      MyPrint.printOnConsole('Update profile status: ${response.statusCode}');
-      MyPrint.printOnConsole('Update profile response: $responseBody');
 
-      if (response.statusCode == 401) {
-        await AuthUtils.handleUnauthorized();
-      }
+      // Enhanced debug prints
+      MyPrint.printOnConsole('Update profile status: ${response.statusCode}');
+      MyPrint.printOnConsole('Update profile headers: ${response.headers}');
+      MyPrint.printOnConsole('Update profile response body: $responseBody');
+      MyPrint.printOnConsole('Response content length: ${response.contentLength} bytes');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return json.decode(responseBody);
+        final jsonResponse = json.decode(responseBody);
+        MyPrint.printOnConsole('Profile update successful: ${jsonResponse.containsKey('success')}');
+        return jsonResponse;
+      } else {
+        MyPrint.printOnConsole('Profile update failed with status: ${response.statusCode}');
+        // Debug print for error response if available
+        try {
+          final errorResponse = json.decode(responseBody);
+          MyPrint.printOnConsole('Error details: $errorResponse');
+        } catch (e) {
+          MyPrint.printOnConsole('Non-JSON error response: $responseBody');
+        }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       MyPrint.printOnConsole('Error updating profile: $e');
+      MyPrint.printOnConsole('Stack trace: $stackTrace');
+      if (e is SocketException) {
+        MyPrint.printOnConsole('Network error: ${e.message}');
+      }
     }
+
     return null;
   }
 }

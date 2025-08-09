@@ -7,6 +7,7 @@ import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/configs/styles.dart';
 import 'package:e2ee_models_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_models_app/models/chats/chat_user_model.dart';
+import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_utils.dart';
 import 'package:e2ee_models_app/view/common/components/common_cachednetwork_image.dart';
@@ -34,7 +35,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
   Duration? _remainingTime;
   String? avatar;
 
-  /*  Future<void> setAvatar() async {
+  /* Future<void> setAvatar() async {
     if (widget.message.message.avatar != null && widget.message.message.avatar!.isNotEmpty) {
       avatar = widget.message.message.avatar;
     } else {
@@ -123,192 +124,191 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
 
     return DateTime.now().isBefore(widget.message.destructTimestamp)
         ? InkWell(
-            onLongPress: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        leading: Icon(Icons.delete),
-                        title: Text("Delete"),
-                        onTap: () async {
-                          Navigator.pop(context);
-                          await widget.chatController.deleteMessage(widget.chatId, widget.message.id);
-                        },
-                      ),
-                      if (filePath != null)
-                        ListTile(
-                          leading: Icon(Icons.save),
-                          title: Text("Save To Vault"),
-                          onTap: () async {
-                            Navigator.pop(context);
-                            if (filePath != null) {
-                              await MyUtils.saveFileToVault(filePath!);
-                            }
-                          },
-                        ),
-                    ],
-                  ),
+      onLongPress: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Icons.delete),
+                  title: Text("Delete"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await widget.chatController.deleteMessage(widget.chatId, widget.message.id);
+                  },
                 ),
-              );
-            },
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment: widget.message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!widget.message.isMe) ...[
-                    // Updated Avatar
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Styles.grey400,
-                      child: () {
-                        final avatarUrl = widget.message.message.avatar;
-                        if (avatarUrl != null && avatarUrl.isNotEmpty) {
-                          return CommonCachedNetworkImage(imageUrl: avatarUrl, borderRadius: 14, height: 28, width: 28);
-                        }
+                if (filePath != null)
+                  ListTile(
+                    leading: Icon(Icons.save),
+                    title: Text("Save To Vault"),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      if (filePath != null) {
+                        await MyUtils.saveFileToVault(filePath!);
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: Row(
+          mainAxisAlignment: widget.message.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!widget.message.isMe) ...[
+              // Updated Avatar
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: Styles.grey400,
+                child: () {
+                  final avatarUrl = widget.message.message.avatar;
+                  if (avatarUrl != null && avatarUrl.isNotEmpty) {
+                    return CommonCachedNetworkImage(imageUrl: avatarUrl, borderRadius: 14, height: 28, width: 28);
+                  }
 
-                        return Text(
-                          'S',
-                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                        );
-                      }(),
+                  return Text(
+                    'S',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  );
+                }(),
+              ),
+              SizedBox(width: 8),
+            ],
+            Flexible(
+              child: Column(
+                crossAxisAlignment: widget.message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (widget.chatRoomType == ChatRoomType.Group && !widget.message.isMe)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
+                      child: Text(() {
+                        final nickname = widget.message.message.nickname;
+                        if (nickname.isNotEmpty) {
+                          return nickname;
+                        }
+                        return widget.message.message.username;
+                      }(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: themeData.colorScheme.primary)),
                     ),
-                    SizedBox(width: 8),
-                  ],
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: widget.message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                      children: [
-                        if (widget.chatRoomType == ChatRoomType.Group && !widget.message.isMe)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0, bottom: 4.0),
-                            child: Text(() {
-                              final senderNickname = widget.message.message.senderNickname;
-                              final nickname = widget.message.message.nickname;
-                              if (senderNickname != null && senderNickname.isNotEmpty && senderNickname != nickname) {
-                                return senderNickname;
-                              }
-                              return widget.message.message.username;
-                            }(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: themeData.colorScheme.primary)),
-                          ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: widget.message.isMe ? Styles.grey400 : themeData.colorScheme.onPrimary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              topRight: Radius.circular(16),
-                              bottomLeft: Radius.circular(widget.message.isMe ? 16 : 4),
-                              bottomRight: Radius.circular(widget.message.isMe ? 4 : 16),
-                            ),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: Offset(0, 2))],
-                          ),
-                          child: widget.message.message.type == ChatMessageType.Image.name
-                              ? filePath == null
-                                    ? SizedBox()
-                                    : InkWell(
-                                        onTap: () {
-                                          OpenFilex.open(filePath!);
-                                        },
-                                        child: Image.file(File(filePath!), height: 120, width: 120, fit: BoxFit.cover),
-                                      )
-                              : widget.message.message.type == ChatMessageType.Audio.name
-                              ? filePath == null
-                                    ? SizedBox()
-                                    : InkWell(
-                                        onTap: () async {
-                                          if (isPlaying) {
-                                            await _audioPlayer.stop();
-                                            setState(() => isPlaying = false);
-                                          } else {
-                                            await _playAudioFromFile();
-                                          }
-                                        },
-                                        child: Container(
-                                          width: 120,
-                                          child: Row(
-                                            children: [
-                                              Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded, color: Colors.white, size: 30),
-                                              Text("Audio", style: TextStyle(color: Colors.white, fontSize: 15)),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                              : widget.message.message.type == ChatMessageType.Video.name
-                              ? filePath == null
-                                    ? SizedBox()
-                                    : InkWell(
-                                        onTap: () async {
-                                          OpenFilex.open(filePath!);
-                                        },
-                                        child: Container(
-                                          width: 120,
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
-                                              Text("Video", style: TextStyle(color: Colors.white, fontSize: 15)),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                              : widget.message.message.type == ChatMessageType.Doc.name
-                              ? filePath == null
-                                    ? SizedBox()
-                                    : InkWell(
-                                        onTap: () async => OpenFilex.open(filePath!),
-                                        child: Container(
-                                          width: 120,
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.folder_rounded, color: Colors.white, size: 25),
-                                              SizedBox(width: 2),
-                                              Text("Document", style: TextStyle(color: Colors.white, fontSize: 15)),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                              : Text(widget.message.message.text, style: TextStyle(fontSize: 13, color: widget.message.isMe ? Colors.white : themeData.colorScheme.onSurface)),
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: widget.message.isMe ? Styles.grey400 : themeData.colorScheme.onPrimary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                        bottomLeft: Radius.circular(widget.message.isMe ? 16 : 4),
+                        bottomRight: Radius.circular(widget.message.isMe ? 4 : 16),
+                      ),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: Offset(0, 2))],
+                    ),
+                    child: widget.message.message.type == ChatMessageType.Image.name
+                        ? filePath == null
+                        ? SizedBox()
+                        : InkWell(
+                      onTap: () {
+                        OpenFilex.open(filePath!);
+                      },
+                      child: Image.file(File(filePath!), height: 120, width: 120, fit: BoxFit.cover),
+                    )
+                        : widget.message.message.type == ChatMessageType.Audio.name
+                        ? filePath == null
+                        ? SizedBox()
+                        : InkWell(
+                      onTap: () async {
+                        if (isPlaying) {
+                          await _audioPlayer.stop();
+                          setState(() => isPlaying = false);
+                        } else {
+                          await _playAudioFromFile();
+                        }
+                      },
+                      child: Container(
+                        width: 120,
+                        child: Row(
                           children: [
-                            if (_remainingTime != null && !_remainingTime!.isNegative && widget.message.destructTimestamp.difference(DateTime.now()).inDays < 365)
-                              Row(
-                                children: [
-                                  Icon(Icons.whatshot, color: Colors.red, size: 12),
-                                  SizedBox(width: 4),
-                                  Text(_formatRemainingTime(_remainingTime!), style: TextStyle(fontSize: 10, color: Colors.red)),
-                                  SizedBox(width: 4),
-                                  Text('•', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
-                                  SizedBox(width: 4),
-                                ],
-                              ),
-                            Text(_formatTime(widget.message.timestamp), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                            Icon(isPlaying ? Icons.pause : Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                            Text("Audio", style: TextStyle(color: Colors.white, fontSize: 15)),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    )
+                        : widget.message.message.type == ChatMessageType.Video.name
+                        ? filePath == null
+                        ? SizedBox()
+                        : InkWell(
+                      onTap: () async {
+                        OpenFilex.open(filePath!);
+                      },
+                      child: Container(
+                        width: 120,
+                        child: Row(
+                          children: [
+                            Icon(Icons.play_arrow_rounded, color: Colors.white, size: 30),
+                            Text("Video", style: TextStyle(color: Colors.white, fontSize: 15)),
+                          ],
+                        ),
+                      ),
+                    )
+                        : widget.message.message.type == ChatMessageType.Doc.name
+                        ? filePath == null
+                        ? SizedBox()
+                        : InkWell(
+                      onTap: () async => OpenFilex.open(filePath!),
+                      child: Container(
+                        width: 120,
+                        child: Row(
+                          children: [
+                            Icon(Icons.folder_rounded, color: Colors.white, size: 25),
+                            SizedBox(width: 2),
+                            Text("Document", style: TextStyle(color: Colors.white, fontSize: 15)),
+                          ],
+                        ),
+                      ),
+                    )
+                        : Text(widget.message.message.text, style: TextStyle(fontSize: 13, color: widget.message.isMe ? Colors.white : themeData.colorScheme.onSurface)),
                   ),
-                  if (widget.message.isMe) ...[
-                    SizedBox(width: 8),
-                    avatar != null && avatar!.isNotEmpty
-                        ? CommonCachedNetworkImage(imageUrl: avatar!, borderRadius: 14, height: 28, width: 28)
-                        : const CircleAvatar(
-                            radius: 14,
-                            backgroundColor: Colors.grey,
-                            child: Icon(Icons.person, size: 16, color: Colors.white),
-                          ),
-                    // CommonCachedNetworkImage(imageUrl: wi, borderRadius: 14, height: 28, width: 28)
-                  ],
+                  SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_remainingTime != null && !_remainingTime!.isNegative && widget.message.destructTimestamp.difference(DateTime.now()).inDays < 365)
+                        Row(
+                          children: [
+                            Icon(Icons.whatshot, color: Colors.red, size: 12),
+                            SizedBox(width: 4),
+                            Text(_formatRemainingTime(_remainingTime!), style: TextStyle(fontSize: 10, color: Colors.red)),
+                            SizedBox(width: 4),
+                            Text('•', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                            SizedBox(width: 4),
+                          ],
+                        ),
+                      Text(_formatTime(widget.message.timestamp), style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                    ],
+                  ),
                 ],
               ),
             ),
-          )
+            if (widget.message.isMe) ...[
+              SizedBox(width: 8),
+              avatar != null && avatar!.isNotEmpty
+                  ? CommonCachedNetworkImage(imageUrl: avatar!, borderRadius: 14, height: 28, width: 28)
+                  : const CircleAvatar(
+                radius: 14,
+                backgroundColor: Colors.grey,
+                child: Icon(Icons.person, size: 16, color: Colors.white),
+              ),
+              // CommonCachedNetworkImage(imageUrl: wi, borderRadius: 14, height: 28, width: 28)
+            ],
+          ],
+        ),
+      ),
+    )
         : SizedBox();
   }
 
@@ -329,7 +329,7 @@ class _MessageBubbleState extends State<MessageBubble> with MySafeState {
         setState(() => isPlaying = false);
       });
     } catch (e) {
-      print("Audio playback error: $e");
+      MyPrint.printOnConsole("Audio playback error: $e");
     } finally {
       setState(() => isLoading = false);
     }

@@ -4,6 +4,7 @@ import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
+import 'package:e2ee_android_app/utils/encryption_service.dart';
 import 'package:e2ee_android_app/utils/enums.dart';
 // import 'package:e2ee_models_app/backend/key_manager/key_manager.dart';
 import 'package:e2ee_models_app/backend/navigation/navigation_operation_perameters.dart';
@@ -342,9 +343,9 @@ class AuthenticationController {
 
   //   if (chatUser != null && chatUser.id.isNotEmpty) {
   //     await SharedPrefManager().setString(MySharedPreferenceVariables.currentUserId, chatUser.id);
-  //     print('[DEBUG] Saved current user id: ${chatUser.id}');
+  //     MyPrint.printOnConsole('[DEBUG] Saved current user id: ${chatUser.id}');
   //   } else {
-  //     print('[ERROR] Could not fetch or save user id!');
+  //     MyPrint.printOnConsole('[ERROR] Could not fetch or save user id!');
   //   }
   // }
 
@@ -389,49 +390,9 @@ class AuthenticationController {
     }
     await SecureStorageManager().deleteAll();
     await SharedPrefManager().clearAll();
+
+    await EncryptionService().init();
   }
-
-  // Future<bool> isUserLoggedIn() async {
-  //   String? token = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken);
-  //   String? userId = await SharedPrefManager().getString(MySharedPreferenceVariables.userId);
-
-  //   MyPrint.printOnConsole("Retrieved authToken: $token");
-  //   MyPrint.printOnConsole("Retrieved userId: $userId");
-
-  //   MyPrint.printOnConsole('Checking login status - token: ${token != null}, userId: $userId');
-
-  //   if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
-  //     MyPrint.printOnConsole('No saved credentials found');
-  //     return false;
-  //   }
-
-  //   try {
-  //     UserModel? userModel = await _authenticationRepository.getUserFromToken(token);
-
-  //     if (userModel != null) {
-  //       MyPrint.printOnConsole('Retrieved user model from token');
-
-  //       MyPrint.logOnConsole("userModel: ${userModel}");
-  //       _authenticationProvider.userId.set(value: userModel.userId, isNotify: false);
-  //       _authenticationProvider.email.set(value: userModel.email, isNotify: false);
-  //       _authenticationProvider.userModel.set(value: userModel, isNotify: true);
-  //       _authToken = token;
-
-  //       String notificationToken = await SharedPrefManager().getString(MySharedPreferenceVariables.loginSessionId) ?? MyUtils.getNewId();
-  //       await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
-  //       _authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
-
-  //       return true;
-  //     }
-
-  //     MyPrint.printOnConsole('User model not found from token, logging out');
-  //     await logout(isNavigateToLogin: false);
-  //     return false;
-  //   } catch (e) {
-  //     MyPrint.printOnConsole('Error retrieving user from token: $e');
-  //     return false;
-  //   }
-  // }
 
   Future<void> onLoginSuccess({
     required BuildContext context,

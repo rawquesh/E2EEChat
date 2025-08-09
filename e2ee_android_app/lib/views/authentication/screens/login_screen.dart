@@ -1,5 +1,4 @@
 // import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
-import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_models_app/configs/constants.dart';
 import 'package:e2ee_models_app/utils/my_safe_state.dart';
 import 'package:e2ee_models_app/utils/my_toast.dart';
@@ -51,9 +50,6 @@ class _LoginScreenState extends State<LoginScreen> with MySafeState {
     tokenController.addListener(_onTokenChanged);
     // _checkBiometricAvailability();
     _loadFailedAttempts();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      NotificationService.init();
-    });
   }
 
   @override

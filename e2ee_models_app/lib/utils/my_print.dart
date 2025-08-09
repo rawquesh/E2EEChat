@@ -11,7 +11,7 @@ class MyPrint {
 
   static void printOnConsole(Object s, {String? tag}) {
     if (kDebugMode) {
-      print("${(tag?.isNotEmpty ?? false) ? "$tag " : ""}${s.toString()}");
+      MyPrint.printOnConsole("${(tag?.isNotEmpty ?? false) ? "$tag " : ""}${s.toString()}");
     }
   }
 
@@ -79,17 +79,17 @@ class MyPrint {
 
   /*static Future<void> initializeRecordVlog() async {
     String tag = MyUtils.getNewId();
-    print("$tag:MyPrint.initializeRecordVlog() called");
+    MyPrint.printOnConsole("$tag:MyPrint.initializeRecordVlog() called");
 
     String key = "_isRecordLog";
     bool? value = await SharedPrefManager().getBool(key);
-    print("$tag:isRecordLog from SharedPreference:$value");
+    MyPrint.printOnConsole("$tag:isRecordLog from SharedPreference:$value");
 
     if (value == null) {
       value = false;
       SharedPrefManager().setBool(key, value);
     }
-    print("$tag:final isRecordLog:$value");
+    MyPrint.printOnConsole("$tag:final isRecordLog:$value");
 
     _isRecordLog = value;
   }*/

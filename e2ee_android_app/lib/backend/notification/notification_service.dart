@@ -8,9 +8,11 @@ class NotificationService {
 
   static Future<void> init() async {
     // Set the log level for debugging
-    OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+    OneSignal.Debug.setLogLevel(OSLogLevel.none);
     OneSignal.initialize("2b0ded98-42f4-47fa-92a5-4c01713f053d");
     await OneSignal.Notifications.requestPermission(true);
+      OneSignal.Location.setShared(false);
+
     _registerListeners();
   }
 

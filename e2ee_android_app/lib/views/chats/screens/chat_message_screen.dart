@@ -45,7 +45,8 @@ class ChatMessageScreen extends StatefulWidget {
   _ChatMessageScreenState createState() => _ChatMessageScreenState();
 }
 
-class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProviderStateMixin, MySafeState {
+class _ChatMessageScreenState extends State<ChatMessageScreen>
+    with TickerProviderStateMixin, MySafeState {
   // --- State & Controllers ---
   final TextEditingController _messageController = TextEditingController();
   late final ChatController _chatController;
@@ -74,12 +75,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   @override
   void initState() {
-    MyPrint.printOnConsole(widget.chatInfo.toMap()..putIfAbsent("UserX", () => "UserX"));
+    MyPrint.printOnConsole(
+      widget.chatInfo.toMap()..putIfAbsent("UserX", () => "UserX"),
+    );
 
     super.initState();
     _chatProvider = context.read<ChatProvider>();
     final authProvider = context.read<AuthenticationProvider>();
-    _chatController = ChatController(chatProvider: _chatProvider, authenticationProvider: authProvider);
+    _chatController = ChatController(
+      chatProvider: _chatProvider,
+      authenticationProvider: authProvider,
+    );
 
     _appState = context.read<AppState>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -99,7 +105,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     // This method listens for the specific self-destruct event
     final lastDeleted = _chatProvider.lastDeletedMessages;
     if (lastDeleted != null && lastDeleted.chatId == widget.chatInfo.id) {
-      MyPrint.printOnConsole("[Real-time] Detected self-destruct for this chat. Reloading messages.");
+      MyPrint.printOnConsole(
+        "[Real-time] Detected self-destruct for this chat. Reloading messages.",
+      );
 
       // Reset the pagination counter and reload messages from scratch
       if (mounted) {
@@ -117,7 +125,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 200), () {
         if (_scrollController.hasClients) {
-          _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 1000), curve: Curves.easeOut);
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOut,
+          );
         }
       });
     });
@@ -127,17 +139,36 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     if (widget.chatInfo.type == ChatRoomType.Group) {
       showModalBottomSheet(
         context: context,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (context) => GroupDetailsBottomSheet(groupInfo: widget.chatInfo),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) =>
+            GroupDetailsBottomSheet(groupInfo: widget.chatInfo),
       );
     }
   }
 
   void _initializeAnimations() {
-    _iconAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
-    _widthAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
-    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _iconAnimationController, curve: Curves.easeInOut));
-    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _widthAnimationController, curve: Curves.easeInOut));
+    _iconAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _widthAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _iconAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _iconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _widthAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _widthAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> getProfilePicture() async {
@@ -146,7 +177,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     if (user != null) {
       profilePicPath = user.profilePicture;
       if (profilePicPath == null || profilePicPath!.isEmpty) {
-        profilePicPath = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
+        profilePicPath = await SharedPrefManager().getString(
+          MySharedPreferenceVariables.avatarUrl,
+        );
       }
       if (profilePicPath == null || profilePicPath!.isEmpty) {
         profilePicPath = 'default_avatar.png'; // Fallback to a default avatar
@@ -155,8 +188,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   }
 
   Future<void> _initializeChat() async {
-    currentUserId = await SharedPrefManager().getString(MySharedPreferenceVariables.currentUserId) ?? '';
-    currentUserToken = await SecureStorageManager().getString(MySharedPreferenceVariables.authToken) ?? '';
+    currentUserId =
+        await SharedPrefManager().getString(
+          MySharedPreferenceVariables.currentUserId,
+        ) ??
+        '';
+    currentUserToken =
+        await SecureStorageManager().getString(
+          MySharedPreferenceVariables.authToken,
+        ) ??
+        '';
 
     _chatProvider.currentOpponent.set(value: widget.chatInfo, isNotify: false);
 
@@ -165,15 +206,25 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     await _loadInitialMessages();
 
     _scrollController.addListener(() {
-      if (_scrollController.offset <= _scrollController.position.minScrollExtent + 10 && !_isLoadingMore) {
+      if (_scrollController.offset <=
+              _scrollController.position.minScrollExtent + 10 &&
+          !_isLoadingMore) {
         _loadMoreMessages();
       }
     });
   }
 
   Future<void> _loadInitialMessages() async {
-    await _chatController.loadMessagesToProvider(chatId: widget.chatInfo.id, limit: _pageSize, offset: _loadedMessages, currentUserId: currentUserId, clear: true);
-    final fetchedCount = _chatProvider.getMessagesFor(widget.chatInfo.id).length;
+    await _chatController.loadMessagesToProvider(
+      chatId: widget.chatInfo.id,
+      limit: _pageSize,
+      offset: _loadedMessages,
+      currentUserId: currentUserId,
+      clear: true,
+    );
+    final fetchedCount = _chatProvider
+        .getMessagesFor(widget.chatInfo.id)
+        .length;
     _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _scrollToBottom();
@@ -181,8 +232,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
   Future<void> _loadMoreMessages() async {
     _isLoadingMore = true;
-    await _chatController.loadMessagesToProvider(chatId: widget.chatInfo.id, limit: _pageSize, offset: _loadedMessages, currentUserId: currentUserId, clear: false);
-    final fetchedCount = _chatProvider.getMessagesFor(widget.chatInfo.id).length;
+    await _chatController.loadMessagesToProvider(
+      chatId: widget.chatInfo.id,
+      limit: _pageSize,
+      offset: _loadedMessages,
+      currentUserId: currentUserId,
+      clear: false,
+    );
+    final fetchedCount = _chatProvider
+        .getMessagesFor(widget.chatInfo.id)
+        .length;
     _loadedMessages = fetchedCount;
     if (mounted) setState(() {});
     _isLoadingMore = false;
@@ -193,23 +252,42 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     if (hasText != _hasText) {
       if (!mounted) return;
       setState(() => _hasText = hasText);
-      hasText ? _iconAnimationController.forward() : _iconAnimationController.reverse();
-      hasText ? _widthAnimationController.forward() : _widthAnimationController.reverse();
+      hasText
+          ? _iconAnimationController.forward()
+          : _iconAnimationController.reverse();
+      hasText
+          ? _widthAnimationController.forward()
+          : _widthAnimationController.reverse();
     }
   }
 
-  void _sendMessage({required ChatMessageType type, String? textMessage, Uint8List? fileBytes, String? fileName}) async {
+  void _sendMessage({
+    required ChatMessageType type,
+    String? textMessage,
+    Uint8List? fileBytes,
+    String? fileName,
+  }) async {
     if (type != ChatMessageType.Text && fileBytes == null) return;
-    if (type == ChatMessageType.Text && (textMessage == null || textMessage.isEmpty)) return;
+    if (type == ChatMessageType.Text &&
+        (textMessage == null || textMessage.isEmpty))
+      return;
 
-    MyPrint.printOnConsole('XXData: textMessage: $textMessage, fileBytes: ${fileBytes?.length}, fileName: $fileName type: ${type}');
+    MyPrint.printOnConsole(
+      'XXData: textMessage: $textMessage, fileBytes: ${fileBytes?.length}, fileName: $fileName type: ${type}',
+    );
 
     _messageController.clear();
 
-    DateTime destructTimestamp = selectedTimeForDestruct == 0 ? DateTime.now().add(const Duration(days: 365 * 100)) : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
+    DateTime destructTimestamp = selectedTimeForDestruct == 0
+        ? DateTime.now().add(const Duration(days: 365 * 100))
+        : DateTime.now().add(Duration(minutes: selectedTimeForDestruct));
     final authProvider = context.read<AuthenticationProvider>();
-    final sharedAvatar = await SharedPrefManager().getString(MySharedPreferenceVariables.avatarUrl);
-    final avatarUrl = sharedAvatar?.isNotEmpty == true ? sharedAvatar! : authProvider.userModel.get()?.profilePicture ?? '';
+    final sharedAvatar = await SharedPrefManager().getString(
+      MySharedPreferenceVariables.avatarUrl,
+    );
+    final avatarUrl = sharedAvatar?.isNotEmpty == true
+        ? sharedAvatar!
+        : authProvider.userModel.get()?.profilePicture ?? '';
     MyPrint.printOnConsole('chat message screen Avatar url: $avatarUrl');
 
     var chatMessageData = ChatMessageData(
@@ -221,15 +299,26 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       avatar: avatarUrl,
     );
 
-    _chatController.sendMessage(message: chatMessageData, destructTimer: selectedTimeForDestruct).then((success) {
-      if (!success) {
-        MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
-        return;
-      }
-      MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
-    });
+    _chatController
+        .sendMessage(
+          message: chatMessageData,
+          destructTimer: selectedTimeForDestruct,
+        )
+        .then((success) {
+          if (!success) {
+            MyPrint.printOnConsole('[SEND DEBUG] Failed to send message.');
+            return;
+          }
+          MyPrint.printOnConsole('[SEND DEBUG] Message sent successfully.');
+        });
 
-    var newChatMessageData = ChatMessageData(type: type.name, text: textMessage ?? "", base64String: "", fileName: fileName ?? '', avatar: avatarUrl);
+    var newChatMessageData = ChatMessageData(
+      type: type.name,
+      text: textMessage ?? "",
+      base64String: "",
+      fileName: fileName ?? '',
+      avatar: avatarUrl,
+    );
 
     if (type != ChatMessageType.Text && fileBytes != null && fileName != null) {
       String path = await MyUtils.saveFileToDevice(fileBytes, fileName);
@@ -250,11 +339,16 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     await _saveLocalMessage(localMessage: localMessage);
   }
 
-  Future<void> _saveLocalMessage({required ChatMessageModel localMessage}) async {
+  Future<void> _saveLocalMessage({
+    required ChatMessageModel localMessage,
+  }) async {
     _chatProvider.addMessageFor(widget.chatInfo.id, localMessage);
     _loadedMessages += 1;
 
-    await _chatController.saveMessageToHive(chatId: widget.chatInfo.id, message: localMessage);
+    await _chatController.saveMessageToHive(
+      chatId: widget.chatInfo.id,
+      message: localMessage,
+    );
 
     var text2 = localMessage.message.text;
     if (text2.isEmpty) {
@@ -286,24 +380,31 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     _messageController.dispose();
     _iconAnimationController.dispose();
     _widthAnimationController.dispose();
-    // _appState.setCurrentChattingWithUserId(null);
+    _appState.setCurrentChattingWithUserId(null);
     _chatProvider.removeListener(_onProviderChange);
     super.dispose();
   }
 
   void _startVoiceRecording() {
     showAudioDialog(context, (filePath) async {
-      print("Send this to API or chat: $filePath");
+      MyPrint.printOnConsole("Send this to API or chat: $filePath");
       final file = File(filePath);
       final bytes = await file.readAsBytes();
       final fileName = filePath.split('/').last;
-      _sendMessage(type: ChatMessageType.Audio, fileBytes: bytes, fileName: fileName);
+      _sendMessage(
+        type: ChatMessageType.Audio,
+        fileBytes: bytes,
+        fileName: fileName,
+      );
     });
   }
 
   void _onButtonPressed() {
     if (_hasText) {
-      _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim());
+      _sendMessage(
+        type: ChatMessageType.Text,
+        textMessage: _messageController.text.trim(),
+      );
       _messageController.clear();
     } else {
       _startVoiceRecording();
@@ -318,7 +419,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         title: const Text('Clear chat'),
         content: const Text('Remove all messages in this chat?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -338,7 +442,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         title: const Text('Delete chat'),
         content: const Text('Delete this chat room and all messages?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -360,7 +467,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -369,17 +479,38 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 width: 40,
                 height: 4,
                 margin: EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               Padding(
                 padding: EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildMediaOption(icon: Icons.camera_alt, title: 'Camera', subtitle: 'Take a photo or video', color: Color(0xFF4CAF50), onTap: _openCamera),
+                    _buildMediaOption(
+                      icon: Icons.camera_alt,
+                      title: 'Camera',
+                      subtitle: 'Take a photo or video',
+                      color: Color(0xFF4CAF50),
+                      onTap: _openCamera,
+                    ),
                     SizedBox(height: 16),
-                    _buildMediaOption(icon: Icons.photo_library, title: 'Gallery', subtitle: 'Choose from gallery', color: Color(0xFF2196F3), onTap: _openGallery),
+                    _buildMediaOption(
+                      icon: Icons.photo_library,
+                      title: 'Gallery',
+                      subtitle: 'Choose from gallery',
+                      color: Color(0xFF2196F3),
+                      onTap: _openGallery,
+                    ),
                     SizedBox(height: 16),
-                    _buildMediaOption(icon: Icons.description, title: 'Document', subtitle: 'Share a file', color: Color(0xFFFF9800), onTap: _openDocuments),
+                    _buildMediaOption(
+                      icon: Icons.description,
+                      title: 'Document',
+                      subtitle: 'Share a file',
+                      color: Color(0xFFFF9800),
+                      onTap: _openDocuments,
+                    ),
                     SizedBox(height: 20),
                   ],
                 ),
@@ -391,7 +522,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
     );
   }
 
-  Widget _buildMediaOption({required IconData icon, required String title, required String subtitle, required Color color, required VoidCallback onTap}) {
+  Widget _buildMediaOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: () {
         Navigator.pop(context);
@@ -400,13 +537,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
           children: [
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(icon, color: color, size: 24),
             ),
             SizedBox(width: 16),
@@ -416,10 +559,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 children: [
                   Text(
                     title,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
                   SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
                 ],
               ),
             ),
@@ -448,7 +598,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       final file = File(result.files.single.path!);
       final fileName = result.files.single.name;
       final fileBytes = await file.readAsBytes();
-      _sendMessage(type: ChatMessageType.Doc, fileBytes: fileBytes, fileName: fileName);
+      _sendMessage(
+        type: ChatMessageType.Doc,
+        fileBytes: fileBytes,
+        fileName: fileName,
+      );
     }
   }
 
@@ -465,7 +619,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
             Future<void> startRecording() async {
               if (await record.hasPermission()) {
                 final dir = await getTemporaryDirectory();
-                audioPath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+                audioPath =
+                    '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
                 await record.start(const RecordConfig(), path: audioPath!);
                 setState(() {
                   isRecording = true;
@@ -486,7 +641,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                 if (await file.exists()) {
                   final bytes = await file.readAsBytes();
                   final fileName = audioPath!.split('/').last;
-                  final filePath = await MyUtils.saveFileToDevice(bytes, fileName);
+                  final filePath = await MyUtils.saveFileToDevice(
+                    bytes,
+                    fileName,
+                  );
                   onSend(filePath);
                 }
               }
@@ -495,13 +653,23 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
 
             return AlertDialog(
               backgroundColor: Colors.white,
-              title: const Text("Record Audio", style: TextStyle(color: Colors.black)),
+              title: const Text(
+                "Record Audio",
+                style: TextStyle(color: Colors.black),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(isRecording ? Icons.mic : Icons.mic_none, color: isRecording ? Colors.red : Colors.black, size: 48),
+                  Icon(
+                    isRecording ? Icons.mic : Icons.mic_none,
+                    color: isRecording ? Colors.red : Colors.black,
+                    size: 48,
+                  ),
                   const SizedBox(height: 10),
-                  Text(isRecording ? 'Recording...' : 'Tap "Record" to start', style: TextStyle(color: Colors.black)),
+                  Text(
+                    isRecording ? 'Recording...' : 'Tap "Record" to start',
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ],
               ),
               actions: [
@@ -524,7 +692,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                       child: Container(
                         width: 100,
                         height: 40,
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: !isRecording && audioPath != null ? Styles.grey500 : Colors.black.withOpacity(0.2)),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(100),
+                          color: !isRecording && audioPath != null
+                              ? Styles.grey500
+                              : Colors.black.withOpacity(0.2),
+                        ),
                         child: Center(child: Text("Send")),
                       ),
                     ),
@@ -550,7 +723,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   Future<void> requestStoragePermission(bool isCamera, bool isImage) async {
     if (Platform.isAndroid) {
       if (Platform.isAndroid && Platform.version.compareTo('13') >= 0) {
-        await [Permission.photos, Permission.audio, Permission.camera].request();
+        await [
+          Permission.photos,
+          Permission.audio,
+          Permission.camera,
+        ].request();
       } else {
         await [Permission.storage, Permission.camera].request();
       }
@@ -600,10 +777,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
               isCamera
                   ? ListTile(
                       leading: Icon(Icons.photo_camera, color: Colors.white),
-                      title: Text("Capture Image", style: TextStyle(color: Colors.white)),
+                      title: Text(
+                        "Capture Image",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onTap: () async {
                         Navigator.pop(context);
-                        final images = await _picker.pickImage(source: ImageSource.camera);
+                        final images = await _picker.pickImage(
+                          source: ImageSource.camera,
+                        );
                         setState(() {
                           image = images;
                           prepareForSendMessage(true);
@@ -614,10 +796,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
               isCamera
                   ? ListTile(
                       leading: Icon(Icons.videocam, color: Colors.white),
-                      title: Text("Capture Video", style: TextStyle(color: Colors.white)),
+                      title: Text(
+                        "Capture Video",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onTap: () async {
                         Navigator.pop(context);
-                        final video = await _picker.pickVideo(source: ImageSource.camera);
+                        final video = await _picker.pickVideo(
+                          source: ImageSource.camera,
+                        );
                         setState(() {
                           image = video;
                           prepareForSendMessage(false);
@@ -628,10 +815,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
               !isCamera
                   ? ListTile(
                       leading: Icon(Icons.image, color: Colors.white),
-                      title: Text("Choose Image", style: TextStyle(color: Colors.white)),
+                      title: Text(
+                        "Choose Image",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onTap: () async {
                         Navigator.pop(context);
-                        final images = await _picker.pickImage(source: ImageSource.gallery);
+                        final images = await _picker.pickImage(
+                          source: ImageSource.gallery,
+                        );
                         setState(() {
                           image = images;
                           prepareForSendMessage(true);
@@ -642,10 +834,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
               !isCamera
                   ? ListTile(
                       leading: Icon(Icons.video_library, color: Colors.white),
-                      title: Text("Choose Video", style: TextStyle(color: Colors.white)),
+                      title: Text(
+                        "Choose Video",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       onTap: () async {
                         Navigator.pop(context);
-                        final video = await _picker.pickVideo(source: ImageSource.gallery);
+                        final video = await _picker.pickVideo(
+                          source: ImageSource.gallery,
+                        );
                         setState(() {
                           image = video;
                           prepareForSendMessage(false);
@@ -670,9 +867,13 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       String fileName = image!.name;
 
       if (isImage) {
-        compressedBytes = await MediaCompression.compressImage(File(image!.path));
+        compressedBytes = await MediaCompression.compressImage(
+          File(image!.path),
+        );
       } else {
-        final mediaInfo = await MediaCompression.compressVideo(File(image!.path));
+        final mediaInfo = await MediaCompression.compressVideo(
+          File(image!.path),
+        );
         if (mediaInfo != null && mediaInfo.file != null) {
           compressedBytes = await mediaInfo.file!.readAsBytes();
           fileName = mediaInfo.path!.split('/').last;
@@ -680,7 +881,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
       }
 
       if (compressedBytes != null) {
-        _sendMessage(type: isImage ? ChatMessageType.Image : ChatMessageType.Video, fileBytes: compressedBytes, fileName: fileName);
+        _sendMessage(
+          type: isImage ? ChatMessageType.Image : ChatMessageType.Video,
+          fileBytes: compressedBytes,
+          fileName: fileName,
+        );
       }
 
       setState(() {
@@ -693,7 +898,9 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     super.pageBuild();
-    MyPrint.printOnConsole("Chat Message Screen build called for message check avatar: ${widget.chatInfo.avatar}");
+    MyPrint.printOnConsole(
+      "Chat Message Screen build called for message check avatar: ${widget.chatInfo.avatar}",
+    );
 
     return ModalProgressHUD(
       inAsyncCall: isLoading,
@@ -702,31 +909,68 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           backgroundColor: themeData.colorScheme.surface,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.chevron_left, color: themeData.colorScheme.onSurface, size: 32),
+            icon: Icon(
+              Icons.chevron_left,
+              color: themeData.colorScheme.onSurface,
+              size: 32,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           title: GestureDetector(
             onTap: _showGroupDetails,
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    CommonCachedNetworkImage(imageUrl: widget.chatInfo.avatar, height: 40, width: 40, fit: BoxFit.cover, borderRadius: 20),
-                    if (widget.chatInfo.isOnline)
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Styles.grey400,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
+                Consumer<ChatProvider>(
+                  builder: (context, chatProvider, child) {
+                    if (widget.chatInfo.type == ChatRoomType.Group) {
+                      final messages = chatProvider.getMessagesFor(widget.chatInfo.id);
+                      String initials = widget.chatInfo.groupName != null && widget.chatInfo.groupName!.isNotEmpty
+                          ? widget.chatInfo.groupName!.substring(0, 1).toUpperCase()
+                          : 'G';
+
+                      if (messages.isNotEmpty) {
+                        final lastSenderNickname = messages.last.message.nickname;
+                        if (lastSenderNickname.isNotEmpty) {
+                          initials = lastSenderNickname.substring(0, 1).toUpperCase();
+                        }
+                      }
+
+                      return CircleAvatar(
+                        radius: 20,
+                        backgroundColor: themeData.primaryColor,
+                        child: Text(
+                          initials,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                      ),
-                  ],
+                      );
+                    } else {
+                      return Stack(
+                        children: [
+                          CommonCachedNetworkImage(
+                            imageUrl: widget.chatInfo.avatar,
+                            height: 40,
+                            width: 40,
+                            fit: BoxFit.cover,
+                            borderRadius: 20,
+                          ),
+                          if (widget.chatInfo.isOnline)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Styles.grey400,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.white, width: 1.5),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }
+                  },
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -734,13 +978,31 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.chatInfo.type == ChatRoomType.Group ? widget.chatInfo.groupName ?? '' : widget.chatInfo.nickname,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: themeData.colorScheme.onSurface),
+                        widget.chatInfo.type == ChatRoomType.Group
+                            ? widget.chatInfo.groupName ?? ''
+                            : widget.chatInfo.nickname,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: themeData.colorScheme.onSurface,
+                        ),
                       ),
                       if (widget.chatInfo.type == ChatRoomType.Group)
-                        Text('${widget.chatInfo.receivers?.length ?? 0} members', style: TextStyle(fontSize: 10, color: Colors.grey[600]))
+                        Text(
+                          '${widget.chatInfo.receivers?.length ?? 0} members',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                        )
                       else
-                        Text(widget.chatInfo.username, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                        Text(
+                          widget.chatInfo.username,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -750,26 +1012,42 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           actions: [
             if (widget.chatInfo.type != ChatRoomType.Group)
               IconButton(
-                icon: Icon(Icons.call_outlined, color: themeData.colorScheme.onSurface),
+                icon: Icon(
+                  Icons.call_outlined,
+                  color: themeData.colorScheme.onSurface,
+                ),
                 onPressed: () async {
                   // Get the CallController from the provider
                   final callProvider = context.read<CallProvider>();
                   final callController = callProvider.callController;
 
                   // Start the call with the current chat user's ID
-                  await callController.startCall(widget.chatInfo.id, receiverName: widget.chatInfo.nickname, receiverAvatar: widget.chatInfo.avatar);
+                  await callController.startCall(
+                    widget.chatInfo.id,
+                    receiverName: widget.chatInfo.nickname,
+                    receiverAvatar: widget.chatInfo.avatar,
+                  );
 
                   // Navigate to the new call screen
                   if (mounted) {
                     NavigationController.navigateToVoiceCallScreen(
-                      navigationOperationParameters: NavigationOperationParameters(context: context, navigationType: NavigationType.pushNamed),
-                      arguments: VoiceCallScreenNavigationArguments(user: widget.chatInfo),
+                      navigationOperationParameters:
+                          NavigationOperationParameters(
+                            context: context,
+                            navigationType: NavigationType.pushNamed,
+                          ),
+                      arguments: VoiceCallScreenNavigationArguments(
+                        user: widget.chatInfo,
+                      ),
                     );
                   }
                 },
               ),
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: themeData.colorScheme.onSurface),
+              icon: Icon(
+                Icons.more_vert,
+                color: themeData.colorScheme.onSurface,
+              ),
               onSelected: (value) {
                 if (value == 'clear') {
                   _showClearChatDialog();
@@ -777,7 +1055,10 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                   _showDeleteChatDialog();
                 }
               },
-              itemBuilder: (context) => const [PopupMenuItem(value: 'clear', child: Text('Clear Chat')), PopupMenuItem(value: 'delete', child: Text('Delete Chat'))],
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'clear', child: Text('Clear Chat')),
+                PopupMenuItem(value: 'delete', child: Text('Delete Chat')),
+              ],
             ),
           ],
         ),
@@ -786,12 +1067,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
             Expanded(
               child: Consumer<ChatProvider>(
                 builder: (context, chatProvider, child) {
-                  final msgList = chatProvider.getMessagesFor(widget.chatInfo.id);
+                  final msgList = chatProvider.getMessagesFor(
+                    widget.chatInfo.id,
+                  );
                   final isLoadingMore = _isLoadingMore;
 
                   return ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
                     reverse: false,
                     // latest message at bottom
                     itemCount: msgList.length + (isLoadingMore ? 1 : 0),
@@ -799,12 +1085,21 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                       if (isLoadingMore && index == 0) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Center(heightFactor: 1, child: LoadingWidget()),
+                          child: Center(
+                            heightFactor: 1,
+                            child: LoadingWidget(),
+                          ),
                         );
                       }
                       final msgIndex = isLoadingMore ? index - 1 : index;
                       final message = msgList[msgIndex];
-                      return MessageBubble(message: message, chatController: _chatController, chatId: widget.chatInfo.id, chatRoomType: widget.chatInfo.type, avatar: profilePicPath);
+                      return MessageBubble(
+                        message: message,
+                        chatController: _chatController,
+                        chatId: widget.chatInfo.id,
+                        chatRoomType: widget.chatInfo.type,
+                        avatar: profilePicPath,
+                      );
                     },
                   );
                 },
@@ -825,11 +1120,15 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                   AnimatedBuilder(
                     animation: _widthAnimation,
                     builder: (context, child) {
-                      final baseWidth = MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
+                      final baseWidth =
+                          MediaQuery.of(context).size.width - 32 - 44 - 44 - 16;
                       final compactWidth = baseWidth * 1;
                       final expandedWidth = baseWidth;
 
-                      final currentWidth = compactWidth + (_widthAnimation.value * (expandedWidth - compactWidth));
+                      final currentWidth =
+                          compactWidth +
+                          (_widthAnimation.value *
+                              (expandedWidth - compactWidth));
 
                       return SizedBox(
                         height: 50,
@@ -839,29 +1138,49 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                           style: TextStyle(fontSize: 14),
                           decoration: InputDecoration(
                             hintText: 'Type a message...',
-                            hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                            hintStyle: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(22),
-                              borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                              borderSide: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(22),
-                              borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                              borderSide: BorderSide(
+                                color: Colors.grey[300]!,
+                                width: 1,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(22),
-                              borderSide: BorderSide(color: themeData.colorScheme.primary, width: 1),
+                              borderSide: BorderSide(
+                                color: themeData.colorScheme.primary,
+                                width: 1,
+                              ),
                             ),
                             suffixIcon: Stack(
                               alignment: Alignment.center,
                               children: [
                                 IconButton(
-                                  icon: Icon(CupertinoIcons.flame_fill, color: themeData.primaryColor),
+                                  icon: Icon(
+                                    CupertinoIcons.flame_fill,
+                                    color: themeData.primaryColor,
+                                  ),
                                   onPressed: () async {
-                                    final selectedTime = await showTimeSelectionDialog(context);
+                                    final selectedTime =
+                                        await showTimeSelectionDialog(context);
                                     if (selectedTime != null) {
-                                      print("User selected: $selectedTimeForDestruct");
-                                      setState(() {}); // Add setState to rebuild the widget
+                                      MyPrint.printOnConsole(
+                                        "User selected: $selectedTimeForDestruct",
+                                      );
+                                      setState(
+                                        () {},
+                                      ); // Add setState to rebuild the widget
                                     }
                                   },
                                 ),
@@ -869,10 +1188,17 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                                     ? SizedBox()
                                     : InkWell(
                                         onTap: () async {
-                                          final selectedTime = await showTimeSelectionDialog(context);
+                                          final selectedTime =
+                                              await showTimeSelectionDialog(
+                                                context,
+                                              );
                                           if (selectedTime != null) {
-                                            print("User selected: $selectedTimeForDestruct");
-                                            setState(() {}); // Add setState to rebuild the widget
+                                            MyPrint.printOnConsole(
+                                              "User selected: $selectedTimeForDestruct",
+                                            );
+                                            setState(
+                                              () {},
+                                            ); // Add setState to rebuild the widget
                                           }
                                         },
                                         child: Container(
@@ -881,13 +1207,19 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                                           width: 18,
                                           // Increased size for better readability
                                           margin: EdgeInsets.only(top: 5),
-                                          decoration: BoxDecoration(color: Styles.grey500, shape: BoxShape.circle),
+                                          decoration: BoxDecoration(
+                                            color: Styles.grey500,
+                                            shape: BoxShape.circle,
+                                          ),
                                           child: Center(
                                             child: Text(
-                                              _formatDestructTime(selectedTimeForDestruct),
+                                              _formatDestructTime(
+                                                selectedTimeForDestruct,
+                                              ),
                                               // Use the new formatting function
                                               style: TextStyle(
-                                                fontSize: 8, // Adjusted font size
+                                                fontSize:
+                                                    8, // Adjusted font size
                                                 color: Colors.white,
                                                 fontWeight: FontWeight.bold,
                                               ),
@@ -899,7 +1231,12 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                             ),
                           ),
                           onSubmitted: (_) {
-                            _hasText ? _sendMessage(type: ChatMessageType.Text, textMessage: _messageController.text.trim()) : null;
+                            _hasText
+                                ? _sendMessage(
+                                    type: ChatMessageType.Text,
+                                    textMessage: _messageController.text.trim(),
+                                  )
+                                : null;
                             _messageController.clear();
                           },
                         ),
@@ -910,20 +1247,39 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: BoxDecoration(color: Styles.grey400, borderRadius: BorderRadius.circular(22)),
+                    decoration: BoxDecoration(
+                      color: Styles.grey400,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
                     child: AnimatedBuilder(
                       animation: _iconAnimation,
                       builder: (context, child) {
                         return IconButton(
                           icon: AnimatedSwitcher(
                             duration: Duration(milliseconds: 200),
-                            transitionBuilder: (Widget child, Animation<double> animation) {
-                              return ScaleTransition(
-                                scale: animation,
-                                child: FadeTransition(opacity: animation, child: child),
-                              );
-                            },
-                            child: _hasText ? Icon(Icons.send, key: ValueKey('send'), color: Colors.white, size: 20) : Icon(Icons.mic, key: ValueKey('mic'), color: Colors.white, size: 20),
+                            transitionBuilder:
+                                (Widget child, Animation<double> animation) {
+                                  return ScaleTransition(
+                                    scale: animation,
+                                    child: FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                            child: _hasText
+                                ? Icon(
+                                    Icons.send,
+                                    key: ValueKey('send'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  )
+                                : Icon(
+                                    Icons.mic,
+                                    key: ValueKey('mic'),
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                           ),
                           onPressed: _onButtonPressed,
                         );
@@ -961,7 +1317,11 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
           backgroundColor: Colors.white,
           title: const Text(
             'Select time for destroy message',
-            style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -991,11 +1351,18 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> with TickerProvid
                             decoration: BoxDecoration(
                               border: Border.all(color: Colors.black, width: 2),
                               borderRadius: BorderRadius.circular(3),
-                              color: selectedTimeForDestruct == (time['value'] as int) ? Colors.black : Colors.transparent,
+                              color:
+                                  selectedTimeForDestruct ==
+                                      (time['value'] as int)
+                                  ? Colors.black
+                                  : Colors.transparent,
                             ),
                           ),
                           SizedBox(width: 7),
-                          Text('${time['label']}', style: TextStyle(color: Colors.black)),
+                          Text(
+                            '${time['label']}',
+                            style: TextStyle(color: Colors.black),
+                          ),
                         ],
                       ),
                     ),

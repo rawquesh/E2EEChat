@@ -207,6 +207,29 @@ class _ChatListItemState extends State<ChatListItem> with MySafeState, TickerPro
   }
 
   Widget _buildModernAvatar() {
+    if (widget.user.type == ChatRoomType.Group) {
+      String initials = '';
+      if (widget.user.lastMessage.contains(': ')) {
+        initials = widget.user.lastMessage.split(': ').first.substring(0, 1).toUpperCase();
+      } else if (widget.user.groupName != null && widget.user.groupName!.isNotEmpty) {
+        initials = widget.user.groupName!.substring(0, 1).toUpperCase();
+      } else {
+        initials = "G";
+      }
+
+      return Stack(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Theme.of(context).primaryColor,
+            child: Text(
+              initials,
+              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      );
+    }
     return Stack(
       children: [
         CommonCachedNetworkImage(imageUrl: widget.user.avatar, borderRadius: 30, height: 55, width: 55),

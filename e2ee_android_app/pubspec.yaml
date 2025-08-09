@@ -43,12 +43,17 @@ dependencies:
   #Media Compression
   flutter_image_compress: ^2.4.0
   video_compress: ^3.1.4
+  image: ^4.5.4
 
   #webrtc
   flutter_webrtc: ^0.14.2
 
   #One Signal Notification
   onesignal_flutter: ^5.3.4
+  disable_battery_optimization:
+    git:
+      url: https://github.com/pvsvamsi/Disable-Battery-Optimizations
+      ref: 3bd744d # This points to a specific commit with the fix
 
 
 
