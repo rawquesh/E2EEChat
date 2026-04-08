@@ -1,2 +1,2 @@
-// Re-export all navigation argument classes from core
-export '../../core/navigation/navigation_arguments.dart';
+// Navigation argument classes are now in the navigation/ directory
+export '../../navigation/navigation_arguments.dart';

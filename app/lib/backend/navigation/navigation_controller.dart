@@ -1,20 +1,20 @@
-import 'package:e2ee_android_app/core/navigation/navigation_arguments.dart';
+import 'package:e2ee_android_app/navigation/navigation_arguments.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'package:e2ee_android_app/configs/constants.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_operation.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_operation_parameters.dart';
-import 'package:e2ee_android_app/utils/storage_manager.dart';
-import 'package:e2ee_android_app/views/authentication/screens/duress_pin_entry_screen.dart';
-import 'package:e2ee_android_app/views/authentication/screens/login_screen.dart';
-import 'package:e2ee_android_app/views/authentication/screens/pin_entry_screen.dart';
-import 'package:e2ee_android_app/views/authentication/screens/sign_up_screen.dart';
-import 'package:e2ee_android_app/views/calls/screens/voice_call_demo_screen.dart';
-import 'package:e2ee_android_app/views/common/screens/splashscreen.dart';
-import 'package:e2ee_android_app/views/homecreen/main_screen.dart';
+import 'package:e2ee_android_app/constants/app_constants.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
+import 'package:e2ee_android_app/navigation/navigation_operation.dart';
+import 'package:e2ee_android_app/navigation/navigation_operation_parameters.dart';
+import 'package:e2ee_android_app/managers/shared_pref_manager.dart';
+import 'package:e2ee_android_app/pages/authentication/duress_pin_entry_screen.dart';
+import 'package:e2ee_android_app/pages/authentication/login_screen.dart';
+import 'package:e2ee_android_app/pages/authentication/pin_entry_screen.dart';
+import 'package:e2ee_android_app/pages/authentication/sign_up_screen.dart';
+import 'package:e2ee_android_app/pages/calls/voice_call_demo_screen.dart';
+import 'package:e2ee_android_app/pages/splash_screen.dart';
+import 'package:e2ee_android_app/pages/main_screen.dart';
 
 class NavigationController {
   static NavigationController? _instance;

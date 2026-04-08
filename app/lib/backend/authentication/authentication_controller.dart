@@ -1,25 +1,23 @@
-import 'package:e2ee_android_app/core/navigation/navigation_arguments.dart';
+import 'package:e2ee_android_app/navigation/navigation_arguments.dart';
 import 'dart:io';
 
 import 'package:e2ee_android_app/backend/chats/chat_repository.dart';
 import 'package:e2ee_android_app/backend/notification/notification_service.dart';
 import 'package:e2ee_android_app/backend/user/my_user_controller.dart';
 import 'package:e2ee_android_app/backend/user/user_repository.dart';
-import 'package:e2ee_android_app/utils/encryption_service.dart';
-import 'package:e2ee_android_app/utils/enums.dart';
-// import 'package:e2ee_android_app/backend/key_manager/key_manager.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_operation_parameters.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_type.dart';
-import 'package:e2ee_android_app/configs/constants.dart';
+import 'package:e2ee_android_app/helpers/encryption_helper.dart';
+import 'package:e2ee_android_app/constants/app_constants.dart';
+import 'package:e2ee_android_app/navigation/navigation_operation_parameters.dart';
+import 'package:e2ee_android_app/navigation/navigation_type.dart';
 import 'package:e2ee_android_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_android_app/models/chats/chat_user_model.dart';
 import 'package:e2ee_android_app/models/user/user_model.dart';
-import 'package:e2ee_android_app/core/extensions.dart';
-import 'package:e2ee_android_app/core/hive_manager.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
-import 'package:e2ee_android_app/core/my_toast.dart';
-import 'package:e2ee_android_app/core/my_utils.dart';
-import 'package:e2ee_android_app/utils/storage_manager.dart';
+import 'package:e2ee_android_app/managers/hive_manager.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
+import 'package:e2ee_android_app/utils/my_toast.dart';
+import 'package:e2ee_android_app/utils/my_utils.dart';
+import 'package:e2ee_android_app/managers/secure_storage_manager.dart';
+import 'package:e2ee_android_app/managers/shared_pref_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:local_auth/local_auth.dart';
@@ -391,7 +389,7 @@ class AuthenticationController {
     await SecureStorageManager().deleteAll();
     await SharedPrefManager().clearAll();
 
-    await EncryptionService().init();
+    await EncryptionHelper().init();
   }
 
   Future<void> onLoginSuccess({
@@ -417,46 +415,44 @@ class AuthenticationController {
     await SharedPrefManager().setString(MySharedPreferenceVariables.loginSessionId, notificationToken);
     authenticationProvider.loginSessionId.set(value: notificationToken, isNotify: false);
 
-    if (context.checkMounted() && context.mounted) {
-      if (authenticationMode == AuthenticationModes.google) {
-        bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
-          userId: userModel.userId,
-          authenticationMode: authenticationMode,
-          email: userModel.email,
-        );
-
-        if (!isUserExist) {
-          // New user, navigate to sign-up
-          MyPrint.printOnConsole("New Google user, navigating to sign-up");
-          await NavigationController.navigateToSignUpScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamedAndRemoveUntil,
-            ),
-            arguments: SignUpScreenNavigationArguments(userModel: userModel),
-          );
-          return;
-        } else {
-          // Existing user, navigate to main screen
-          MyPrint.printOnConsole("Existing Google user, navigating to main screen");
-          NavigationController.navigateToMainScreen(
-            navigationOperationParameters: NavigationOperationParameters(
-              context: context,
-              navigationType: NavigationType.pushNamedAndRemoveUntil,
-            ),
-          );
-          return;
-        }
-      }
-
-      // For non-Google authentication
-      NavigationController.navigateToMainScreen(
-        navigationOperationParameters: NavigationOperationParameters(
-          context: context,
-          navigationType: NavigationType.pushNamedAndRemoveUntil,
-        ),
+    if (authenticationMode == AuthenticationModes.google) {
+      bool isUserExist = await checkUserWithIdExistOrNotAndIfNotExistThenCreate(
+        userId: userModel.userId,
+        authenticationMode: authenticationMode,
+        email: userModel.email,
       );
+
+      if (!isUserExist) {
+        // New user, navigate to sign-up
+        MyPrint.printOnConsole("New Google user, navigating to sign-up");
+        await NavigationController.navigateToSignUpScreen(
+          navigationOperationParameters: NavigationOperationParameters(
+            context: context,
+            navigationType: NavigationType.pushNamedAndRemoveUntil,
+          ),
+          arguments: SignUpScreenNavigationArguments(userModel: userModel),
+        );
+        return;
+      } else {
+        // Existing user, navigate to main screen
+        MyPrint.printOnConsole("Existing Google user, navigating to main screen");
+        NavigationController.navigateToMainScreen(
+          navigationOperationParameters: NavigationOperationParameters(
+            context: context,
+            navigationType: NavigationType.pushNamedAndRemoveUntil,
+          ),
+        );
+        return;
+      }
     }
+
+    // For non-Google authentication
+    NavigationController.navigateToMainScreen(
+      navigationOperationParameters: NavigationOperationParameters(
+        context: context,
+        navigationType: NavigationType.pushNamedAndRemoveUntil,
+      ),
+    );
   }
 
   Future<bool> checkUserWithIdExistOrNotAndIfNotExistThenCreate({
@@ -499,7 +495,7 @@ class AuthenticationController {
       }
     } catch (e, s) {
       MyPrint.printOnConsole("Error: $e");
-      MyPrint.printOnConsole(s);
+      MyPrint.printOnConsole(s.toString());
       return false;
     }
   }

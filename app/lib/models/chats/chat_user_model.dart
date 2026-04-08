@@ -1,4 +1,4 @@
-import '../../core/parsing_helper.dart';
+import 'package:e2ee_android_app/helpers/parsing_helper.dart';
 
 enum ChatRoomType { Single, Group }
 

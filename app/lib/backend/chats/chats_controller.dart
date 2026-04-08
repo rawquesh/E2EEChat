@@ -1,8 +1,9 @@
-import 'package:e2ee_android_app/configs/constants.dart';
+import 'package:e2ee_android_app/constants/app_constants.dart';
 import 'package:e2ee_android_app/models/chats/chat_message_model.dart';
 import 'package:e2ee_android_app/models/chats/chat_user_model.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
-import 'package:e2ee_android_app/utils/storage_manager.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
+import 'package:e2ee_android_app/managers/secure_storage_manager.dart';
+import 'package:e2ee_android_app/managers/shared_pref_manager.dart';
 
 import '../authentication/authentication_provider.dart';
 import 'chat_repository.dart';

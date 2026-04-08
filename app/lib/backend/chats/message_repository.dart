@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:e2ee_android_app/models/chats/chat_message_model.dart';
 
-import 'package:e2ee_android_app/core/hive_manager.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
+import 'package:e2ee_android_app/managers/hive_manager.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
 import 'package:hive/hive.dart';
 
 class MessageRepository {

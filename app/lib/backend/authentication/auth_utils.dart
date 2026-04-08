@@ -1,9 +1,9 @@
 import 'package:e2ee_android_app/backend/authentication/authentication_controller.dart';
 import 'package:e2ee_android_app/backend/common/dependency_injection.dart';
-import 'package:e2ee_android_app/backend/navigation/navigation_controller.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_operation_parameters.dart';
-import 'package:e2ee_android_app/core/navigation/navigation_type.dart';
-import 'package:e2ee_android_app/core/my_toast.dart';
+import 'package:e2ee_android_app/navigation/navigation_controller.dart';
+import 'package:e2ee_android_app/navigation/navigation_operation_parameters.dart';
+import 'package:e2ee_android_app/navigation/navigation_type.dart';
+import 'package:e2ee_android_app/utils/my_toast.dart';
 import 'package:flutter/material.dart';
 
 class AuthUtils {

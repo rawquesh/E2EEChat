@@ -1,4 +1,4 @@
-import '../../core/my_utils.dart';
+import 'package:e2ee_android_app/utils/my_utils.dart';
 
 class ProfileUpdateRequestModel {
   String? displayName;

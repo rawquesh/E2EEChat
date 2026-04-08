@@ -3,7 +3,7 @@ import 'package:e2ee_android_app/backend/webrtc/call_provider.dart';
 
 import '../authentication/authentication_provider.dart';
 import 'app_state.dart';
-import 'app_theme/app_theme_provider.dart';
+import '../../styles/theme_provider.dart';
 
 class DependencyInjection {
   static final AuthenticationProvider authenticationProvider =

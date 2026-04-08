@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_service.dart';
 import 'package:e2ee_android_app/backend/webrtc/webRTC_signaling_repository.dart';
 import 'package:e2ee_android_app/models/calling/web_rtc_signal_model.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
-import 'package:e2ee_android_app/core/my_utils.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
+import 'package:e2ee_android_app/utils/my_utils.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-import '../../views/calls/screens/calls_screen.dart';
+import 'package:e2ee_android_app/pages/calls/calls_screen.dart';
 import 'call_provider.dart';
 
 class CallController {

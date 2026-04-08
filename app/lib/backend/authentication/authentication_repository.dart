@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:e2ee_android_app/configs/constants.dart';
+import 'package:e2ee_android_app/constants/app_constants.dart';
 import 'package:e2ee_android_app/models/user/user_model.dart';
-import 'package:e2ee_android_app/core/my_print.dart';
-import 'package:e2ee_android_app/utils/storage_manager.dart';
+import 'package:e2ee_android_app/utils/my_print.dart';
+import 'package:e2ee_android_app/managers/secure_storage_manager.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_utils.dart';

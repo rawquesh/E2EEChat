@@ -1,4 +1,4 @@
-import 'package:e2ee_android_app/core/state/common_provider.dart';
+import 'package:e2ee_android_app/backend/common/common_provider.dart';
 import 'package:e2ee_android_app/models/user/user_model.dart';
 
 class AuthenticationProvider extends CommonProvider {

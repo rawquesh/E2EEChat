@@ -1,5 +1,5 @@
-import '../../core/my_utils.dart';
-import '../../core/parsing_helper.dart';
+import 'package:e2ee_android_app/utils/my_utils.dart';
+import 'package:e2ee_android_app/helpers/parsing_helper.dart';
 
 class UserModel {
   String userId;
