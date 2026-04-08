@@ -1,3 +1,0 @@
-class NavigationArguments {
-  const NavigationArguments();
-}

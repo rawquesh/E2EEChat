@@ -1,0 +1,6 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": ["Bash(*)", "Bash(npx tsc:*)", "Bash(npm info:*)"]
+  }
+}
