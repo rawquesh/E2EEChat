@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:e2ee_models_app/utils/my_print.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:mime/mime.dart';
 
 import '../authentication/auth_utils.dart';
 

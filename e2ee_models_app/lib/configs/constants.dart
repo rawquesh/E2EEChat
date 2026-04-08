@@ -57,7 +57,7 @@ class PostStatus {
 
 enum LoginType { basic, withToken }
 
-const LoginType currentLoginType = LoginType.basic;
+const LoginType currentLoginType = LoginType.withToken;
 
 class MySharedPreferenceVariables {
   static String isFirst = "isfirst";
