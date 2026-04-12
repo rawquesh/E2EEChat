@@ -6,10 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 
 import '../authentication/auth_utils.dart';
+import '../common/api_endpoints.dart';
 
 class WebRTCSignalingRepository {
-  final String baseUrl = 'https://172.86.92.130.sslip.io/api';
-
   PusherClient? _pusher;
   Channel? _channel;
 
@@ -19,14 +18,14 @@ class WebRTCSignalingRepository {
     required Function(WebRTCSignalModel signal) onSignalReceived,
   }) {
     final options = PusherOptions(
-      key: 'sip6lkxyrl3d0um6vbv9',
-      cluster: 'mt1',
-      host: '172.86.92.130.sslip.io',
-      wsPort: 8080,
-      wssPort: 443,
-      encrypted: false,
+      key: ApiEndpoints.pusherKey,
+      cluster: ApiEndpoints.pusherCluster,
+      host: ApiEndpoints.pusherHost,
+      wsPort: ApiEndpoints.pusherWsPort,
+      wssPort: ApiEndpoints.pusherWssPort,
+      encrypted: ApiEndpoints.pusherEncrypted,
       authOptions: PusherAuthOptions(
-        'https://172.86.92.130.sslip.io/broadcasting/auth',
+        ApiEndpoints.pusherBroadcastingAuthUrl,
         headers: {'Authorization': 'Bearer $token'},
       ),
     );
@@ -67,7 +66,7 @@ class WebRTCSignalingRepository {
     required String token,
     required WebRTCSignalModel signal,
   }) async {
-    final url = Uri.parse('$baseUrl/webrtc-signal');
+    final url = Uri.parse(ApiEndpoints.urlWebrtcSignal);
     final body = jsonEncode(signal.toMap());
 
     MyPrint.printOnConsole('[WEBRTC REPO] Sending signal: ${signal.type}');

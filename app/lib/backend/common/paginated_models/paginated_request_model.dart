@@ -1,7 +1,8 @@
+import 'package:e2ee_android_app/backend/common/api_endpoints.dart';
+
 import 'api_documents_paginated_list_model.dart';
 
 class GetAPIDocumentsPaginatedListRequestModel<T> {
-  final String baseUrl;
   final String endpoint;
   final Map<String, dynamic>? queryParams;
   final bool isRefresh;
@@ -13,7 +14,6 @@ class GetAPIDocumentsPaginatedListRequestModel<T> {
   final T Function(Map<String, dynamic>) convertDataToContent;
 
   GetAPIDocumentsPaginatedListRequestModel({
-    required this.baseUrl,
     required this.endpoint,
     this.queryParams,
     this.isRefresh = false,
@@ -24,4 +24,6 @@ class GetAPIDocumentsPaginatedListRequestModel<T> {
     required this.paginatedListModel,
     required this.convertDataToContent,
   });
+
+  String get baseUrl => ApiEndpoints.baseUrl;
 }

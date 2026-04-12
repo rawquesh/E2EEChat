@@ -8,22 +8,22 @@ import 'package:http/http.dart' as http;
 import 'package:pusher_client_socket/pusher_client_socket.dart';
 
 import '../authentication/auth_utils.dart';
+import '../common/api_endpoints.dart';
 
 class ChatRepository {
-  final String baseUrl = 'https://172.86.92.130.sslip.io/api';
   PusherClient? _pusher;
   Channel? _channel;
 
   // initPusher remains the same
   void initPusher({required String userId, required String token, required Function(dynamic data) onMessageReceived}) {
     final options = PusherOptions(
-      key: 'sip6lkxyrl3d0um6vbv9',
-      cluster: 'mt1',
-      host: '172.86.92.130.sslip.io',
-      wsPort: 8080,
-      wssPort: 443,
-      encrypted: false,
-      authOptions: PusherAuthOptions('https://172.86.92.130.sslip.io/broadcasting/auth', headers: {'Authorization': 'Bearer $token'}),
+      key: ApiEndpoints.pusherKey,
+      cluster: ApiEndpoints.pusherCluster,
+      host: ApiEndpoints.pusherHost,
+      wsPort: ApiEndpoints.pusherWsPort,
+      wssPort: ApiEndpoints.pusherWssPort,
+      encrypted: ApiEndpoints.pusherEncrypted,
+      authOptions: PusherAuthOptions(ApiEndpoints.pusherBroadcastingAuthUrl, headers: {'Authorization': 'Bearer $token'}),
     );
 
     _pusher = PusherClient(options: options);
@@ -100,7 +100,7 @@ class ChatRepository {
     printLongText('[SEND DEBUG] Final Request Body: $body');
 
     // Send the request
-    final url = Uri.parse('$baseUrl/send-message');
+    final url = Uri.parse(ApiEndpoints.urlSendMessage);
     MyPrint.printOnConsole('[SEND DEBUG] POST $url');
 
     try {
@@ -126,7 +126,7 @@ class ChatRepository {
 
   // fetchChatUser remains the same
   Future<ChatUserModel?> fetchChatUser({String? username, String? userId, required String token}) async {
-    final url = Uri.parse('$baseUrl/chat/getopponent');
+    final url = Uri.parse(ApiEndpoints.urlGetOpponent);
     final Map<String, dynamic> bodyMap = {};
     if (username != null && username.isNotEmpty) bodyMap['username'] = username;
     if (userId != null && userId.isNotEmpty) bodyMap['userid'] = userId;
@@ -153,7 +153,7 @@ class ChatRepository {
       return null;
     }
 
-    final url = Uri.parse('$baseUrl/users/$userId/keys');
+    final url = Uri.parse(ApiEndpoints.urlUserKeys(userId));
 
     try {
       final response = await http.get(url, headers: {"Accept": "application/json", "Authorization": "Bearer $token"});
@@ -187,7 +187,7 @@ class ChatRepository {
   }
 }
 
-// curl --location 'https://172.86.92.130.sslip.io/api/users/<USER_ID>/keys' \
+// curl --location '${ApiEndpoints.apiBaseUrl}${ApiEndpoints.userKeys}/<USER_ID>/keys' \
 
 // --header 'Accept: application/json' \
 

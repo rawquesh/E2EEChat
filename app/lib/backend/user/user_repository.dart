@@ -6,12 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../authentication/auth_utils.dart';
+import '../common/api_endpoints.dart';
 
 class UserRepository {
-  final String baseUrl = 'https://172.86.92.130.sslip.io/api';
-
   Future<bool> updateDisplayName({required String token, required String name}) async {
-    final url = Uri.parse('$baseUrl/update-profile');
+    final url = Uri.parse(ApiEndpoints.urlUpdateProfile);
     try {
       final response = await http.post(url, headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Bearer $token'}, body: jsonEncode({'name': name}));
       MyPrint.printOnConsole('Update profile status: ${response.statusCode}');
@@ -32,7 +31,7 @@ class UserRepository {
     String? name,
     File? profilePhoto
   }) async {
-    final url = Uri.parse('$baseUrl/update-profile');
+    final url = Uri.parse(ApiEndpoints.urlUpdateProfile);
 
     try {
       MyPrint.printOnConsole('Starting profile update - Name: $name, Photo: ${profilePhoto?.path}');

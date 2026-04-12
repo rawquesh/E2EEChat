@@ -1,6 +1,8 @@
 import 'package:e2ee_android_app/utils/my_print.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../common/api_endpoints.dart';
+
 class WebRTCService {
   RTCPeerConnection? _peerConnection;
   MediaStream? _localStream;
@@ -8,22 +10,6 @@ class WebRTCService {
 
   Function(RTCIceCandidate)? _onIceCandidateCallback;
   Function(MediaStream)? _onAddRemoteStreamCallback;
-
-  /// STUN/TURN servers
-  static const Map<String, dynamic> _iceServers = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-      {
-        'urls': [
-          'turn:172.86.92.130.sslip.io:3478?transport=udp',
-          'turn:172.86.92.130.sslip.io:3478?transport=tcp',
-          'turns:172.86.92.130.sslip.io:5349?transport=tcp',
-        ],
-        'username': 'webrtcuser',
-        'credential': 'webrtccred',
-      },
-    ],
-  };
 
   /// Optional peer connection constraints
   static const Map<String, dynamic> _constraints = {
@@ -53,7 +39,7 @@ class WebRTCService {
     // ✨ STORE THE NEW CALLBACK
     _onConnectionStateCallback = onConnectionState;
 
-    _peerConnection = await createPeerConnection(_iceServers, _constraints);
+    _peerConnection = await createPeerConnection(ApiEndpoints.iceServers, _constraints);
 
     // ✨ LISTEN FOR THE CONNECTION STATE
     _peerConnection?.onConnectionState = (RTCPeerConnectionState state) {

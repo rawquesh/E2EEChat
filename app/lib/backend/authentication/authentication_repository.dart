@@ -7,15 +7,14 @@ import 'package:e2ee_android_app/utils/my_print.dart';
 import 'package:e2ee_android_app/managers/secure_storage_manager.dart';
 import 'package:http/http.dart' as http;
 
+import '../common/api_endpoints.dart';
 import 'auth_utils.dart';
 
 class AuthenticationRepository {
-  final String baseUrl = 'https://172.86.92.130.sslip.io/api';
 
   Future<Map<String, dynamic>?> registerNewUserFromPayload(Map<String, dynamic> payload) async {
     try {
-      final url = '$baseUrl/auth/register';
-      final response = await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
+      final response = await http.post(Uri.parse(ApiEndpoints.urlAuthRegister), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
 
       MyPrint.printOnConsole("Register response code: ${response.statusCode}");
       MyPrint.printOnConsole("Register response body: ${response.body}");
@@ -36,8 +35,7 @@ class AuthenticationRepository {
 
   Future<Map<String, dynamic>?> registerNewUserFromPayloadWithToken(Map<String, dynamic> payload) async {
     try {
-      final url = '$baseUrl/auth/register2';
-      final response = await http.post(Uri.parse(url), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
+      final response = await http.post(Uri.parse(ApiEndpoints.urlAuthRegister2), headers: {'Content-Type': 'application/json'}, body: json.encode(payload));
 
       MyPrint.printOnConsole("Register with token response code: ${response.statusCode}");
       MyPrint.printOnConsole("Register with token response body: ${response.body}");
@@ -80,7 +78,7 @@ class AuthenticationRepository {
 
   //     MyPrint.printOnConsole("Sending access token to backend...");
   //     final response = await http.post(
-  //       Uri.parse('$baseUrl/auth/google/mobile'),
+  //       Uri.parse('${ApiEndpoints.apiBaseUrl}/auth/google/mobile'),
   //       headers: {'Content-Type': 'application/json'},
   //       body: json.encode({'accessToken': accessToken}),
   //     );
@@ -117,7 +115,7 @@ class AuthenticationRepository {
   //     if (userData == null) {
   //       MyPrint.printOnConsole("User data not in response, fetching separately");
 
-  //       final userResponse = await http.get(Uri.parse('$baseUrl/auth/me'), headers: {'Authorization': 'Bearer $token'});
+  //       final userResponse = await http.get(Uri.parse(ApiEndpoints.urlAuthUser), headers: {'Authorization': 'Bearer $token'});
 
   //       MyPrint.printOnConsole("User info response code: ${userResponse.statusCode}");
   //       MyPrint.printOnConsole("User info response body: ${userResponse.body}");
@@ -149,8 +147,7 @@ class AuthenticationRepository {
     MyPrint.printOnConsole("AuthenticationRepository().checkEmailExists() called for $email");
 
     try {
-      final encodedEmail = Uri.encodeComponent(email.toLowerCase());
-      final response = await http.get(Uri.parse('$baseUrl/auth/check-email/$encodedEmail'));
+      final response = await http.get(Uri.parse(ApiEndpoints.urlAuthCheckEmail(email.toLowerCase())));
 
       MyPrint.printOnConsole("Email check response status: ${response.statusCode}");
       MyPrint.printOnConsole("Email check response body: ${response.body}");
@@ -179,7 +176,7 @@ class AuthenticationRepository {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse(ApiEndpoints.urlAuthLogin),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'password': password}),
       );
@@ -223,7 +220,7 @@ class AuthenticationRepository {
       MyPrint.printOnConsole("Register Request Payload: ${json.encode(userModel.toMap())}");
 
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/register'),
+        Uri.parse(ApiEndpoints.urlAuthRegister),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(userModel.toMap()),
       );
@@ -253,7 +250,7 @@ class AuthenticationRepository {
   // }) async {
   //   try {
   //     final response = await http.post(
-  //       Uri.parse('$baseUrl/keys'),
+  //       Uri.parse('${ApiEndpoints.apiBaseUrl}/keys'),
   //       headers: {
   //         'Content-Type': 'application/json',
   //         'Authorization': 'Bearer $token',
@@ -274,7 +271,7 @@ class AuthenticationRepository {
 
   Future<UserModel?> getUserFromToken(String token) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/auth/user'), headers: {'Authorization': 'Bearer $token'});
+      final response = await http.get(Uri.parse(ApiEndpoints.urlAuthUser), headers: {'Authorization': 'Bearer $token'});
 
       if (response.statusCode == 401) {
         await AuthUtils.handleUnauthorized();
