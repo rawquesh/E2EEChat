@@ -1,0 +1,87 @@
+# =============================================================================
+# docker-compose.yml — Local Development Setup
+# Run: docker compose up
+# Starts all three services: Express API + Soketi + MongoDB
+#
+# For Railway deployment, each service is deployed separately from its Dockerfile.
+# See DEPLOY.md for step-by-step Railway setup.
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # --------------------------------------------------------------------------
+  # Express REST API (port 3000)
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: e2ee-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/e2ee_chat
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret-change-me}
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      # Soketi service URL (container name = internal Docker DNS)
+      - SOKETI_HOST=soketi
+      - SOKETI_PORT=6001
+      - SOKETI_APP_ID=${SOKETI_APP_ID:-app-id}
+      - SOKETI_APP_KEY=${SOKETI_APP_KEY:-app-key}
+      - SOKETI_APP_SECRET=${SOKETI_APP_SECRET:-app-secret}
+      # TURN/STUN (leave placeholders for now)
+      - STUN_HOST=stun.l.google.com
+      - STUN_PORT=19302
+      - TURN_HOST=REPLACE_WITH_TURN_HOST
+      - TURN_PORT=3478
+      - TURNS_PORT=5349
+      - TURN_USERNAME=REPLACE_WITH_TURN_USER
+      - TURN_CREDENTIAL=REPLACE_WITH_TURN_PASS
+    depends_on:
+      mongo:
+        condition: service_healthy
+      soketi:
+        condition: service_started
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Soketi WebSocket Server (port 6001) — Pusher-compatible
+  # --------------------------------------------------------------------------
+  soketi:
+    build:
+      context: .
+      dockerfile: soketi/Dockerfile
+    container_name: e2ee-soketi
+    ports:
+      - "6001:6001"
+    environment:
+      - PORT=6001
+      - SOKETI_DRIVER_HTTP_SERVER_PORT=6001
+      - SOKETI_DEFAULT_APP_ID=${SOKETI_APP_ID:-app-id}
+      - SOKETI_DEFAULT_APP_KEY=${SOKETI_APP_KEY:-app-key}
+      - SOKETI_DEFAULT_APP_SECRET=${SOKETI_APP_SECRET:-app-secret}
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # MongoDB (port 27017)
+  # --------------------------------------------------------------------------
+  mongo:
+    image: mongo:7
+    container_name: e2ee-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

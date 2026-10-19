@@ -185,6 +185,37 @@ class ChatRepository {
       return null;
     }
   }
+
+  /// Fetches any messages stored on the server that arrived while the app was offline.
+  /// The server returns the encrypted payload — decryption is handled by the caller.
+  /// Returns a list of raw message maps from the server.
+  Future<List<Map<String, dynamic>>> fetchPendingMessages({required String token}) async {
+    final url = Uri.parse(ApiEndpoints.urlPendingMessages);
+
+    try {
+      final response = await http.get(url, headers: {"Accept": "application/json", "Authorization": "Bearer $token"});
+
+      MyPrint.printOnConsole('[PENDING MESSAGES] Status: ${response.statusCode}');
+
+      if (response.statusCode == 401) {
+        await AuthUtils.handleUnauthorized();
+        return [];
+      }
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = json.decode(response.body);
+        final List<dynamic>? messages = body['messages'];
+        if (messages != null) {
+          MyPrint.printOnConsole('[PENDING MESSAGES] Received ${messages.length} pending messages');
+          return messages.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      MyPrint.printOnConsole('[PENDING MESSAGES] Error fetching pending messages: $e');
+      return [];
+    }
+  }
 }
 
 // curl --location '${ApiEndpoints.apiBaseUrl}${ApiEndpoints.userKeys}/<USER_ID>/keys' \

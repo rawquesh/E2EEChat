@@ -7,28 +7,36 @@ class ApiEndpoints {
   // ---------------------------------------------------------------------------
   // API Server
   // ---------------------------------------------------------------------------
-  static const String apiBaseUrl = 'https://172.86.92.130.sslip.io/api';
+  // LOCAL DEV:     http://localhost:3000/api
+  // PRODUCTION:    https://e2ee-api.up.railway.app/api  (update after Railway deploy)
+  static const String apiBaseUrl = 'http://localhost:3000/api';
   static String get baseUrl => apiBaseUrl;
 
   // ---------------------------------------------------------------------------
   // WebRTC STUN/TURN servers (for WebRTCService)
   // ---------------------------------------------------------------------------
+  // Uses Google's public STUN server. Replace TURN config with your own
+  // coturn/Janus server for production. See backend/.env TURN_* values.
   static const String stunServer = 'stun:stun.l.google.com:19302';
-  static const String turnHost = '172.86.92.130.sslip.io';
+  static const String turnHost = 'REPLACE_WITH_TURN_HOST';
   static const int turnPort = 3478;
   static const int turnsPort = 5349;
-  static const String turnUsername = 'webrtcuser';
-  static const String turnCredential = 'webrtccred';
+  static const String turnUsername = 'REPLACE_WITH_TURN_USER';
+  static const String turnCredential = 'REPLACE_WITH_TURN_PASS';
 
   // ---------------------------------------------------------------------------
-  // Pusher / WebSocket (shared between ChatRepository & WebRTCSignalingRepository)
+  // Soketi WebSocket (shared between ChatRepository & WebRTCSignalingRepository)
   // ---------------------------------------------------------------------------
-  static const String pusherKey = 'sip6lkxyrl3d0um6vbv9';
-  static const String pusherCluster = 'mt1';
-  static const String pusherHost = '172.86.92.130.sslip.io';
-  static const int pusherWsPort = 8080;
+  // LOCAL DEV:     pusherHost = 'localhost', pusherKey = 'app-key'
+  // PRODUCTION:    pusherHost = 'e2ee-soketi.up.railway.app', pusherKey = your Soketi app key
+  // Generate app key: node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
+  // Must match SOKETI_APP_KEY in backend/.env and Railway variables.
+  static const String pusherKey = 'app-key';
+  // Leave pusherHost/pusherWsPort as-is for Soketi's managed cloud service.
+  static const String pusherHost = 'localhost';
+  static const int pusherWsPort = 80;
   static const int pusherWssPort = 443;
-  static const bool pusherEncrypted = false;
+  static const bool pusherEncrypted = true;
   static String get pusherBroadcastingAuthUrl =>
       '$apiBaseUrl/broadcasting/auth';
 
@@ -95,4 +103,10 @@ class ApiEndpoints {
   static String urlUserKeys(String userId) => '$apiBaseUrl${userKeysFor(userId)}';
   static String get urlWebrtcSignal => '$apiBaseUrl$webrtcSignal';
   static String get urlUpdateProfile => '$apiBaseUrl$updateProfile';
+
+  // ---------------------------------------------------------------------------
+  // Offline Message Polling (fetches messages delivered while app was offline)
+  // ---------------------------------------------------------------------------
+  static const String pendingMessages = '/pending-messages';
+  static String get urlPendingMessages => '$apiBaseUrl$pendingMessages';
 }
