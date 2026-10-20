@@ -27,16 +27,23 @@ class ApiEndpoints {
   // ---------------------------------------------------------------------------
   // Soketi WebSocket (shared between ChatRepository & WebRTCSignalingRepository)
   // ---------------------------------------------------------------------------
-  // LOCAL DEV:     pusherHost = 'localhost', pusherKey = 'app-key'
-  // PRODUCTION:    pusherHost = 'e2ee-soketi.up.railway.app', pusherKey = your Soketi app key
+  // LOCAL DEV:     pusherHost = 'localhost', pusherWsPort = 8080,
+  //                pusherEncrypted = false  (self-hosted Soketi behind an HTTP proxy)
+  // PRODUCTION:    pusherHost = 'e2ee-soketi.up.railway.app', pusherWsPort = 443,
+  //                pusherEncrypted = true  (direct WSS to Soketi)
   // Generate app key: node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
   // Must match SOKETI_APP_KEY in backend/.env and Railway variables.
+  // Do NOT include https:// in pusherHost — the library adds the scheme itself.
   static const String pusherKey = 'app-key';
-  // Leave pusherHost/pusherWsPort as-is for Soketi's managed cloud service.
+  // Committed defaults are LOCAL DEV values (see docker-compose.yml: port 6001).
+  // For production, override with the values documented in the block above.
   static const String pusherHost = 'localhost';
-  static const int pusherWsPort = 80;
+  static const int pusherWsPort = 8080;
   static const int pusherWssPort = 443;
-  static const bool pusherEncrypted = true;
+  static const bool pusherEncrypted = false;
+  // Soketi is a single self-hosted server — no cluster. When pusherHost is set,
+  // the pusher_client_socket library ignores cluster entirely, so it stays null.
+  static String? get pusherCluster => null;
   static String get pusherBroadcastingAuthUrl =>
       '$apiBaseUrl/broadcasting/auth';
 

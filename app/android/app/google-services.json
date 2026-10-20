@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "585497393388",
-    "project_id": "chat-672cb",
-    "storage_bucket": "chat-672cb.firebasestorage.app"
+    "project_number": "000000000000",
+    "project_id": "REPLACE_WITH_FIREBASE_PROJECT_ID",
+    "storage_bucket": "REPLACE_WITH_FIREBASE_PROJECT_ID.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:585497393388:android:69de9b1a51ca3ec66a4dc9",
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
         "android_client_info": {
-          "package_name": "io.darkcrypt.e2e"
+          "package_name": "com.yourcompany.e2eechat"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBHUGPWCcDnxeaQNpno1FVSehehWukae2M"
+          "current_key": "REPLACE_WITH_FIREBASE_ANDROID_API_KEY"
         }
       ],
       "services": {

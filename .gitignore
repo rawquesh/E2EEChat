@@ -1,0 +1,20 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Node / secrets
+node_modules/
+*.log
+.env
+.env.local
+.env.*.local
+
+# Firebase config (committed per-App-ID files; keep only the .example)
+google-services.json
+GoogleService-Info.plist
+
+# Editor
+.idea/
+*.iml
+
+# NOTE: Flutter build outputs are already ignored in app/.gitignore — not duplicated here.

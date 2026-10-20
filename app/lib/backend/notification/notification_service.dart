@@ -9,7 +9,8 @@ class NotificationService {
   static Future<void> init() async {
     // Set the log level for debugging
     OneSignal.Debug.setLogLevel(OSLogLevel.none);
-    OneSignal.initialize("2b0ded98-42f4-47fa-92a5-4c01713f053d");
+    // Set your OneSignal App ID here (see README.md).
+    OneSignal.initialize("REPLACE_WITH_ONESIGNAL_APP_ID");
     await OneSignal.Notifications.requestPermission(true);
       OneSignal.Location.setShared(false);
 
